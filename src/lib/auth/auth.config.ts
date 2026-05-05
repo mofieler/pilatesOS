@@ -11,6 +11,41 @@ export const authConfig: NextAuthConfig = {
   // The Drizzle adapter (DB sessions) only works for OAuth providers like Google.
   // With JWT, the session lives in a signed cookie, not the sessions table.
   session: { strategy: 'jwt' },
+
+  // Cookie configuration for cross-subdomain authentication
+  // Set AUTH_COOKIE_DOMAIN=.pilateq.de for multi-tenant subdomains
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.AUTH_COOKIE_DOMAIN || undefined, // e.g., .pilateq.de for subdomains
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
+      },
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Host-next-auth.csrf-token' : 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
+      },
+    },
+  },
   providers: [
     Credentials({
       name: 'Credentials',
