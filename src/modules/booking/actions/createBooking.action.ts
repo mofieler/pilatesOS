@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth/auth';
 import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
+import { checkRateLimit, bookingRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -27,6 +28,16 @@ export async function createBookingAction(
     return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
   }
   const userId = authSession.user.id;
+
+  // ── 1a. Rate Limiting ────────────────────────────────────────────────────────
+  const rateLimitResult = await checkRateLimit(bookingRateLimitConfig, `create:${userId}`);
+  if (!rateLimitResult.success) {
+    return {
+      success: false,
+      error: 'Too many booking attempts. Please try again in a minute.',
+      code: 'RATE_LIMITED',
+    };
+  }
 
   // ── 1b. Waiver Check ─────────────────────────────────────────────────────────
   // Students must sign waiver before their first booking (liability protection)

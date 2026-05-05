@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth/auth';
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
 import type { ServiceResult } from '@/modules/billing/services/credit.service';
 import type { CancellationResult } from '@/modules/booking/services/cancellation.service';
+import { checkRateLimit, cancellationRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -22,6 +23,16 @@ export async function cancelBookingAction(
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  }
+
+  // ── 1a. Rate Limiting ────────────────────────────────────────────────────────
+  const rateLimitResult = await checkRateLimit(cancellationRateLimitConfig, `cancel:${session.user.id}`);
+  if (!rateLimitResult.success) {
+    return {
+      success: false,
+      error: 'Too many cancellation attempts. Please try again in a minute.',
+      code: 'RATE_LIMITED',
+    };
   }
 
   // ── 2. Zod validation ────────────────────────────────────────────────────────

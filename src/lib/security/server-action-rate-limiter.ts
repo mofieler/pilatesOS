@@ -87,3 +87,15 @@ export const registerRateLimitConfig: RateLimitConfig = {
   maxRequests: 3, // 3 registrations per 15 minutes
   keyPrefix: 'register',
 };
+
+export const bookingRateLimitConfig: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 5, // 5 bookings per minute per user
+  keyPrefix: 'booking',
+};
+
+export const cancellationRateLimitConfig: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 5, // 5 cancellations per minute per user
+  keyPrefix: 'cancellation',
+};

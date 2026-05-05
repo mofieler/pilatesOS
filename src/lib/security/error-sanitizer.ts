@@ -15,6 +15,8 @@ const PUBLIC_ERROR_MESSAGES: Record<ServiceErrorCode, string> = {
   'INVALID_STATE': 'The action cannot be completed at this time.',
   'DUPLICATE_PAYMENT': 'This payment has already been processed.',
   'DB_ERROR': 'An unexpected error occurred. Please try again.',
+  'WAIVER_REQUIRED': 'Please sign the liability waiver before booking.',
+  'RATE_LIMITED': 'Too many requests. Please try again later.',
 };
 
 // Internal error codes that should never be exposed to users
@@ -145,6 +147,8 @@ export function handleApiError(error: unknown, context: string) {
       case 'NOT_FOUND': status = 404; break;
       case 'INVALID_STATE': status = 400; break;
       case 'INSUFFICIENT_CREDITS': status = 402; break;
+      case 'WAIVER_REQUIRED': status = 403; break;
+      case 'RATE_LIMITED': status = 429; break;
       default: status = 500;
     }
   }

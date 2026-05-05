@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { creditPurchases, creditBalances, creditPackages, creditTransactions } from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { creditPurchases, creditPackages } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import { requireUserOwnership } from '@/lib/auth/api-auth';
 import { purchaseRateLimiter } from '@/lib/security/rate-limiter';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { handleApiError } from '@/lib/security/error-sanitizer';
+import { creditService } from '@/modules/billing/services/credit.service';
 
 export async function POST(request: Request) {
   // Rate limiting check
@@ -97,46 +98,22 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    // If paid immediately (Stripe), add credits to balance with audit trail
+    // If paid immediately (Stripe), add credits using creditService for consistency
     if (paymentMethod === 'stripe') {
-      // Get current balance for audit
-      const [currentBalance] = await db
-        .select({ balance: creditBalances.balance })
-        .from(creditBalances)
-        .where(and(
-          eq(creditBalances.userId, userId),
-          eq(creditBalances.creditType, package_.creditType)
-        ));
+      const creditResult = await creditService.addCredits({
+        userId,
+        creditType: package_.creditType,
+        amount: package_.creditsAmount,
+        packageId,
+        description: `Credit purchase: ${package_.name}`,
+      });
 
-      const newBalance = (currentBalance?.balance || 0) + package_.creditsAmount;
-
-      // Update balance
-      await db
-        .insert(creditBalances)
-        .values({
-          userId,
-          creditType: package_.creditType,
-          balance: package_.creditsAmount,
-        })
-        .onConflictDoUpdate({
-          target: [creditBalances.userId, creditBalances.creditType],
-          set: {
-            balance: sql`${creditBalances.balance} + ${package_.creditsAmount}`,
-          },
-        });
-
-      // Create audit transaction
-      await db
-        .insert(creditTransactions)
-        .values({
-          userId,
-          packageId,
-          creditType: package_.creditType,
-          amount: package_.creditsAmount,
-          balanceAfter: newBalance,
-          type: 'purchase',
-          description: `Credit purchase: ${package_.name}`,
-        });
+      if (!creditResult.success) {
+        return NextResponse.json(
+          { error: creditResult.error, code: creditResult.code },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({

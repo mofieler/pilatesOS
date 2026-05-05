@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
-import { bookings, classSessions, creditBalances, creditTransactions } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { requireUserOwnership } from '@/lib/auth/api-auth';
 import { bookingRateLimiter } from '@/lib/security/rate-limiter';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { handleApiError } from '@/lib/security/error-sanitizer';
+import { cancellationService } from '@/modules/booking/services/cancellation.service';
 
 export async function POST(request: Request) {
   // Rate limiting check
@@ -13,7 +11,7 @@ export async function POST(request: Request) {
   if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
-      { 
+      {
         status: 429,
         headers: {
           'X-RateLimit-Reset': rateLimitResult.resetTime?.toString() || ''
@@ -49,95 +47,27 @@ export async function POST(request: Request) {
       details: { requestedUserId: userId }
     });
 
-    // Get the booking details with session startsAt
-    const [row] = await db
-      .select({
-        id: bookings.id,
-        userId: bookings.userId,
-        status: bookings.status,
-        creditsSpent: bookings.creditsSpent,
-        creditType: bookings.creditType,
-        startsAt: classSessions.startsAt,
-      })
-      .from(bookings)
-      .innerJoin(classSessions, eq(bookings.sessionId, classSessions.id))
-      .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)));
+    // Use cancellationService for consistent behavior with server action
+    const result = await cancellationService.cancel(bookingId, userId);
 
-    const booking = row;
-
-    if (!booking) {
-      return NextResponse.json(
-        { error: 'Booking not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check cancellation policy (24 hours before class)
-    const hoursUntilClass = booking.startsAt.getTime() - Date.now();
-    const hoursUntilClassHours = hoursUntilClass / (1000 * 60 * 60);
-    
-    const isLateCancellation = hoursUntilClassHours < 24;
-
-    // For user cancellations within 24 hours, credits are forfeited
-    // This will be handled by the frontend showing a warning modal
-    // We still process the cancellation but don't refund credits
-
-    // Update booking status
-    await db
-      .update(bookings)
-      .set({ 
-        status: 'cancelled',
-        cancelledAt: new Date(),
-      })
-      .where(eq(bookings.id, bookingId));
-
-    // Refund credits (only if cancelled more than 24 hours before class)
-    let creditsRefunded = 0;
-    if (hoursUntilClassHours >= 24) { // More than 24 hours before class
-      creditsRefunded = booking.creditsSpent;
-      
-      // Get current balance before update
-      const [currentBalance] = await db
-        .select({ balance: creditBalances.balance })
-        .from(creditBalances)
-        .where(and(
-          eq(creditBalances.userId, userId),
-          eq(creditBalances.creditType, booking.creditType)
-        ));
-
-      const newBalance = (currentBalance?.balance || 0) + booking.creditsSpent;
-
-      // Add credits back to balance
-      await db
-        .update(creditBalances)
-        .set({
-          balance: newBalance,
-        })
-        .where(and(
-          eq(creditBalances.userId, userId),
-          eq(creditBalances.creditType, booking.creditType)
-        ));
-
-      // Create credit transaction record
-      await db
-        .insert(creditTransactions)
-        .values({
-          userId,
-          bookingId,
-          creditType: booking.creditType,
-          amount: booking.creditsSpent,
-          balanceAfter: newBalance,
-          type: 'refund',
-          description: `Refund for cancelled booking: ${bookingId}`,
-        });
+    if (!result.success) {
+      // Map error codes to appropriate HTTP status
+      let status = 500;
+      switch (result.code) {
+        case 'NOT_FOUND': status = 404; break;
+        case 'UNAUTHORIZED': status = 401; break;
+        case 'ALREADY_CANCELLED': status = 409; break;
+        case 'RATE_LIMITED': status = 429; break;
+        default: status = 500;
+      }
+      return NextResponse.json(result, { status });
     }
 
     return NextResponse.json({
       success: true,
-      creditsRefunded,
-      message: creditsRefunded > 0 
-        ? `${creditsRefunded} credits refunded to your account`
-        : 'Booking cancelled (no refund due to late cancellation)',
+      creditsRefunded: result.data.creditsRefunded,
+      mercyApplied: result.data.mercyApplied,
+      message: result.data.message,
     });
   } catch (error) {
     const errorResponse = handleApiError(error, 'booking-cancel');
