@@ -23,7 +23,11 @@ export const classTemplates = pgTable(
     durationMinutes: integer('duration_minutes').notNull(),
     maxCapacity: integer('max_capacity').notNull(),
     creditCost: integer('credit_cost').notNull(),
-    creditType: creditTypeEnum('credit_type').notNull().default('standard'),
+    // Credit type based on class type:
+    // - mat_group: for group mat classes
+    // - reformer_group: for group reformer classes  
+    // - private_session: for private sessions (1:1 or 1:2)
+    creditType: creditTypeEnum('credit_type').notNull(),
     // [FIX-3] SET NULL — if an instructor is removed, templates survive as orphaned records
     instructorId: uuid('instructor_id').references(() => instructors.id, { onDelete: 'set null' }),
     vibeTags: jsonb('vibe_tags').$type<string[]>().default([]),

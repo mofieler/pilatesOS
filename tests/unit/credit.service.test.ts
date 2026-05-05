@@ -1,0 +1,137 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// vi.hoisted runs before the module graph is resolved, so these
+// values are safe to reference inside the vi.mock factories below.
+const { mockTransaction } = vi.hoisted(() => ({
+  mockTransaction: vi.fn(),
+}));
+
+vi.mock('@/db', () => ({
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    transaction: mockTransaction,
+  },
+}));
+
+vi.mock('@/db/schema', () => ({
+  creditBalances: { userId: 'userId', creditType: 'creditType', id: 'id' },
+  creditTransactions: { userId: 'userId', createdAt: 'createdAt' },
+}));
+
+import { creditService } from '../../src/modules/billing/services/credit.service';
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeTx(balanceRows: unknown[]) {
+  return {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          for: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue(balanceRows),
+          })),
+          orderBy: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })),
+          limit: vi.fn().mockResolvedValue(balanceRows),
+        })),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn().mockResolvedValue(undefined),
+      })),
+    })),
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        returning: vi.fn().mockResolvedValue([
+          {
+            id: 'tx-1',
+            userId: 'user-1',
+            type: 'debit',
+            creditType: 'mat_group',
+            amount: -3,
+            balanceAfter: 7,
+          },
+        ]),
+      })),
+    })),
+  };
+}
+
+describe('creditService.debit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns INVALID_STATE when amount is zero or negative', async () => {
+    const result = await creditService.debit({
+      userId: 'user-1',
+      creditType: 'mat_group',
+      amount: 0,
+      bookingId: 'booking-1',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.code).toBe('INVALID_STATE');
+  });
+
+  it('debits balance and records a credit transaction', async () => {
+    const fakeBalance = { id: 'bal-1', balance: 10 };
+
+    mockTransaction.mockImplementation(
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance])),
+    );
+
+    const result = await creditService.debit({
+      userId: 'user-1',
+      creditType: 'mat_group',
+      amount: 3,
+      bookingId: 'booking-1',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.amount).toBe(-3);
+      expect(result.data.balanceAfter).toBe(7);
+    }
+  });
+
+  it('returns INSUFFICIENT_CREDITS when balance is lower than the debit amount', async () => {
+    const fakeBalance = { id: 'bal-1', balance: 2 };
+
+    mockTransaction.mockImplementation(
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance])),
+    );
+
+    const result = await creditService.debit({
+      userId: 'user-1',
+      creditType: 'mat_group',
+      amount: 5,
+      bookingId: 'booking-1',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.code).toBe('INSUFFICIENT_CREDITS');
+      expect(result.error).toContain('Has: 2');
+      expect(result.error).toContain('Needs: 5');
+    }
+  });
+
+  it('returns INSUFFICIENT_CREDITS when no balance row exists for the user', async () => {
+    mockTransaction.mockImplementation(
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([])),
+    );
+
+    const result = await creditService.debit({
+      userId: 'user-1',
+      creditType: 'mat_group',
+      amount: 1,
+      bookingId: 'booking-1',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.code).toBe('INSUFFICIENT_CREDITS');
+  });
+});

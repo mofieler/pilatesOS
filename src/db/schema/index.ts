@@ -21,7 +21,7 @@ import type { instructors } from './instructors.schema';
 import type { classTemplates, classSessions } from './classes.schema';
 import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
-import type { creditPackages, creditBalances, creditTransactions } from './credits.schema';
+import type { creditPackages, creditBalances, creditTransactions, creditPurchases } from './credits.schema';
 import type {
   userRoleEnum,
   classTypeEnum,
@@ -80,6 +80,9 @@ export type NewCreditBalance = InferInsertModel<typeof creditBalances>;
 
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type NewCreditTransaction = InferInsertModel<typeof creditTransactions>;
+
+export type CreditPurchase = InferSelectModel<typeof creditPurchases>;
+export type NewCreditPurchase = InferInsertModel<typeof creditPurchases>;
 
 // ─── Enum value types — use these instead of raw strings ─────────────────────
 export type UserRole = (typeof userRoleEnum.enumValues)[number];

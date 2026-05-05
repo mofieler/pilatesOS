@@ -3,13 +3,15 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 export const userRoleEnum = pgEnum('user_role', ['student', 'instructor', 'admin']);
 
 export const classTypeEnum = pgEnum('class_type', [
-  'private',
-  'duo',
-  'group',
-  'reformer',
-  'mat',
-  'online',
+  'mat',      // Group mat class
+  'reformer', // Group reformer class
+  'private',  // Private session (1:1 or 1:2)
+  'duo',      // Duo session (2 people)
+  'group',    // General group class
+  'online',   // Online/virtual class
 ]);
+
+export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);
 
 export const intensityLevelEnum = pgEnum('intensity_level', ['low', 'medium', 'high', 'varied']);
 
@@ -34,7 +36,11 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
   'admin_cancelled',
 ]);
 
-export const creditTypeEnum = pgEnum('credit_type', ['standard', 'premium', 'vip']);
+export const creditTypeEnum = pgEnum('credit_type', [
+  'mat_group', 
+  'reformer_group', 
+  'private_session'
+]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [
   'purchase',
@@ -60,6 +66,31 @@ export const waitlistStatusEnum = pgEnum('waitlist_status', [
 ]);
 
 export const guestPassStatusEnum = pgEnum('guest_pass_status', ['active', 'redeemed', 'expired']);
+
+export const paymentMethodEnum = pgEnum('payment_method', [
+  'stripe',
+  'pay_at_studio', 
+  'bank_transfer',
+  'cash',
+  'sound_healing_credits'
+]);
+
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'pending',
+  'paid',
+  'failed',
+  'cancelled',
+  'overdue',
+  'refunded'
+]);
+
+export const creditPackCategoryEnum = pgEnum('credit_pack_category', [
+  'standard',
+  'premium',
+  'vip',
+  'specialty',
+  'wellness'
+]);
 
 export const vodStatusEnum = pgEnum('vod_status', [
   'processing',

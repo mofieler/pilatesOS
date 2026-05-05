@@ -10,7 +10,13 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { creditTypeEnum, creditTransactionTypeEnum } from './enums';
+import { 
+  creditTypeEnum, 
+  creditTransactionTypeEnum, 
+  paymentMethodEnum, 
+  paymentStatusEnum,
+  creditPackCategoryEnum 
+} from './enums';
 import { users } from './users.schema';
 import { bookings } from './bookings.schema';
 
@@ -22,6 +28,7 @@ export const creditPackages = pgTable(
     description: text('description'),
     creditsAmount: integer('credits_amount').notNull(),
     creditType: creditTypeEnum('credit_type').notNull(),
+    category: creditPackCategoryEnum('category').notNull().default('standard'),
     priceCents: integer('price_cents').notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('eur'),
     validityDays: integer('validity_days').notNull().default(365),
@@ -38,6 +45,7 @@ export const creditPackages = pgTable(
   (table) => ({
     isActiveIdx: index('credit_packages_is_active_idx').on(table.isActive),
     creditTypeIdx: index('credit_packages_credit_type_idx').on(table.creditType),
+    categoryIdx: index('credit_packages_category_idx').on(table.category),
   }),
 );
 
@@ -101,5 +109,59 @@ export const creditTransactions = pgTable(
       table.userId,
       table.createdAt,
     ),
+  }),
+);
+
+// Credit purchases with payment tracking (Stripe + Pay at Studio + New Methods)
+export const creditPurchases = pgTable(
+  'credit_purchases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    packageId: uuid('package_id')
+      .notNull()
+      .references(() => creditPackages.id, { onDelete: 'restrict' }),
+    creditsAmount: integer('credits_amount').notNull(),
+    creditType: creditTypeEnum('credit_type').notNull(),
+    priceCents: integer('price_cents').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('eur'),
+    
+    // Payment method with new options including sound healing credits
+    paymentMethod: paymentMethodEnum('payment_method').notNull().default('pay_at_studio'),
+    
+    // Payment status with refunded option
+    paymentStatus: paymentStatusEnum('payment_status').notNull().default('pending'),
+    
+    // Stripe fields (optional, for future Stripe integration)
+    stripeSessionId: varchar('stripe_session_id', { length: 255 }),
+    stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 }),
+    
+    // Pay at studio fields
+    paymentDueDate: timestamp('payment_due_date', { withTimezone: true, mode: 'date' }),
+    paidAt: timestamp('paid_at', { withTimezone: true, mode: 'date' }),
+    paidByUserId: uuid('paid_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    
+    // Processing fee tracking
+    processingFeeCents: integer('processing_fee_cents').default(0),
+    
+    // Admin notes for manual payments
+    adminNotes: text('admin_notes'),
+    
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    userIdIdx: index('credit_purchases_user_id_idx').on(table.userId),
+    packageIdIdx: index('credit_purchases_package_id_idx').on(table.packageId),
+    statusIdx: index('credit_purchases_status_idx').on(table.paymentStatus),
+    methodIdx: index('credit_purchases_method_idx').on(table.paymentMethod),
+    dueDateIdx: index('credit_purchases_due_date_idx').on(table.paymentDueDate),
+    stripeSessionIdx: index('credit_purchases_stripe_session_idx').on(table.stripeSessionId),
   }),
 );
