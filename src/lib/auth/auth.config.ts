@@ -36,13 +36,14 @@ export const authConfig: NextAuthConfig = {
       },
     },
     csrfToken: {
+      // __Host- prefix forbids a Domain attribute, so CSRF stays per-origin
+      // even when AUTH_COOKIE_DOMAIN is set for cross-subdomain session sharing.
       name: process.env.NODE_ENV === 'production' ? '__Host-next-auth.csrf-token' : 'next-auth.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
       },
     },
   },
