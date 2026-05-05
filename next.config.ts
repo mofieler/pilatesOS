@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       // },
     ],
   },
+  // Standalone build: ensure public assets are served correctly
+  assetPrefix: process.env.ASSET_PREFIX || '',
+  // Optimize static assets in standalone mode
+  experimental: {
+    isrMemoryCacheSize: 52 * 1024 * 1024,
+  },
   // Ensure production builds are optimized
   reactStrictMode: true,
   poweredByHeader: false,

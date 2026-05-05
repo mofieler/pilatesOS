@@ -42,6 +42,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Ensure public directory has correct permissions for standalone mode
+RUN chmod -R 755 /app/public 2>/dev/null || true
+
 # Switch to non-root user
 USER nextjs
 
