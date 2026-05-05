@@ -56,36 +56,48 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error('[AUTH] Missing email or password');
           return null;
         }
 
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email as string))
-          .limit(1)
-          .then((rows) => rows[0]);
+        try {
+          const user = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, credentials.email as string))
+            .limit(1)
+            .then((rows) => rows[0]);
 
-        if (!user || !user.passwordHash) {
+          console.log('[AUTH] User found:', user?.email, 'passwordHash exists:', !!user?.passwordHash);
+
+          if (!user || !user.passwordHash) {
+            console.error('[AUTH] User not found or no passwordHash');
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password as string,
+            user.passwordHash,
+          );
+
+          console.log('[AUTH] Password valid:', isPasswordValid);
+
+          if (!isPasswordValid) {
+            console.error('[AUTH] Password mismatch');
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image || user.avatarUrl || undefined,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error('[AUTH] Error:', error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash,
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image || user.avatarUrl || undefined,
-          role: user.role,
-        };
       },
     }),
     Google({
