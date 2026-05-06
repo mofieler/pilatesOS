@@ -27,10 +27,13 @@ function LoginForm() {
 
   useEffect(() => {
     const verified = searchParams.get('verified');
+    const reset = searchParams.get('reset');
     const errorParam = searchParams.get('error');
 
     if (verified === 'true') {
       setInfo('Email verified! You can now sign in.');
+    } else if (reset === 'true') {
+      setInfo('Password reset successfully! You can now sign in.');
     } else if (errorParam === 'expired_token') {
       setError('Verification link expired. Please register again.');
     } else if (errorParam === 'invalid_token') {
@@ -119,6 +122,12 @@ function LoginForm() {
                 : <EyeIcon className="size-5" />}
             </button>
           </div>
+          <a
+            href="/forgot-password"
+            className="text-sm text-[#6b3d32] hover:text-[#4e2b22] transition-colors block mt-2"
+          >
+            Forgot password?
+          </a>
         </div>
 
         {error && (

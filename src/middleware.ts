@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/auth';
 import { addSecurityHeaders } from '@/lib/security/security-headers';
 import '@/lib/config/env-init';
 
-const PUBLIC_PREFIXES = ['/login', '/register', '/verify-email', '/complete-profile'];
+const PUBLIC_PREFIXES = ['/login', '/register', '/verify-email', '/complete-profile', '/forgot-password', '/reset-password'];
 const PUBLIC_EXACT = ['/'];
 
 export async function middleware(request: NextRequest) {
