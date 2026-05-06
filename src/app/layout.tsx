@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   description: "Book your perfect Pilates class experience",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   // Read nonce from header set by middleware for CSP support
-  const headersList = headers();
+  const headersList = await headers();
   const nonce = headersList.get("x-nonce") || undefined;
 
   return (
