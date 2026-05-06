@@ -22,11 +22,9 @@ import type { AdminTemplateRow, InstructorOption } from '@/modules/classes/actio
 import {
   getClassTypeSelectOptions,
   getClassTypeBadgeStyle,
-  getCreditTypeSelectOptions,
   getCreditTypeBadgeStyle,
   getCreditTypeLabel,
   type ClassType,
-  type CreditType,
 } from '@/lib/config/class-types';
 
 // ─── Form types ───────────────────────────────────────────────────────────────
@@ -38,7 +36,7 @@ type FormState = {
   durationMinutes: string;
   maxCapacity: string;
   creditCost: string;
-  creditType: CreditType;
+  creditType?: string;
   instructorId: string;
   location: string;
   isActive: boolean;
@@ -46,7 +44,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', classType: 'reformer', durationMinutes: '60',
-  maxCapacity: '10', creditCost: '1', creditType: 'mat_group',
+  maxCapacity: '10', creditCost: '1', creditType: 'mat_group' as const,
   instructorId: '', location: '', isActive: true,
 };
 
@@ -191,21 +189,6 @@ function TemplateFormDialog({
               <Label htmlFor="tpl-cost" className="text-[#6b3d32] font-medium">Credits per class *</Label>
               <Input id="tpl-cost" type="number" min={1} value={form.creditCost} onChange={set('creditCost')} required />
             </div>
-          </div>
-
-          {/* Credit tier */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tpl-ctype" className="text-[#6b3d32] font-medium">Credit tier *</Label>
-            <select
-              id="tpl-ctype"
-              value={form.creditType}
-              onChange={set('creditType')}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
-            >
-              {getCreditTypeSelectOptions().map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
           </div>
 
           {/* Instructor + location */}
