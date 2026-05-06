@@ -40,6 +40,7 @@ const ArrowRightIcon = () => (
 );
 
 const NAV_LINKS = [
+  { href: '/admin',           label: 'Dashboard', icon: DashboardIcon },
   { href: '/admin/classes',   label: 'Classes',   icon: CalendarIcon },
   { href: '/admin/templates', label: 'Templates', icon: TemplateIcon },
   { href: '/admin/credits',   label: 'Credits',   icon: CoinsIcon },
