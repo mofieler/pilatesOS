@@ -258,7 +258,7 @@ export default async function MyBookingsPage() {
 
   const userId = session.user.id;
   const { upcoming, past } = await getUserBookings(userId);
-  const mercyAvailable = await getMercyAvailable(userId);
+  const mercyAvailable = await getMercyAvailable();
 
   return (
     <div className="space-y-8">

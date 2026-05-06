@@ -2,47 +2,21 @@
 
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
+import { auth } from '@/lib/auth/auth';
 
 /**
- * Check if user still has their one-time "mercy" available.
- * This allows one free late cancellation without penalty.
+ * Check if the current session user still has their one-time "mercy" available.
+ * userId is derived from the session — never accepted from the caller.
  */
-export async function getMercyAvailable(userId: string): Promise<boolean> {
+export async function getMercyAvailable(): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) return false;
+
   const [row] = await db
     .select({ firstMercyUsed: users.firstMercyUsed })
     .from(users)
-    .where(eq(users.id, userId));
+    .where(and(eq(users.id, session.user.id), isNull(users.deletedAt)));
 
   return !row?.firstMercyUsed;
-}
-
-/**
- * Mark the user's one-time mercy as used.
- * Called when they cancel a class and the mercy is applied.
- */
-export async function useMercy(userId: string): Promise<void> {
-  await db
-    .update(users)
-    .set({ firstMercyUsed: true })
-    .where(eq(users.id, userId));
-}
-
-/**
- * Get user profile details.
- */
-export async function getUserProfile(userId: string) {
-  const [row] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      image: users.image,
-      role: users.role,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .where(eq(users.id, userId));
-
-  return row ?? null;
 }
