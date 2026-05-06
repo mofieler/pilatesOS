@@ -2,7 +2,7 @@
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  * 
  * This file serves as the single source of truth for all class and credit types
- * in the Pilates OS application. Any changes to types should be made here only.
+ * in the Pilateq application. Any changes to types should be made here only.
  * 
  * Features:
  * - Type-safe definitions

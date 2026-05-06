@@ -2,7 +2,7 @@
  * CENTRALIZED FINANCIAL CONFIGURATION
  * 
  * This file serves as the single source of truth for all financial configurations
- * including credit packs, payment modalities, and financial types in the Pilates OS.
+ * including credit packs, payment modalities, and financial types in the Pilateq application.
  * 
  * Features:
  * - Type-safe definitions for payment methods

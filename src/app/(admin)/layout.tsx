@@ -40,7 +40,6 @@ const ArrowRightIcon = () => (
 );
 
 const NAV_LINKS = [
-  { href: '/',            label: 'Dashboard',  icon: DashboardIcon },
   { href: '/admin/classes',   label: 'Classes',   icon: CalendarIcon },
   { href: '/admin/templates', label: 'Templates', icon: TemplateIcon },
   { href: '/admin/credits',   label: 'Credits',   icon: CoinsIcon },
@@ -64,8 +63,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Brand + nav links */}
           <div className="flex items-center gap-3">
-            <img src="/logo_transparent.png" alt="Pilates OS" className="h-8 w-auto" />
-            <h1 className="text-xl font-bold text-[#4e2b22]">Pilates OS</h1>
+            <img src="/logo.png" alt="Pilateq" className="h-8 w-auto" />
+            <h1 className="text-xl font-bold text-[#4e2b22]">Pilateq</h1>
             <span className="rounded-full bg-[#4e2b22] px-3 py-1 text-xs font-semibold text-[#faf9f7]">
               Admin
             </span>

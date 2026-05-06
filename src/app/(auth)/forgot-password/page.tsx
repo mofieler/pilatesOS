@@ -34,8 +34,8 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#faf9f7] px-4 py-8">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <img src="/logo_transparent.png" alt="" className="h-16 w-auto mx-auto mb-3" />
-            <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilates OS</h1>
+            <img src="/logo.png" alt="Pilateq" className="h-16 w-auto mx-auto mb-3" />
+            <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilateq</h1>
             <p className="text-[#8b6b5c]">Password recovery</p>
           </div>
 
@@ -62,8 +62,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#faf9f7] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/logo_transparent.png" alt="" className="h-16 w-auto mx-auto mb-3" />
-          <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilates OS</h1>
+          <img src="/logo.png" alt="Pilateq" className="h-16 w-auto mx-auto mb-3" />
+          <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilateq</h1>
           <p className="text-[#8b6b5c]">Forgot your password?</p>
         </div>
 

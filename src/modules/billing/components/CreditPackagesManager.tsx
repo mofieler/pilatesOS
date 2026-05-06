@@ -18,6 +18,7 @@ import {
   updateCreditPackageAction,
   deleteCreditPackageAction,
 } from '@/modules/billing/actions/creditPackage.actions';
+import { getClassTemplatesAdminAction } from '@/modules/classes/actions/class.actions';
 import type { CreditPackage } from '@/db/schema';
 import {
   getCreditTypeLabel,
@@ -33,7 +34,10 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Props = { packages: CreditPackage[] };
+type Props = { 
+  packages: CreditPackage[];
+  availableCreditTypes: CreditType[];
+};
 
 // ─── Package form dialog ──────────────────────────────────────────────────────
 
@@ -181,9 +185,9 @@ function PackageFormDialog({
                 onChange={set('creditType')}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
               >
-                {getCreditTypeSelectOptions().map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {availableCreditTypes.map((creditType) => (
+                  <option key={creditType} value={creditType}>
+                    {getCreditTypeLabel(creditType)}
                   </option>
                 ))}
               </select>
@@ -243,7 +247,7 @@ function PackageFormDialog({
 
 // ─── Public component ─────────────────────────────────────────────────────────
 
-export function CreditPackagesManager({ packages }: Props) {
+export function CreditPackagesManager({ packages, availableCreditTypes }: Props) {
   const [createOpen, setCreateOpen]       = useState(false);
   const [editTarget, setEditTarget]       = useState<CreditPackage | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<CreditPackage | null>(null);
@@ -299,7 +303,7 @@ export function CreditPackagesManager({ packages }: Props) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {packages.length === 0 && (
-              <tr><td colSpan={7} className="py-12 text-center text-sm text-[#8b6b5c]">No packages yet. Create one above.</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-sm text-[#8b6b5c]">No packages yet. Create your first credit package to get started.</td></tr>
             )}
             {packages.map((pkg) => (
               <tr key={pkg.id} className="hover:bg-slate-50">

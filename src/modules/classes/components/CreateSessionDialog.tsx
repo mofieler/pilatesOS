@@ -111,7 +111,9 @@ export function CreateSessionDialog({ templates, instructors }: Props) {
       {/* Trigger */}
       <Button
         onClick={() => setOpen(true)}
-        className="bg-emerald-600 text-white hover:bg-emerald-700"
+        disabled={templates.length === 0}
+        className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        title={templates.length === 0 ? "Create class templates first" : "Schedule a new class"}
       >
         <PlusIcon className="size-4" aria-hidden />
         New Class

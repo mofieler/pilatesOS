@@ -1,8 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
+
+export const viewport: Viewport = {
+  themeColor: '#faf9f7',
+};
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -11,7 +15,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Pilates OS - Boutique Studio Experience",
+  title: "Pilateq - Booking System for Boutique Pilates Studios",
   description: "Book your perfect Pilates class experience",
   icons: {
     icon: [
@@ -27,11 +31,10 @@ export const metadata: Metadata = {
     ],
   },
   manifest: '/site.webmanifest',
-  themeColor: '#faf9f7',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Pilates OS',
+    title: 'Pilateq',
   },
 };
 

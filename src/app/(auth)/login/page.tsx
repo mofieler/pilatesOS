@@ -89,6 +89,7 @@ function LoginForm() {
           <Input
             id="email"
             type="email"
+            autoComplete="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -104,6 +105,7 @@ function LoginForm() {
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -172,8 +174,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#faf9f7] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/logo.png" alt="Pilates OS" className="h-16 w-auto mx-auto mb-3" />
-          <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilates OS</h1>
+          <img src="/logo.png" alt="Pilateq" className="h-16 w-auto mx-auto mb-3" />
+          <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilateq</h1>
           <p className="text-[#8b6b5c]">Sign in to your account</p>
         </div>
         <Suspense>
