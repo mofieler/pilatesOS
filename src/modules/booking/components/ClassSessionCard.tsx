@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 export type ClassSessionCardProps = {
   id: string;
   name: string;
-  classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online';
+  classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online' | 'sound_healing';
   startsAt: Date;
   durationMinutes: number;
   instructorName: string;
@@ -20,7 +20,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session';
+  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -53,6 +53,7 @@ const CLASS_TYPE_LABEL: Record<ClassSessionCardProps['classType'], string> = {
   duo: 'Duo Session',
   group: 'Group Class',
   online: 'Online Class',
+  sound_healing: 'Sound Healing',
 };
 
 const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
@@ -62,18 +63,27 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
   duo: 'Duo',
   group: 'Grp',
   online: 'Web',
+  sound_healing: 'Sound',
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   mat_group: 'bg-[#8b6b5c]',
   reformer_group: 'bg-[#6b8e6b]',
   private_session: 'bg-[#c4a88a]',
+  duo_group: 'bg-[#6366f1]',
+  general_group: 'bg-[#0891b2]',
+  online_class: 'bg-[#ea580c]',
+  sound_healing: 'bg-[#9333ea]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   mat_group: 'Mat Credit',
   reformer_group: 'Reformer Credit',
   private_session: 'Private Session',
+  duo_group: 'Duo Credit',
+  general_group: 'Group Credit',
+  online_class: 'Online Credit',
+  sound_healing: 'Sound Healing Credit',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
