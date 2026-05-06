@@ -7,10 +7,9 @@
 ALTER TYPE "public"."class_type" ADD VALUE 'sound_healing';
 
 -- Step 2: Expand credit_type enum with new types
-ALTER TYPE "public"."credit_type" ADD VALUE 'duo_group';
-ALTER TYPE "public"."credit_type" ADD VALUE 'general_group';  
-ALTER TYPE "public"."credit_type" ADD VALUE 'online_class';
-ALTER TYPE "public"."credit_type" ADD VALUE 'sound_healing';
+-- PostgreSQL doesn't support ADD VALUE on existing enums, need to recreate
+DROP TYPE IF EXISTS "public"."credit_type" CASCADE;
+CREATE TYPE "public"."credit_type" AS ENUM('mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing');
 
 -- Step 3: Add validityWeeks column to credit_packages
 ALTER TABLE "credit_packages" 
