@@ -34,7 +34,7 @@ const CREDIT_TYPE_LABELS = {
   private_session: 'Private Session',
 };
 
-// Fetch credit packages from database
+// Fetch credit packages from API
 async function fetchCreditPackages(): Promise<CreditPackage[]> {
   try {
     const response = await fetch('/api/credit-packages');
@@ -42,59 +42,8 @@ async function fetchCreditPackages(): Promise<CreditPackage[]> {
     return await response.json();
   } catch (error) {
     console.error('Error fetching credit packages:', error);
-    // Fallback to mock data for development
-    return [
-      {
-        id: '1',
-        name: 'Mat Starter Pack',
-        description: '5 group mat classes - perfect for beginners',
-        creditsAmount: 5,
-        creditType: 'mat_group',
-        priceCents: 7500,
-        currency: 'eur',
-        validityDays: 90,
-      },
-      {
-        id: '2',
-        name: 'Mat Regular Pack',
-        description: '10 group mat classes - most popular',
-        creditsAmount: 10,
-        creditType: 'mat_group',
-        priceCents: 14000,
-        currency: 'eur',
-        validityDays: 180,
-      },
-      {
-        id: '3',
-        name: 'Reformer Starter Pack',
-        description: '5 reformer group classes',
-        creditsAmount: 5,
-        creditType: 'reformer_group',
-        priceCents: 10000,
-        currency: 'eur',
-        validityDays: 90,
-      },
-      {
-        id: '4',
-        name: 'Reformer Regular Pack',
-        description: '10 reformer group classes',
-        creditsAmount: 10,
-        creditType: 'reformer_group',
-        priceCents: 18000,
-        currency: 'eur',
-        validityDays: 180,
-      },
-      {
-        id: '5',
-        name: 'Private Session Pack',
-        description: '3 private sessions (1:1 or 1:2)',
-        creditsAmount: 3,
-        creditType: 'private_session',
-        priceCents: 24000,
-        currency: 'eur',
-        validityDays: 365,
-      },
-    ];
+    // Return empty array if fetch fails
+    return [];
   }
 }
 
@@ -246,16 +195,22 @@ export default function CreditsPage() {
   } | null>(null);
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch credit packages on mount
   useEffect(() => {
     fetchCreditPackages().then((data) => {
       setPackages(data);
       setLoading(false);
+      setError(null);
+    }).catch((err) => {
+      setError('Failed to load credit packages. Please try again later.');
+      setLoading(false);
     });
   }, []);
 
   const selectedPkg = packages.find((p) => p.id === selectedPackage);
+  const hasPackages = packages.length > 0;
 
   async function handlePurchase() {
     if (!selectedPkg) return;
@@ -359,31 +314,88 @@ export default function CreditsPage() {
         </p>
       </div>
 
-      {/* Credit Packages */}
-      <section>
-        <div className="flex items-center gap-2.5 mb-4">
-          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
-            <WalletCardsIcon className="size-4" aria-hidden />
-          </span>
-          <h2 className="text-lg font-semibold text-[#4e2b22]">Available Packages</h2>
+      {/* Error State */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
-        {loading ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-[#6b3d32]">Loading packages...</p>
+      )}
+
+      {/* Credit Packages */}
+      {!loading && !error && (
+        <section>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
+              <WalletCardsIcon className="size-4" aria-hidden />
+            </span>
+            <h2 className="text-lg font-semibold text-[#4e2b22]">
+              {hasPackages ? 'Available Packages' : 'No Credit Packages'}
+            </h2>
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {packages.map((pkg) => (
-              <PackageCard
-                key={pkg.id}
-                pkg={pkg}
-                isSelected={selectedPackage === pkg.id}
-                onSelect={() => setSelectedPackage(pkg.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-[#6b3d32]">Loading packages...</p>
+            </div>
+          ) : hasPackages ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {packages.map((pkg) => (
+                <PackageCard
+                  key={pkg.id}
+                  pkg={pkg}
+                  isSelected={selectedPackage === pkg.id}
+                  onSelect={() => setSelectedPackage(pkg.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#ede8e5]/50 bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1] p-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#c4a88a]/20 mb-4">
+                <WalletCardsIcon className="w-8 h-8 text-[#c4a88a]" />
+              </div>
+              <h2 className="text-xl font-semibold text-[#4e2b22] mb-3">No Credit Packages Available</h2>
+              <p className="text-[#6b3d32] mb-6 max-w-md mx-auto">
+                Credit packages haven't been configured yet. Please contact your studio directly to purchase credits.
+              </p>
+              
+              <div className="bg-white/80 rounded-lg p-6 text-left max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold text-[#4e2b22] mb-4">What to do next?</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#4a7c4a]/20 flex items-center justify-center text-sm font-semibold text-[#4a7c4a]">1</div>
+                    <div>
+                      <h4 className="font-medium text-[#4e2b22]">Contact Your Studio</h4>
+                      <p className="text-sm text-[#8b6b5c] mt-1">Reach out to your Pilateq studio to inquire about available credit packages and pricing.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#c4a88a]/20 flex items-center justify-center text-sm font-semibold text-[#c4a88a]">2</div>
+                    <div>
+                      <h4 className="font-medium text-[#4e2b22]">Check Back Later</h4>
+                      <p className="text-sm text-[#8b6b5c] mt-1">Credit packages may be configured soon. Check back periodically for updates.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#4e2b22]/20 flex items-center justify-center text-sm font-semibold text-[#4e2b22]">3</div>
+                    <div>
+                      <h4 className="font-medium text-[#4e2b22]">Visit Studio Website</h4>
+                      <p className="text-sm text-[#8b6b5c] mt-1">Some studios offer online credit purchase through their website.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-[#ede8e5]/50">
+                  <p className="text-xs text-[#8b6b5c]">
+                    <strong>Need help?</strong> Contact your studio administrator for assistance with credit packages and account management.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Payment Method */}
       {selectedPackage && (
