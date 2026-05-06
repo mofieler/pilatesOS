@@ -26,6 +26,7 @@ const BLOCK_BG: Record<ClassType, string> = {
   duo:      'bg-[#7c6b8e]/10 border-[#7c6b8e]/30 text-[#4a3d6b] hover:bg-[#7c6b8e]/20',
   group:    'bg-[#5a8e8b]/10 border-[#5a8e8b]/30 text-[#2e5a58] hover:bg-[#5a8e8b]/20',
   online:   'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200',
+  sound_healing: 'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea] hover:bg-[#9333ea]/20',
 };
 
 const BLOCK_DOT: Record<ClassType, string> = {
@@ -35,6 +36,7 @@ const BLOCK_DOT: Record<ClassType, string> = {
   duo:      'bg-[#7c6b8e]',
   group:    'bg-[#5a8e8b]',
   online:   'bg-slate-400',
+  sound_healing: 'bg-[#9333ea]',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
