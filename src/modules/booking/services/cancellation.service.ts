@@ -6,12 +6,12 @@ import { differenceInHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
 import { creditService } from '@/modules/billing/services/credit.service';
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
+import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
 
 export type { ServiceResult, ServiceErrorCode };
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CANCELLATION_WINDOW_HOURS = 24;
 
 const logger = {
   info: (msg: string, meta?: object) =>

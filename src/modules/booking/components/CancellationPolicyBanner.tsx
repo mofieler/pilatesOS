@@ -1,4 +1,6 @@
 import { differenceInHours } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
 import { AlertTriangleIcon, HeartHandshakeIcon, ShieldCheckIcon } from 'lucide-react';
 
 // ─── Policy resolver ──────────────────────────────────────────────────────────
@@ -11,7 +13,6 @@ export type CancellationPolicy = {
   willReceiveRefund: boolean;
 };
 
-const CANCELLATION_WINDOW_HOURS = 24;
 
 export function resolveCancellationPolicy(
   startsAt: Date,

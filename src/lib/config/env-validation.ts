@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { APP_CONFIG } from '@/constants/APP_CONFIG';
 
 // Environment variable schema with validation
 const envSchema = z.object({
@@ -92,6 +93,6 @@ export const isTest = env.NODE_ENV === 'test';
 export const securityConfig = {
   trustHost: env.AUTH_TRUST_HOST === 'true',
   useSecureCookies: isProduction,
-  allowedOrigins: env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  allowedOrigins: APP_CONFIG.ALLOWED_ORIGINS,
   enableHsts: isProduction,
 } as const;

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
+import { LEGACY_CREDIT_TYPE_LABELS, LEGACY_CREDIT_TYPE_STYLES } from '@/lib/config/class-types';
 
 // Types - match database schema exactly
 interface CreditPackage {
@@ -26,18 +27,6 @@ interface CreditPackage {
 }
 
 type PaymentMethod = 'stripe' | 'pay_at_studio';
-
-const CREDIT_TYPE_COLORS = {
-  mat_group: 'bg-[#6b8e6b]/10 border-[#6b8e6b]/30 text-[#4a7c4a]',
-  reformer_group: 'bg-[#8b5a3c]/10 border-[#c4a88a]/40 text-[#4e2b22]',
-  private_session: 'bg-[#4e2b22]/10 border-[#4e2b22]/20 text-[#4e2b22]',
-};
-
-const CREDIT_TYPE_LABELS = {
-  mat_group: 'Mat Class',
-  reformer_group: 'Reformer Class',
-  private_session: 'Private Session',
-};
 
 // Fetch credit packages from API
 async function fetchCreditPackages(): Promise<CreditPackage[]> {
@@ -116,10 +105,10 @@ function PackageCard({
           variant="outline"
           className={cn(
             'rounded-full px-3 py-1 text-xs font-medium capitalize',
-            CREDIT_TYPE_COLORS[pkg.creditType]
+            LEGACY_CREDIT_TYPE_STYLES[pkg.creditType]
           )}
         >
-          {CREDIT_TYPE_LABELS[pkg.creditType] || pkg.creditType.replace('_', ' ')}
+          {LEGACY_CREDIT_TYPE_LABELS[pkg.creditType] || pkg.creditType.replace('_', ' ')}
         </Badge>
       </div>
 
@@ -473,7 +462,7 @@ export default function CreditsPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-[#6b3d32]">Credits</span>
                 <span className="font-medium text-[#4e2b22]">
-                  {selectedPkg?.creditsAmount} {CREDIT_TYPE_LABELS[selectedPkg?.creditType || 'mat_group'] || selectedPkg?.creditType?.replace('_', ' ') || 'credits'}
+                  {selectedPkg?.creditsAmount} {LEGACY_CREDIT_TYPE_LABELS[selectedPkg?.creditType || 'mat_group'] || selectedPkg?.creditType?.replace('_', ' ') || 'credits'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">

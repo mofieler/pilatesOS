@@ -1,4 +1,6 @@
 import { Resend } from 'resend';
+import React from 'react';
+import { APP_CONFIG } from '@/constants/APP_CONFIG';
 
 // Lazy init — avoids module-load crash when RESEND_API_KEY is not set
 let _resend: Resend | null = null;
@@ -13,7 +15,7 @@ function getResend(): Resend {
 }
 
 const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+const APP_URL = APP_CONFIG.APP_URL;
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Pilateq';
 
 // Brand Colors - matching the app's brown palette

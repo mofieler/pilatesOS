@@ -13,9 +13,11 @@ import {
   Banknote,
   Calendar,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { LEGACY_CREDIT_TYPE_LABELS, LEGACY_CREDIT_TYPE_STYLES } from '@/lib/config/class-types';
 
 // Types
 interface CreditPurchase {
@@ -97,17 +99,6 @@ const STATUS_CONFIG = {
   },
 };
 
-const CREDIT_TYPE_COLORS = {
-  mat_group: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  reformer_group: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  private_session: 'bg-[#4e2b22]/10 text-[#4e2b22]',
-};
-
-const CREDIT_TYPE_LABELS = {
-  mat_group: 'Mat Class',
-  reformer_group: 'Reformer Class',
-  private_session: 'Private Session',
-};
 
 function formatPrice(cents: number, currency: string): string {
   return new Intl.NumberFormat('de-DE', {
@@ -184,10 +175,10 @@ function PurchaseRow({
               variant="outline"
               className={cn(
                 'text-xs rounded-full',
-                CREDIT_TYPE_COLORS[purchase.creditType]
+                LEGACY_CREDIT_TYPE_STYLES[purchase.creditType]
               )}
             >
-              {CREDIT_TYPE_LABELS[purchase.creditType]}
+              {LEGACY_CREDIT_TYPE_LABELS[purchase.creditType]}
             </Badge>
             <span className="text-sm text-[#6b3d32]">{purchase.packageName}</span>
             <span className="text-sm font-medium text-[#4e2b22]">

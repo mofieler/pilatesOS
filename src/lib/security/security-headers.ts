@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { APP_CONFIG } from '@/constants/APP_CONFIG';
 
 export function addSecurityHeaders(request: NextRequest, response: NextResponse) {
   // CSP without nonces — mixing nonces + unsafe-inline causes browsers to ignore
@@ -29,7 +31,7 @@ export function addSecurityHeaders(request: NextRequest, response: NextResponse)
   }
 
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+    const allowedOrigins = APP_CONFIG.ALLOWED_ORIGINS;
     response.headers.set('Access-Control-Allow-Origin', allowedOrigins[0]);
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
