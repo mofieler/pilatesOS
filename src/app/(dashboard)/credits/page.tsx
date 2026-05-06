@@ -430,8 +430,8 @@ export default function CreditsPage() {
               </div>
               <div className="border-t border-[#ede8e5] pt-2 mt-2">
                 <div className="flex justify-between">
-                  <span className="font-semibold text-primary">Total</span>
-                  <span className="font-bold text-lg text-primary">
+                  <span className="font-semibold text-[#4e2b22]">Total</span>
+                  <span className="font-bold text-lg text-[#4e2b22]">
                     {selectedPkg && formatPrice(selectedPkg.priceCents, selectedPkg.currency)}
                   </span>
                 </div>

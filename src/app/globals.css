@@ -160,16 +160,6 @@
     @apply font-sans;
   }
   
-  /* Consistent text patterns */
-  .text-primary { color: var(--text-primary); }
-  .text-secondary { color: var(--text-secondary); }
-  .text-muted { color: var(--text-muted); }
-  .text-subtle { color: var(--text-subtle); }
-  .text-inverse { color: var(--text-inverse); }
-  .text-success { color: var(--text-success); }
-  .text-warning { color: var(--text-warning); }
-  .text-error { color: var(--text-error); }
-  
   /* Heading hierarchy */
   h1, h2, h3, h4, h5, h6 {
     @apply text-primary font-semibold;
@@ -210,6 +200,17 @@
 
 /* Glassmorphism Card Styles */
 @layer utilities {
+  /* Override Tailwind's color-based text utilities with our semantic text colors.
+     Must be in @layer utilities (not base) so they win the cascade. */
+  .text-primary { color: var(--text-primary) !important; }
+  .text-secondary { color: var(--text-secondary) !important; }
+  .text-muted { color: var(--text-muted) !important; }
+  .text-subtle { color: var(--text-subtle) !important; }
+  .text-inverse { color: var(--text-inverse) !important; }
+  .text-success { color: var(--text-success) !important; }
+  .text-warning { color: var(--text-warning) !important; }
+  .text-error { color: var(--text-error) !important; }
+
   .glass-card {
     background: var(--glass-bg);
     backdrop-filter: blur(20px) saturate(180%);

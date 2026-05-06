@@ -274,19 +274,19 @@ export default async function MyBookingsPage() {
       {/* Stats Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-[#ede8e5]/80 bg-gradient-to-br from-[#faf9f7]/80 to-[#ede8e5]/40 p-5">
-          <p className="text-sm text-muted">Upcoming</p>
+          <p className="text-sm font-medium text-secondary">Upcoming</p>
           <p className="text-2xl font-bold text-primary">{upcoming.length}</p>
           <p className="text-xs text-muted">Classes booked</p>
         </div>
         <div className="rounded-2xl border border-[#ede8e5]/80 bg-gradient-to-br from-[#faf9f7]/80 to-[#ede8e5]/40 p-5">
-          <p className="text-sm text-muted">Past 30 Days</p>
+          <p className="text-sm font-medium text-secondary">Past 30 Days</p>
           <p className="text-2xl font-bold text-primary">
             {past.filter((b) => b.startsAt > addDays(new Date(), -30)).length}
           </p>
           <p className="text-xs text-muted">Classes attended</p>
         </div>
         <div className="rounded-2xl border border-[#ede8e5]/80 bg-gradient-to-br from-[#faf9f7]/80 to-[#ede8e5]/40 p-5">
-          <p className="text-sm text-muted">Total</p>
+          <p className="text-sm font-medium text-secondary">Total</p>
           <p className="text-2xl font-bold text-primary">{upcoming.length + past.length}</p>
           <p className="text-xs text-muted">All-time bookings</p>
         </div>
