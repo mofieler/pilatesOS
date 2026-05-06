@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 
-// Types
+// Types - match database schema exactly
 interface CreditPackage {
   id: string;
   name: string;
@@ -19,6 +19,10 @@ interface CreditPackage {
   priceCents: number;
   currency: string;
   validityDays: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 type PaymentMethod = 'stripe' | 'pay_at_studio';
@@ -38,9 +42,28 @@ const CREDIT_TYPE_LABELS = {
 // Fetch credit packages from API
 async function fetchCreditPackages(): Promise<CreditPackage[]> {
   try {
-    const response = await fetch('/api/credit-packages');
-    if (!response.ok) throw new Error('Failed to fetch packages');
-    return await response.json();
+    const response = await fetch('/api/credit-packages', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Ensure fresh data
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to fetch packages (${response.status})`);
+    }
+    
+    const data = await response.json();
+    
+    // Validate response is an array
+    if (!Array.isArray(data)) {
+      console.error('Invalid API response:', data);
+      return [];
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error fetching credit packages:', error);
     // Return empty array if fetch fails
@@ -96,7 +119,7 @@ function PackageCard({
             CREDIT_TYPE_COLORS[pkg.creditType]
           )}
         >
-          {CREDIT_TYPE_LABELS[pkg.creditType]}
+          {CREDIT_TYPE_LABELS[pkg.creditType] || pkg.creditType.replace('_', ' ')}
         </Badge>
       </div>
 
@@ -450,7 +473,7 @@ export default function CreditsPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-[#6b3d32]">Credits</span>
                 <span className="font-medium text-[#4e2b22]">
-                  {selectedPkg?.creditsAmount} {CREDIT_TYPE_LABELS[selectedPkg?.creditType || 'mat_group']}
+                  {selectedPkg?.creditsAmount} {CREDIT_TYPE_LABELS[selectedPkg?.creditType || 'mat_group'] || selectedPkg?.creditType?.replace('_', ' ') || 'credits'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
