@@ -30,13 +30,13 @@ async function getDashboardStats() {
       )
     );
 
-  // Active students count (users with role 'user' who are not deleted)
+  // Active students count (users with role 'student' who are not deleted)
   const [activeStudentsResult] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(users)
     .where(
       and(
-        eq(users.role, 'user'),
+        eq(users.role, 'student'),
         isNull(users.deletedAt)
       )
     );
@@ -64,7 +64,7 @@ async function getDashboardStats() {
       className: classTemplates.name,
     })
     .from(bookings)
-    .leftJoin(classSessions, eq(bookings.classSessionId, classSessions.id))
+    .leftJoin(classSessions, eq(bookings.sessionId, classSessions.id))
     .leftJoin(classTemplates, eq(classSessions.templateId, classTemplates.id))
     .orderBy(desc(bookings.createdAt))
     .limit(5);
