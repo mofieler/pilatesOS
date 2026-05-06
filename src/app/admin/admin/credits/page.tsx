@@ -29,15 +29,15 @@ export default async function CreditsPage() {
         </p>
       </div>
 
-      {/* Error State */}
-      {!packagesResult.success && (
+      {/* Error State - only show if there's an actual error and packages exist */}
+      {!packagesResult.success && packages.length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Failed to load packages: {packagesResult.error}
         </div>
       )}
 
       {/* Empty State */}
-      {isEmpty && packagesResult.success && (
+      {isEmpty && (
         <div className="rounded-xl border border-[#ede8e5]/50 bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1] p-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#c4a88a]/20 mb-4">
             <Package2Icon className="w-8 h-8 text-[#c4a88a]" />
@@ -95,8 +95,8 @@ export default async function CreditsPage() {
         </div>
       )}
 
-      {/* Credit Packages Manager */}
-      {!isEmpty && packagesResult.success && (
+      {/* Credit Packages Manager - show even on error so users can create packages */}
+      {!isEmpty && (
         <CreditPackagesManager packages={packages} availableCreditTypes={availableCreditTypes} />
       )}
     </div>
