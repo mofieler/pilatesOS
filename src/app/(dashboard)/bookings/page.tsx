@@ -119,6 +119,10 @@ function BookingCard({
     mat_group: 'Mat Credit',
     reformer_group: 'Reformer Credit',
     private_session: 'Private Session',
+    duo_group: 'Duo Credit',
+    general_group: 'Group Credit',
+    online_class: 'Online Credit',
+    sound_healing: 'Sound Healing Credit',
   }[booking.creditType];
 
   return (
