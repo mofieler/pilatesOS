@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth';
 import { addSecurityHeaders } from '@/lib/security/security-headers';
-import '@/lib/config/env-init'; // Initialize environment validation
+import '@/lib/config/env-init';
 
-// Routes that anyone can visit without a session
-const PUBLIC_PREFIXES = ['/login', '/register'];
-// The exact landing page is also public
+const PUBLIC_PREFIXES = ['/login', '/register', '/verify-email', '/complete-profile'];
 const PUBLIC_EXACT = ['/'];
 
 export async function middleware(request: NextRequest) {
@@ -16,29 +14,34 @@ export async function middleware(request: NextRequest) {
     PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (isPublic) {
-  const response = NextResponse.next();
-  return addSecurityHeaders(request, response);
+    return addSecurityHeaders(request, NextResponse.next());
   }
 
-  // Everything else requires a valid session
   const session = await auth();
+
   if (!session?.user) {
     const loginUrl = new URL('/login', request.url);
-    const response = NextResponse.redirect(loginUrl);
-    return addSecurityHeaders(request, response);
+    return addSecurityHeaders(request, NextResponse.redirect(loginUrl));
   }
 
-  // /admin/* additionally requires admin or instructor role
+  // New Google OAuth users must complete their profile first
+  const needsProfileCompletion = (session.user as any).needsProfileCompletion;
+  if (needsProfileCompletion && !pathname.startsWith('/complete-profile')) {
+    return addSecurityHeaders(
+      request,
+      NextResponse.redirect(new URL('/complete-profile', request.url)),
+    );
+  }
+
+  // /admin/* requires admin or instructor role
   if (pathname.startsWith('/admin')) {
     const role = session.user.role as string | undefined;
     if (role !== 'admin' && role !== 'instructor') {
-      const response = NextResponse.redirect(new URL('/', request.url));
-      return addSecurityHeaders(request, response);
+      return addSecurityHeaders(request, NextResponse.redirect(new URL('/', request.url)));
     }
   }
 
-  const response = NextResponse.next();
-  return addSecurityHeaders(request, response);
+  return addSecurityHeaders(request, NextResponse.next());
 }
 
 export const config = {

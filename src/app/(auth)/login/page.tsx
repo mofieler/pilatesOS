@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,14 +14,30 @@ function roleRedirect(role: string | undefined | null): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    const errorParam = searchParams.get('error');
+
+    if (verified === 'true') {
+      setInfo('Email verified! You can now sign in.');
+    } else if (errorParam === 'expired_token') {
+      setError('Verification link expired. Please register again.');
+    } else if (errorParam === 'invalid_token') {
+      setError('Invalid verification link.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
 
     try {
@@ -32,12 +48,13 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(
+          'Invalid email or password. If you just registered, please check your email for a verification link.',
+        );
         return;
       }
 
       if (result?.ok) {
-        // Read the fresh session to get the user's role
         const session = await getSession();
         router.push(roleRedirect(session?.user?.role as string | undefined));
       }
@@ -57,7 +74,16 @@ export default function LoginPage() {
           <p className="text-[#8b6b5c]">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 bg-gradient-to-br from-[#ede8e5]/60 to-[#faf9f7]/80 p-6 rounded-2xl border border-[#ede8e5]/80 shadow-[0_4px_20px_rgba(78,43,34,0.04)] backdrop-blur-sm">
+        {info && (
+          <p className="text-sm text-[#4a7c4a] bg-[#6b8e6b]/10 border border-[#6b8e6b]/20 p-3 rounded-xl mb-4 text-center">
+            {info}
+          </p>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 bg-gradient-to-br from-[#ede8e5]/60 to-[#faf9f7]/80 p-6 rounded-2xl border border-[#ede8e5]/80 shadow-[0_4px_20px_rgba(78,43,34,0.04)] backdrop-blur-sm"
+        >
           <div>
             <Label htmlFor="email" className="text-[#4e2b22] font-medium">Email</Label>
             <Input
@@ -86,7 +112,9 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-[#c45c4a] bg-[#c45c4a]/10 p-3 rounded-xl">{error}</p>}
+          {error && (
+            <p className="text-sm text-[#c45c4a] bg-[#c45c4a]/10 p-3 rounded-xl">{error}</p>
+          )}
 
           <Button type="submit" variant="boutique" className="w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign In'}
@@ -101,16 +129,19 @@ export default function LoginPage() {
 
         <Button
           variant="outline"
-          className="w-full mt-6 border-[#ede8e5] bg-[#faf9f7]/60 text-[#4e2b22] hover:bg-[#ede8e5]/60 rounded-xl"
+          className="w-full mt-4 border-[#ede8e5] bg-[#faf9f7]/60 text-[#4e2b22] hover:bg-[#ede8e5]/60 rounded-xl"
           onClick={() => signIn('google', { redirect: true, redirectTo: '/' })}
           disabled={loading}
         >
-          Sign in with Google
+          Continue with Google
         </Button>
 
         <p className="text-sm text-[#8b6b5c] text-center mt-6">
           Don&apos;t have an account?{' '}
-          <a href="/register" className="text-[#4e2b22] font-semibold hover:text-[#6b3d32] transition-colors">
+          <a
+            href="/register"
+            className="text-[#4e2b22] font-semibold hover:text-[#6b3d32] transition-colors"
+          >
             Sign up
           </a>
         </p>
