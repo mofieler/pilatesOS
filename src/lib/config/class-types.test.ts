@@ -31,7 +31,7 @@ import {
 describe('Class Types Configuration', () => {
   describe('Type Definitions', () => {
     it('should have all expected class types', () => {
-      const expectedTypes: ClassType[] = ['mat', 'reformer', 'private', 'duo', 'group', 'online'];
+      const expectedTypes: ClassType[] = ['mat', 'reformer', 'private', 'duo', 'group', 'online', 'sound_healing'];
       expect(getClassTypeValues()).toEqual(expectedTypes);
     });
 
@@ -179,7 +179,7 @@ describe('Class Types Configuration', () => {
         expect(config).toHaveProperty('description');
         expect(config).toHaveProperty('badgeStyle');
         expect(config).toHaveProperty('associatedClassType');
-        expect(['mat', 'reformer', 'private', 'duo', 'group', 'online']).toContain(config.associatedClassType);
+        expect(['mat', 'reformer', 'private', 'duo', 'group', 'online', 'sound_healing']).toContain(config.associatedClassType);
       });
     });
   });
