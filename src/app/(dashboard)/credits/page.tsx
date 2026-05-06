@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, addDays } from 'date-fns';
-import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon } from 'lucide-react';
+import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
 
 // Types
 interface CreditPackage {
@@ -185,6 +186,7 @@ function PaymentMethodCard({
 
 export default function CreditsPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay_at_studio');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -196,6 +198,7 @@ export default function CreditsPage() {
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   // Fetch credit packages on mount
   useEffect(() => {
@@ -213,30 +216,35 @@ export default function CreditsPage() {
   const hasPackages = packages.length > 0;
 
   async function handlePurchase() {
-    if (!selectedPkg) return;
+    if (!selectedPkg || !session?.user?.id) {
+      setPurchaseError('Authentication required. Please sign in.');
+      return;
+    }
 
     setIsProcessing(true);
+    setPurchaseError(null);
 
     try {
-      // Get current user ID (this would come from auth context)
-      // For now, using a mock user ID
-      const userId = 'mock-user-id';
-
       const response = await fetch('/api/credit-purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageId: selectedPkg.id,
-          userId,
+          userId: session.user.id,
           paymentMethod,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Purchase failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Purchase failed (${response.status})`);
       }
 
       const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Purchase failed');
+      }
 
       setPurchaseDetails({
         packageName: selectedPkg.name,
@@ -245,7 +253,7 @@ export default function CreditsPage() {
       setPurchaseComplete(true);
     } catch (error) {
       console.error('Purchase failed:', error);
-      // Show error message to user
+      setPurchaseError(error instanceof Error ? error.message : 'Purchase failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -397,6 +405,17 @@ export default function CreditsPage() {
         </section>
       )}
 
+      {/* Purchase Error */}
+      {purchaseError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Purchase Error</p>
+            <p>{purchaseError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Payment Method */}
       {selectedPackage && (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -464,9 +483,9 @@ export default function CreditsPage() {
               variant="boutique"
               className="w-full"
               onClick={handlePurchase}
-              disabled={isProcessing}
+              disabled={isProcessing || status !== 'authenticated'}
             >
-              {isProcessing ? 'Processing...' : 'Complete Purchase'}
+              {isProcessing ? 'Processing...' : status !== 'authenticated' ? 'Please sign in' : 'Complete Purchase'}
             </Button>
           </div>
         </section>
