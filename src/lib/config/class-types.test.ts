@@ -36,7 +36,7 @@ describe('Class Types Configuration', () => {
     });
 
     it('should have all expected credit types', () => {
-      const expectedTypes: CreditType[] = ['mat_group', 'reformer_group', 'private_session'];
+      const expectedTypes: CreditType[] = ['mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing'];
       expect(getCreditTypeValues()).toEqual(expectedTypes);
     });
   });

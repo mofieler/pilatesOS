@@ -285,11 +285,19 @@ export const LEGACY_CLASS_TYPE_OPTIONS = [
 export const LEGACY_CREDIT_TYPE_LABELS = { 
   mat_group: 'Mat Class', 
   reformer_group: 'Reformer Class', 
-  private_session: 'Private Session' 
+  private_session: 'Private Session',
+  duo_group: 'Duo Class',
+  general_group: 'Group Class',
+  online_class: 'Online Class',
+  sound_healing: 'Sound Healing'
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES = {
   mat_group: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
   reformer_group: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
   private_session: 'bg-[#4e2b22]/10 text-[#4e2b22]',
+  duo_group: 'bg-[#6366f1]/10 text-white',
+  general_group: 'bg-[#0891b2]/10 text-white',
+  online_class: 'bg-[#ea580c]/10 text-white',
+  sound_healing: 'bg-[#9333ea]/10 text-white',
 };

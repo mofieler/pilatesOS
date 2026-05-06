@@ -31,12 +31,20 @@ const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   mat_group:       'bg-[#8b6b5c]',
   reformer_group:  'bg-[#6b8e6b]',
   private_session: 'bg-[#c4a88a]',
+  duo_group:       'bg-[#6366f1]',
+  general_group:   'bg-[#0891b2]',
+  online_class:     'bg-[#ea580c]',
+  sound_healing:   'bg-[#9333ea]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   mat_group:       'Mat Credit',
   reformer_group:  'Reformer Credit',
   private_session: 'Private Session',
+  duo_group:       'Duo Credit',
+  general_group:   'Group Credit',
+  online_class:     'Online Credit',
+  sound_healing:   'Sound Healing Credit',
 };
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {

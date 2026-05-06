@@ -404,7 +404,7 @@ const updateClassTemplateSchema = z.object({
   durationMinutes: z.number().int().positive().optional(),
   maxCapacity:     z.number().int().positive().optional(),
   creditCost:      z.number().int().positive().optional(),
-  creditType:      z.enum(['mat_group', 'reformer_group', 'private_session']).optional(),
+  creditType:      z.enum(['mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing']).optional(),
   instructorId:    z.string().uuid().nullable().optional(),
   location:        z.string().max(255).nullable().optional(),
   isActive:        z.boolean().optional(),

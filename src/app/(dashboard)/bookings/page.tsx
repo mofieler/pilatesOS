@@ -17,7 +17,7 @@ type BookingWithDetails = {
   sessionId: string;
   status: 'confirmed' | 'cancelled' | 'attended' | 'no_show' | 'waitlisted';
   creditsSpent: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session';
+  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
   name: string;
   classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online';
   durationMinutes: number;

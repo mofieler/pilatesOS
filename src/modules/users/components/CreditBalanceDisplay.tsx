@@ -123,7 +123,7 @@ function CreditCard({ balance }: { balance: CreditBalance }) {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session'];
+  const ALL_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing'];
 
   // Ensure all three tiers are always shown, even if balance row doesn't exist yet
   const filled = ALL_TYPES.map(

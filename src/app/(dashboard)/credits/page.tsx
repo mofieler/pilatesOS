@@ -16,7 +16,7 @@ interface CreditPackage {
   name: string;
   description: string | null;
   creditsAmount: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session';
+  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
   priceCents: number;
   currency: string;
   validityDays: number;
