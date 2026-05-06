@@ -1,7 +1,8 @@
 import {
   getAdminSessionsAction,
-  getClassTemplatesAction,
+  getClassTemplatesAdminAction,
   getInstructorsAction,
+  type AdminTemplateRow,
 } from '@/modules/classes/actions/class.actions';
 import {
   SessionsDataTable,
@@ -31,7 +32,7 @@ function toSessionRow(session: AdminSession): SessionRow {
 export default async function ClassesPage() {
   const [sessionsResult, templatesResult, instructorsResult] = await Promise.all([
     getAdminSessionsAction(),
-    getClassTemplatesAction(),
+    getClassTemplatesAdminAction(),
     getInstructorsAction(),
   ]);
 
