@@ -1,50 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { requireAdminRole } from '@/lib/auth/api-auth';
 
 const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
+  // Hard gate: this endpoint runs `npm run db:migrate` via shell exec.
+  // Even with admin auth it must never be reachable in production —
+  // migrations belong in the deploy pipeline, not the web request path.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_RUNTIME_MIGRATE !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const authResult = await requireAdminRole(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     console.log('[MIGRATE] Starting database migration...');
-    console.log('[MIGRATE] Working directory:', process.cwd());
-    console.log('[MIGRATE] Environment check:', {
-      DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
-      NODE_ENV: process.env.NODE_ENV
-    });
-    
-    // Use npm only (always available in production)
+
     const command = 'npm run db:migrate';
     const { stdout, stderr } = await execAsync(command, {
       cwd: process.cwd(),
-      env: { ...process.env }
+      env: { ...process.env },
     });
-    
+
     console.log('[MIGRATE] Migration stdout:', stdout);
     if (stderr) console.log('[MIGRATE] Migration stderr:', stderr);
-    
-    console.log('[MIGRATE] Database migration completed successfully!');
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: 'Database migration completed successfully',
       stdout: stdout.trim(),
-      command: command
+      command,
     });
-    
   } catch (error) {
     console.error('[MIGRATE] Migration failed:', error);
-    
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: {
-        message: (error as any).message,
-        code: (error as any).code,
-        signal: (error as any).signal,
-        stdout: (error as any).stdout,
-        stderr: (error as any).stderr
-      }
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
+    );
   }
 }
