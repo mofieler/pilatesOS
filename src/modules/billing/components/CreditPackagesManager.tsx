@@ -75,11 +75,12 @@ function fromPackage(p: CreditPackage): FormState {
 }
 
 function PackageFormDialog({
-  open, onOpenChange, editingPackage,
+  open, onOpenChange, editingPackage, availableCreditTypes,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editingPackage: CreditPackage | null;
+  availableCreditTypes: CreditType[];
 }) {
   const isEdit = editingPackage !== null;
   const [form, setForm] = useState<FormState>(
@@ -359,8 +360,8 @@ export function CreditPackagesManager({ packages, availableCreditTypes }: Props)
       </div>
 
       {/* Dialogs */}
-      <PackageFormDialog open={createOpen} onOpenChange={setCreateOpen} editingPackage={null} />
-      <PackageFormDialog open={editTarget !== null} onOpenChange={(v) => { if (!v) setEditTarget(null); }} editingPackage={editTarget} />
+      <PackageFormDialog open={createOpen} onOpenChange={setCreateOpen} editingPackage={null} availableCreditTypes={availableCreditTypes} />
+      <PackageFormDialog open={editTarget !== null} onOpenChange={(v) => { if (!v) setEditTarget(null); }} editingPackage={editTarget} availableCreditTypes={availableCreditTypes} />
 
       <AlertDialog open={deleteTarget !== null} onOpenChange={(v) => { if (!v && !deleting) { setDeleteTarget(null); setDeleteError(null); } }}>
         <AlertDialogContent>
