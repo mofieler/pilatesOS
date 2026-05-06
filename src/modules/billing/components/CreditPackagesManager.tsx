@@ -48,7 +48,7 @@ type FormState = {
   creditType: CreditType;
   category: CreditPackCategory;
   priceEur: string;
-  validityDays: string;
+  validityWeeks: string;
   sortOrder: string;
   isActive: boolean;
   stripePriceId: string;
@@ -56,7 +56,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', creditsAmount: '', creditType: 'mat_group', category: 'standard',
-  priceEur: '', validityDays: '365', sortOrder: '0', isActive: true, stripePriceId: '',
+  priceEur: '', validityWeeks: '52', sortOrder: '0', isActive: true, stripePriceId: '',
 };
 
 function fromPackage(p: CreditPackage): FormState {
@@ -67,7 +67,7 @@ function fromPackage(p: CreditPackage): FormState {
     creditType:    p.creditType,
     category:      p.category || 'standard',
     priceEur:      (p.priceCents / 100).toFixed(2),
-    validityDays:  String(p.validityDays),
+    validityWeeks: String((p as any).validityWeeks || Math.ceil((p as any).validityDays / 7) || 52),
     sortOrder:     String(p.sortOrder),
     isActive:      p.isActive,
     stripePriceId: p.stripePriceId ?? '',
@@ -107,12 +107,13 @@ function PackageFormDialog({
 
     const creditsAmount = parseInt(form.creditsAmount, 10);
     const priceCents    = Math.round(parseFloat(form.priceEur) * 100);
-    const validityDays  = parseInt(form.validityDays, 10);
+    const validityWeeks = parseInt(form.validityWeeks, 10);
+    const validityDays  = validityWeeks * 7; // Calculate days from weeks
     const sortOrder     = parseInt(form.sortOrder, 10);
 
     if (isNaN(creditsAmount) || creditsAmount < 1) { setError('Credits must be a positive whole number.'); return; }
     if (isNaN(priceCents)    || priceCents < 0)    { setError('Price must be 0 or more.'); return; }
-    if (isNaN(validityDays)  || validityDays < 1)  { setError('Validity days must be positive.'); return; }
+    if (isNaN(validityWeeks) || validityWeeks < 1)  { setError('Validity weeks must be positive.'); return; }
 
     startTransition(async () => {
       const payload = {
@@ -124,6 +125,7 @@ function PackageFormDialog({
         priceCents,
         currency:      'eur',
         validityDays,
+        validityWeeks,
         sortOrder:     isNaN(sortOrder) ? 0 : sortOrder,
         isActive:      form.isActive,
         stripePriceId: form.stripePriceId || null,
@@ -202,8 +204,9 @@ function PackageFormDialog({
               <Input id="pkg-price" type="number" min={0} step="0.01" value={form.priceEur} onChange={set('priceEur')} required placeholder="89.00" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pkg-validity" className="text-[#6b3d32] font-medium">Validity (days) *</Label>
-              <Input id="pkg-validity" type="number" min={1} value={form.validityDays} onChange={set('validityDays')} required />
+              <Label htmlFor="pkg-validity-weeks" className="text-[#6b3d32] font-medium">Validity (weeks) *</Label>
+              <Input id="pkg-validity-weeks" type="number" min={1} value={form.validityWeeks} onChange={set('validityWeeks')} required />
+              <p className="text-xs text-[#8b6b5c] mt-1">Credits will expire after {form.validityWeeks} week(s) ({parseInt(form.validityWeeks) * 7} days)</p>
             </div>
           </div>
 

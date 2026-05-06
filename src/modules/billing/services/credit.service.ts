@@ -192,19 +192,32 @@ export const creditService = {
     const [current] = await tx
       .select()
       .from(creditBalances)
-      .where(and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, creditType)))
+      .where(
+        and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, creditType)),
+      )
       .for('update')
       .limit(1);
 
-    const currentAmount = current?.balance ?? 0;
-
-    if (currentAmount < amount) {
+    if (!current) {
       throw new InsufficientCreditsError(
-        `Insufficient ${creditType} credits. Has: ${currentAmount}, Needs: ${amount}`,
+        `No ${creditType} credits found for user ${userId}`,
       );
     }
 
-    const newBalance = currentAmount - amount;
+    // Check if credits are expired
+    if (current.expiresAt && new Date() > current.expiresAt) {
+      throw new InsufficientCreditsError(
+        `${creditType} credits expired on ${current.expiresAt.toLocaleDateString()}`,
+      );
+    }
+
+    if (current.balance < amount) {
+      throw new InsufficientCreditsError(
+        `Insufficient ${creditType} credits. Has: ${current.balance}, Needs: ${amount}`,
+      );
+    }
+
+    const newBalance = current.balance - amount;
 
     await tx
       .update(creditBalances)
@@ -295,7 +308,7 @@ export const creditService = {
    * The guard is stubbed here until stripeTransactions is added in Phase 2.
    */
   async addCredits(params: CreditAddParams): Promise<ServiceResult<CreditTransaction>> {
-    const { userId, creditType, amount, packageId, expiresAt, description } = params;
+    const { userId, creditType, amount, packageId, validityWeeks, description } = params;
 
     if (amount <= 0) {
       return { success: false, error: 'Amount must be positive.', code: 'INVALID_STATE' };
@@ -305,6 +318,13 @@ export const creditService = {
       const result = await db.transaction(async (tx) => {
         // [FIX-5] Phase 2 TODO: add stripeTransactions FOR UPDATE idempotency check here
         // before any balance mutation when stripeCheckoutSessionId is present.
+
+        // Calculate expiry date from validityWeeks if provided
+        let calculatedExpiresAt: Date | null = null;
+        if (validityWeeks && validityWeeks > 0) {
+          calculatedExpiresAt = new Date();
+          calculatedExpiresAt.setDate(calculatedExpiresAt.getDate() + (validityWeeks * 7));
+        }
 
         const [existing] = await tx
           .select()
@@ -323,7 +343,7 @@ export const creditService = {
             .update(creditBalances)
             .set({
               balance: newBalance,
-              expiresAt: expiresAt ?? existing.expiresAt,
+              expiresAt: calculatedExpiresAt ?? existing.expiresAt,
               updatedAt: new Date(),
             })
             .where(eq(creditBalances.id, existing.id));
@@ -333,7 +353,7 @@ export const creditService = {
             userId,
             creditType,
             balance: newBalance,
-            expiresAt: expiresAt ?? null,
+            expiresAt: calculatedExpiresAt,
           });
         }
 

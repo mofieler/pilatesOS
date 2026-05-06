@@ -32,6 +32,7 @@ export const creditPackages = pgTable(
     priceCents: integer('price_cents').notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('eur'),
     validityDays: integer('validity_days').notNull().default(365),
+    validityWeeks: integer('validity_weeks').notNull().default(52),
     stripePriceId: varchar('stripe_price_id', { length: 255 }),
     isActive: boolean('is_active').notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),

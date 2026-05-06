@@ -13,8 +13,8 @@
 
 // ─── TYPE DEFINITIONS ────────────────────────────────────────────────────────
 
-export type ClassType = 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online';
-export type CreditType = 'mat_group' | 'reformer_group' | 'private_session';
+export type ClassType = 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online' | 'sound_healing';
+export type CreditType = 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -85,6 +85,14 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
     defaultDuration: 60,
     defaultCapacity: 20,
   },
+  sound_healing: {
+    value: 'sound_healing',
+    label: 'Sound Healing',
+    description: 'Therapeutic sound healing session',
+    badgeStyle: 'bg-purple-100 text-purple-800',
+    defaultDuration: 60,
+    defaultCapacity: 1,
+  },
 } as const;
 
 // ─── CREDIT TYPES CONFIGURATION ─────────────────────────────────────────────────
@@ -110,6 +118,34 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
     description: 'Credits for private sessions',
     badgeStyle: 'bg-[#4e2b22]/10 text-[#4e2b22]',
     associatedClassType: 'private',
+  },
+  duo_group: {
+    value: 'duo_group',
+    label: 'Duo Session Credits',
+    description: 'Credits for duo sessions',
+    badgeStyle: 'bg-[#6366f1]/10 text-[#4c1d95]',
+    associatedClassType: 'duo',
+  },
+  general_group: {
+    value: 'general_group',
+    label: 'General Group Credits',
+    description: 'Credits for general group classes',
+    badgeStyle: 'bg-[#0891b2]/10 text-[#0e7490]',
+    associatedClassType: 'group',
+  },
+  online_class: {
+    value: 'online_class',
+    label: 'Online Class Credits',
+    description: 'Credits for online classes',
+    badgeStyle: 'bg-[#ea580c]/10 text-[#c2410c]',
+    associatedClassType: 'online',
+  },
+  sound_healing: {
+    value: 'sound_healing',
+    label: 'Sound Healing Credits',
+    description: 'Credits for sound healing sessions',
+    badgeStyle: 'bg-[#9333ea]/10 text-[#7c3aed]',
+    associatedClassType: 'sound_healing',
   },
 } as const;
 

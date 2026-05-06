@@ -9,6 +9,7 @@ export const classTypeEnum = pgEnum('class_type', [
   'duo',      // Duo session (2 people)
   'group',    // General group class
   'online',   // Online/virtual class
+  'sound_healing', // Sound healing session
 ]);
 
 export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);
@@ -39,7 +40,11 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 export const creditTypeEnum = pgEnum('credit_type', [
   'mat_group', 
   'reformer_group', 
-  'private_session'
+  'private_session',
+  'duo_group',
+  'general_group',
+  'online_class',
+  'sound_healing'
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [
