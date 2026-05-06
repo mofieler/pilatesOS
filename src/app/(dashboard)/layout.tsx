@@ -61,7 +61,7 @@ export default async function DashboardLayout({ children }:  { children: React.R
               href="/"
               className="flex items-center gap-2 text-base font-bold tracking-tight text-[#4e2b22] hover:text-[#6b3d32] transition-colors"
             >
-              <img src="/logo_transparent.png" alt="Pilates OS" className="h-8 w-auto" />
+              <img src="/logo.png" alt="Pilates OS" className="h-8 w-auto" />
               Pilates OS
             </Link>
 

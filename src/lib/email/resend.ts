@@ -14,7 +14,7 @@ function getResend(): Resend {
 
 const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Pilates OS';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Pilateq';
 
 // Brand Colors - matching the app's brown palette
 const COLORS = {
@@ -130,7 +130,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
                   <td style="text-align: center;">
                     <!-- Logo placeholder - can be replaced with actual logo image -->
                     <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #faf9f7; letter-spacing: -0.5px; text-transform: none;">${APP_NAME}</h1>
-                    <p style="margin: 8px 0 0; font-size: 13px; color: ${COLORS.accent}; font-weight: 400; letter-spacing: 0.3px;">Ihr Boutique Pilates Studio</p>
+                    <p style="margin: 8px 0 0; font-size: 13px; color: ${COLORS.accent}; font-weight: 400; letter-spacing: 0.3px;">Boutique Pilates Studio Booking System</p>
                   </td>
                 </tr>
               </table>
@@ -193,10 +193,10 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
           <tr>
             <td class="footer-bg" style="background-color: ${COLORS.background}; padding: 24px 40px; text-align: center; border-top: 1px solid ${COLORS.border};" class="border-color">
               <p class="text-muted" style="margin: 0 0 8px; font-size: 12px; color: ${COLORS.textLighter};">
-                &copy; ${new Date().getFullYear()} ${APP_NAME}. Alle Rechte vorbehalten.
+                &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
               </p>
               <p class="text-muted" style="margin: 0; font-size: 11px; color: ${COLORS.textLighter};">
-                Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht darauf.
+                This email was sent automatically. Please do not reply.
               </p>
             </td>
           </tr>
@@ -208,9 +208,9 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
           <tr>
             <td style="text-align: center; padding: 0 20px;">
               <p style="margin: 0; font-size: 12px; color: ${COLORS.textLighter};">
-                <a href="${APP_URL}" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: none;">Website besuchen</a>
+                <a href="${APP_URL}" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: none;">Visit website</a>
                 <span style="margin: 0 8px; color: ${COLORS.border};">|</span>
-                <a href="${APP_URL}/privacy" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: none;">Datenschutz</a>
+                <a href="${APP_URL}/privacy" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: none;">Privacy</a>
               </p>
             </td>
           </tr>
@@ -238,15 +238,15 @@ export async function sendVerificationEmail(
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `E-Mail bestätigen – ${APP_NAME}`,
+    subject: `Verify your email – ${APP_NAME}`,
     html: buildBaseTemplate({
-      subject: 'E-Mail bestätigen',
-      title: 'E-Mail-Adresse bestätigen',
-      greeting: `Hallo ${name},`,
-      body: `willkommen bei ${APP_NAME}! Bitte bestätigen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren und alle Funktionen nutzen zu können.`,
+      subject: 'Verify email',
+      title: 'Verify your email address',
+      greeting: `Hi ${name},`,
+      body: `welcome to ${APP_NAME}! Please verify your email address to activate your account and access all features.`,
       actionUrl: link,
-      actionText: 'E-Mail bestätigen',
-      expiryText: 'Dieser Link läuft in <strong>24 Stunden</strong> ab. Falls Sie kein Konto erstellt haben, können Sie diese E-Mail ignorieren.',
+      actionText: 'Verify email',
+      expiryText: 'This link expires in <strong>24 hours</strong>. If you did not create an account, you can ignore this email.',
     }),
   });
 }
@@ -261,16 +261,16 @@ export async function sendPasswordResetEmail(
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `Passwort zurücksetzen – ${APP_NAME}`,
+    subject: `Reset your password – ${APP_NAME}`,
     html: buildBaseTemplate({
-      subject: 'Passwort zurücksetzen',
-      title: 'Passwort zurücksetzen',
-      greeting: `Hallo ${name},`,
-      body: 'wir haben eine Anfrage zum Zurücksetzen Ihres Passworts erhalten. Klicken Sie auf die Schaltfläche unten, um ein neues Passwort zu erstellen.',
+      subject: 'Reset password',
+      title: 'Reset password',
+      greeting: `Hi ${name},`,
+      body: 'we received a request to reset your password. Click the button below to create a new password.',
       actionUrl: link,
-      actionText: 'Passwort zurücksetzen',
-      expiryText: 'Dieser Link läuft in <strong>1 Stunde</strong> ab. Falls Sie keine Zurücksetzung angefordert haben, ignorieren Sie diese E-Mail bitte.',
-      footerText: 'Aus Sicherheitsgründen wird Ihr Passwort nicht geändert, wenn Sie nicht auf den Link klicken.',
+      actionText: 'Reset password',
+      expiryText: 'This link expires in <strong>1 hour</strong>. If you did not request a reset, please ignore this email.',
+      footerText: 'For security reasons, your password will not be changed unless you click the link.',
     }),
   });
 }
@@ -293,10 +293,10 @@ export async function sendNotificationEmail(
     html: buildBaseTemplate({
       subject,
       title,
-      greeting: 'Guten Tag,',
+      greeting: 'Hello,'
       body: message,
       actionUrl: actionUrl ?? APP_URL,
-      actionText: actionText ?? 'Jetzt ansehen',
+      actionText: actionText ?? 'View now',
       expiryText: '',
     }),
   });
@@ -317,15 +317,15 @@ export async function sendBookingConfirmationEmail(
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `Buchungsbestätigung – ${APP_NAME}`,
+    subject: `Booking confirmation – ${APP_NAME}`,
     html: buildBaseTemplate({
-      subject: 'Buchungsbestätigung',
-      title: 'Ihr Kurs ist bestätigt',
-      greeting: `Hallo ${name},`,
-      body: `Ihr Kurs <strong>"${classTitle}"</strong> am <strong>${classDate}</strong> um <strong>${classTime}</strong> wurde erfolgreich gebucht.`,
+      subject: 'Booking confirmation',
+      title: 'Your class is confirmed',
+      greeting: `Hi ${name},`,
+      body: `Your class <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> at <strong>${classTime}</strong> has been successfully booked.`,
       actionUrl: link,
-      actionText: 'Meine Kurse ansehen',
-      expiryText: 'Bitte kommen Sie mindestens 10 Minuten vor Kursbeginn. Bei Verhinderung stornieren Sie bitte frühzeitig.',
+      actionText: 'View my classes',
+      expiryText: 'Please arrive at least 10 minutes before class starts. If you cannot attend, please cancel early.',
     }),
   });
 }
@@ -344,15 +344,15 @@ export async function sendBookingCancellationEmail(
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `Stornierungsbestätigung – ${APP_NAME}`,
+    subject: `Cancellation confirmation – ${APP_NAME}`,
     html: buildBaseTemplate({
-      subject: 'Stornierungsbestätigung',
-      title: 'Kurs storniert',
-      greeting: `Hallo ${name},`,
-      body: `Ihr Kurs <strong>"${classTitle}"</strong> am <strong>${classDate}</strong> wurde erfolgreich storniert.`,
+      subject: 'Cancellation confirmation',
+      title: 'Class cancelled',
+      greeting: `Hi ${name},`,
+      body: `Your class <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> has been successfully cancelled.`,
       actionUrl: link,
-      actionText: 'Neuen Kurs buchen',
-      expiryText: 'Ihr Guthaben wurde Ihrem Konto gutgeschrieben und steht Ihnen für zukünftige Buchungen zur Verfügung.',
+      actionText: 'Book a new class',
+      expiryText: 'Your credit has been added to your account and is available for future bookings.',
     }),
   });
 }
@@ -369,15 +369,15 @@ export async function sendWelcomeEmail(
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `Willkommen – ${APP_NAME}`,
+    subject: `Welcome – ${APP_NAME}`,
     html: buildBaseTemplate({
-      subject: 'Willkommen',
-      title: `Willkommen bei ${APP_NAME}`,
-      greeting: `Hallo ${name},`,
-      body: `schön, dass Sie da sind! Ihr Konto ist jetzt vollständig eingerichtet. Entdecken Sie unsere Kursangebote und buchen Sie Ihre erste Pilates-Stunde.`,
+      subject: 'Welcome',
+      title: `Welcome to ${APP_NAME}`,
+      greeting: `Hi ${name},`,
+      body: `great to have you here! Your account is now fully set up. Explore our class offerings and book your first Pilates session.`,
       actionUrl: link,
-      actionText: 'Kurse entdecken',
-      expiryText: 'Haben Sie Fragen? Antworten Sie einfach auf diese E-Mail oder besuchen Sie uns im Studio.',
+      actionText: 'Explore classes',
+      expiryText: 'Have questions? Simply reply to this email or visit us at the studio.',
     }),
   });
 }

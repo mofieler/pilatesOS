@@ -3,16 +3,26 @@ import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
 import { and, eq, gt } from 'drizzle-orm';
 
+// Get app URL from env or fallback to request URL
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+function getRedirectUrl(path: string, request: NextRequest): string {
+  // Use configured app URL if available, otherwise use request origin
+  const baseUrl = APP_URL || request.nextUrl.origin;
+  return new URL(path, baseUrl).toString();
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const token = searchParams.get('token');
   const identifier = searchParams.get('identifier');
 
-  const invalid = (reason: string) =>
-    NextResponse.redirect(new URL(`/login?error=${reason}`, request.url));
+  // Invalid or missing parameters
+  if (!token || !identifier) {
+    return NextResponse.redirect(getRedirectUrl('/verification-failed?reason=invalid', request));
+  }
 
-  if (!token || !identifier) return invalid('invalid_token');
-
+  // Check if token exists and is valid
   const tokenRecord = await db
     .select()
     .from(verificationTokens)
@@ -26,7 +36,10 @@ export async function GET(request: NextRequest) {
     .limit(1)
     .then((rows) => rows[0]);
 
-  if (!tokenRecord) return invalid('expired_token');
+  // Token not found or expired
+  if (!tokenRecord) {
+    return NextResponse.redirect(getRedirectUrl('/verification-failed?reason=expired', request));
+  }
 
   // Mark email verified and delete the used token atomically
   await db.transaction(async (tx) => {
@@ -45,5 +58,6 @@ export async function GET(request: NextRequest) {
       );
   });
 
-  return NextResponse.redirect(new URL('/login?verified=true', request.url));
+  // Success - redirect to styled success page
+  return NextResponse.redirect(getRedirectUrl('/email-verified', request));
 }
