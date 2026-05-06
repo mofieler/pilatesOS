@@ -41,10 +41,10 @@ const ArrowRightIcon = () => (
 
 const NAV_LINKS = [
   { href: '/admin',           label: 'Dashboard', icon: DashboardIcon },
-  { href: '/admin/classes',   label: 'Classes',   icon: CalendarIcon },
-  { href: '/admin/templates', label: 'Templates', icon: TemplateIcon },
-  { href: '/admin/credits',   label: 'Credits',   icon: CoinsIcon },
-  { href: '/admin/payments',  label: 'Payments',  icon: PaymentIcon },
+  { href: '/admin/admin/classes',   label: 'Classes',   icon: CalendarIcon },
+  { href: '/admin/admin/templates', label: 'Templates', icon: TemplateIcon },
+  { href: '/admin/admin/credits',   label: 'Credits',   icon: CoinsIcon },
+  { href: '/admin/admin/payments',  label: 'Payments',  icon: PaymentIcon },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
