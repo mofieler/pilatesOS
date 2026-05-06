@@ -334,15 +334,15 @@ export default function CreditsPage() {
         </p>
       </div>
 
-      {/* Error State */}
-      {error && (
+      {/* Error State - only show if there's an actual error and packages exist */}
+      {error && packages.length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {/* Credit Packages */}
-      {!loading && !error && (
+      {!loading && (
         <section>
           <div className="flex items-center gap-2.5 mb-4">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
