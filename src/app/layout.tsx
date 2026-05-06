@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
-import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -15,15 +14,11 @@ export const metadata: Metadata = {
   description: "Book your perfect Pilates class experience",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Read nonce from header set by middleware for CSP support
-  const headersList = await headers();
-  const nonce = headersList.get("x-nonce") || undefined;
-
   return (
     <html
       lang="en"
