@@ -293,7 +293,7 @@ export async function sendNotificationEmail(
     html: buildBaseTemplate({
       subject,
       title,
-      greeting: 'Hello,'
+      greeting: 'Hello,',
       body: message,
       actionUrl: actionUrl ?? APP_URL,
       actionText: actionText ?? 'View now',
