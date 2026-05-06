@@ -6,10 +6,12 @@ export function addSecurityHeaders(request: NextRequest, response: NextResponse)
 
   // Content Security Policy - Prevents XSS and data injection
   // Build CSP with proper template literal for nonce interpolation
+  // Note: 'unsafe-inline' and 'unsafe-eval' are required for Next.js to function properly
+  // 'strict-dynamic' is kept for modern browsers that support it, with fallbacks for older ones
   const cspHeader = [
     "default-src 'self';",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https:;`,
-    `style-src 'self' 'nonce-${nonce}' https:;`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' https:;`,
+    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https:;`,
     "img-src 'self' blob: data: https:;",
     "font-src 'self' https:;",
     "object-src 'none';",
