@@ -7,7 +7,6 @@ import { requireUserOwnership } from '@/lib/auth/api-auth';
 import { purchaseRateLimiter } from '@/lib/security/rate-limiter';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { handleApiError } from '@/lib/security/error-sanitizer';
-import { creditService } from '@/modules/billing/services/credit.service';
 
 export async function POST(request: Request) {
   console.log('Credit purchase request received');
@@ -60,8 +59,13 @@ export async function POST(request: Request) {
       details: { packageId, paymentMethod }
     });
 
-    // Validate payment method
-    if (!['stripe', 'pay_at_studio'].includes(paymentMethod)) {
+    // Validate payment method.
+    // 'stripe' is intentionally rejected here: this route is the client-initiated
+    // path. Stripe purchases must originate from a Checkout Session and be
+    // confirmed by the Stripe webhook (which is the only place credits may be
+    // granted for a Stripe payment). Without that webhook, allowing 'stripe' here
+    // is a free-credits exploit — the client could just claim it paid.
+    if (paymentMethod !== 'pay_at_studio') {
       return NextResponse.json(
         { error: 'Invalid payment method' },
         { status: 400 }
@@ -85,18 +89,9 @@ export async function POST(request: Request) {
     
     console.log('Package found:', package_.name, '-', package_.creditsAmount, package_.creditType, 'credits');
 
-    // For Stripe payments, verify payment status (in real implementation)
-    // For now, we'll assume payment is verified if paymentMethod is 'stripe'
-    if (paymentMethod === 'stripe') {
-      // TODO: Add actual Stripe payment verification here
-      // const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
-      // if (paymentIntent.status !== 'succeeded') {
-      //   return NextResponse.json({ error: 'Payment not verified' }, { status: 400 });
-      // }
-    }
-
-    // Create the purchase record
-    console.log('Creating purchase record with payment method:', paymentMethod);
+    // Create the pay-at-studio purchase record. Credits are NOT granted yet —
+    // they are added by the admin marking the purchase paid (see
+    // updateCreditPurchaseAction).
     const purchase = await db
       .insert(creditPurchases)
       .values({
@@ -107,44 +102,18 @@ export async function POST(request: Request) {
         priceCents: package_.priceCents,
         currency: package_.currency,
         paymentMethod,
-        paymentStatus: paymentMethod === 'pay_at_studio' ? 'pending' : 'paid',
-        paymentDueDate: paymentMethod === 'pay_at_studio' ? addDays(new Date(), 14) : null,
-        paidAt: paymentMethod === 'stripe' ? new Date() : null,
+        paymentStatus: 'pending',
+        paymentDueDate: addDays(new Date(), 14),
+        paidAt: null,
       })
       .returning();
-    
+
     console.log('Purchase record created:', purchase[0].id);
-
-    // If paid immediately (Stripe), add credits using creditService for consistency
-    if (paymentMethod === 'stripe') {
-      console.log('Adding credits for Stripe payment');
-      const creditResult = await creditService.addCredits({
-        userId,
-        creditType: package_.creditType,
-        amount: package_.creditsAmount,
-        packageId,
-        description: `Credit purchase: ${package_.name}`,
-      });
-
-      if (!creditResult.success) {
-        console.error('Failed to add credits:', creditResult.error);
-        return NextResponse.json(
-          { error: creditResult.error, code: creditResult.code },
-          { status: 500 }
-        );
-      }
-      
-      console.log('Credits added successfully');
-    } else {
-      console.log('Payment method is pay_at_studio - credits will be added after payment confirmation');
-    }
 
     const response = {
       success: true,
       purchase: purchase[0],
-      dueDate: paymentMethod === 'pay_at_studio' 
-        ? addDays(new Date(), 14).toISOString()
-        : null,
+      dueDate: addDays(new Date(), 14).toISOString(),
     };
     
     console.log('Purchase completed successfully:', { 
