@@ -15,9 +15,9 @@ export type UpcomingBookingsListProps = {
 export type UpcomingBooking = {
   bookingId: string;
   creditsSpent: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session';
+  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
   name: string;
-  classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online';
+  classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online' | 'sound_healing';
   startsAt: Date;
   durationMinutes: number;
   location: string | null;
@@ -34,12 +34,17 @@ const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
   duo: 'Duo Session',
   group: 'Group Class',
   online: 'Online Class',
+  sound_healing: 'Sound Healing',
 };
 
 const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {
   mat_group: 'bg-[#6b8e6b]',
   reformer_group: 'bg-[#8b5a3c]',
   private_session: 'bg-[#c4a88a]',
+  duo_group: 'bg-[#6366f1]',
+  general_group: 'bg-[#0891b2]',
+  online_class: 'bg-[#ea580c]',
+  sound_healing: 'bg-[#9333ea]',
 };
 
 function dateLabel(date: Date): string {
