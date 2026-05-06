@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, Suspense } from 'react';
 import { signIn, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -174,7 +175,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#faf9f7] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/logo.png" alt="Pilateq" className="h-16 w-auto mx-auto mb-3" />
+          <Image 
+              src="/logo.png" 
+              alt="Pilateq" 
+              width={64}
+              height={64}
+              className="h-16 w-auto mx-auto mb-3" 
+              priority={true}
+            />
           <h1 className="text-4xl font-bold text-[#4e2b22] mb-2">Pilateq</h1>
           <p className="text-[#8b6b5c]">Sign in to your account</p>
         </div>
