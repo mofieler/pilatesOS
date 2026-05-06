@@ -2,7 +2,7 @@
 
 import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '@/lib/email/resend';
@@ -19,8 +19,7 @@ export async function forgotPasswordAction(formData: { email: string }) {
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.email, validated.data.email))
-      .where(isNull(users.deletedAt))
+      .where(and(eq(users.email, validated.data.email), isNull(users.deletedAt)))
       .limit(1)
       .then((r) => r[0]);
 
