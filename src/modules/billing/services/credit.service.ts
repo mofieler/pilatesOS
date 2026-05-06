@@ -50,6 +50,7 @@ export type CreditAddParams = {
   amount: number;
   packageId?: string;
   expiresAt?: Date;
+  validityWeeks?: number;
   description?: string;
   // [FIX-5] Required for Stripe webhook calls — prevents double-crediting on retries.
   // Phase 2: wired to stripeTransactions FOR UPDATE idempotency guard.
