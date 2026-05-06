@@ -1,7 +1,6 @@
 import { getCreditPackagesAction } from '@/modules/billing/actions/creditPackage.actions';
 import { getClassTemplatesAdminAction } from '@/modules/classes/actions/class.actions';
 import { CreditPackagesManager } from '@/modules/billing/components/CreditPackagesManager';
-import { Package2Icon } from 'lucide-react';
 import type { CreditType } from '@/lib/config/class-types';
 
 export default async function CreditsPage() {
@@ -12,7 +11,6 @@ export default async function CreditsPage() {
   
   const packages = packagesResult.success ? packagesResult.data : [];
   const templates = templatesResult.success ? templatesResult.data : [];
-  const isEmpty = packages.length === 0;
   
   // Extract unique credit types from templates
   const availableCreditTypes = Array.from(
