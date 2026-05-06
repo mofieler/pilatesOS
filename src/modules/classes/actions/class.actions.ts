@@ -400,7 +400,7 @@ const updateClassTemplateSchema = z.object({
   id:              z.string().uuid(),
   name:            z.string().min(1).max(255).optional(),
   description:     z.string().max(1000).optional().nullable(),
-  classType:       z.enum(['private', 'duo', 'group', 'reformer', 'mat', 'online']).optional(),
+  classType:       z.enum(['private', 'duo', 'group', 'reformer', 'mat', 'online', 'sound_healing']).optional(),
   durationMinutes: z.number().int().positive().optional(),
   maxCapacity:     z.number().int().positive().optional(),
   creditCost:      z.number().int().positive().optional(),
