@@ -25,8 +25,8 @@ async function getDashboardStats() {
     .from(classSessions)
     .where(
       and(
-        gte(classSessions.startTime, today),
-        lt(classSessions.startTime, tomorrow)
+        gte(classSessions.startsAt, today),
+        lt(classSessions.startsAt, tomorrow)
       )
     );
 
