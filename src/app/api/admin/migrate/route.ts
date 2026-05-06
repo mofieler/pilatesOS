@@ -13,46 +13,24 @@ export async function POST(request: NextRequest) {
       NODE_ENV: process.env.NODE_ENV
     });
     
-    // Try npm first, fallback to pnpm
-    let command = 'npm run db:migrate';
-    try {
-      const { stdout, stderr } = await execAsync(command, {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
-      
-      console.log('[MIGRATE] Migration stdout:', stdout);
-      if (stderr) console.log('[MIGRATE] Migration stderr:', stderr);
-      
-      console.log('[MIGRATE] Database migration completed successfully!');
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Database migration completed successfully',
-        stdout: stdout.trim(),
-        command: command
-      });
-    } catch (npmError) {
-      console.log('[MIGRATE] npm failed, trying pnpm...');
-      
-      command = 'pnpm db:migrate';
-      const { stdout, stderr } = await execAsync(command, {
-        cwd: process.cwd(),
-        env: { ...process.env }
-      });
-      
-      console.log('[MIGRATE] Migration stdout:', stdout);
-      if (stderr) console.log('[MIGRATE] Migration stderr:', stderr);
-      
-      console.log('[MIGRATE] Database migration completed successfully!');
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Database migration completed successfully',
-        stdout: stdout.trim(),
-        command: command
-      });
-    }
+    // Use npm only (always available in production)
+    const command = 'npm run db:migrate';
+    const { stdout, stderr } = await execAsync(command, {
+      cwd: process.cwd(),
+      env: { ...process.env }
+    });
+    
+    console.log('[MIGRATE] Migration stdout:', stdout);
+    if (stderr) console.log('[MIGRATE] Migration stderr:', stderr);
+    
+    console.log('[MIGRATE] Database migration completed successfully!');
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Database migration completed successfully',
+      stdout: stdout.trim(),
+      command: command
+    });
     
   } catch (error) {
     console.error('[MIGRATE] Migration failed:', error);
