@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -19,6 +20,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read nonce from header set by middleware for CSP support
+  const headersList = headers();
+  const nonce = headersList.get("x-nonce") || undefined;
+
   return (
     <html
       lang="en"
