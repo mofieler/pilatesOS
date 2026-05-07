@@ -5,6 +5,7 @@ export * from './classes.schema';
 export * from './bookings.schema';
 export * from './waitlist.schema';
 export * from './credits.schema';
+export * from './waivers.schema';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export * from './enums';
@@ -22,6 +23,7 @@ import type { classTemplates, classSessions } from './classes.schema';
 import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
 import type { creditPackages, creditBalances, creditTransactions, creditPurchases } from './credits.schema';
+import type { waivers } from './waivers.schema';
 import type {
   userRoleEnum,
   classTypeEnum,
@@ -83,6 +85,10 @@ export type NewCreditTransaction = InferInsertModel<typeof creditTransactions>;
 
 export type CreditPurchase = InferSelectModel<typeof creditPurchases>;
 export type NewCreditPurchase = InferInsertModel<typeof creditPurchases>;
+
+// Waivers
+export type Waiver = InferSelectModel<typeof waivers>;
+export type NewWaiver = InferInsertModel<typeof waivers>;
 
 // ─── Enum value types — use these instead of raw strings ─────────────────────
 export type UserRole = (typeof userRoleEnum.enumValues)[number];

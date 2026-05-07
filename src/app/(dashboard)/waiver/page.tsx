@@ -6,6 +6,7 @@ import { ShieldIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signWaiverAction } from '@/modules/users/actions/waiver.action';
@@ -14,18 +15,29 @@ export default function WaiverPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [acknowledged, setAcknowledged] = useState(false);
+  const [signedName, setSignedName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const trimmedName = signedName.trim();
+  const canSubmit = acknowledged && trimmedName.length >= 2;
 
   function handleSubmit() {
     if (!acknowledged) {
       setError('Please acknowledge the waiver to continue');
       return;
     }
+    if (trimmedName.length < 2) {
+      setError('Please type your full legal name as your signature');
+      return;
+    }
 
     setError(null);
     startTransition(async () => {
-      const result = await signWaiverAction({ acknowledged });
+      const result = await signWaiverAction({
+        acknowledged,
+        signedName: trimmedName,
+      });
 
       if (result.success) {
         setSuccess(true);
@@ -112,6 +124,25 @@ export default function WaiverPage() {
                   </p>
                 </div>
               </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="signedName" className="text-sm font-medium">
+                  Type your full legal name as your signature
+                </Label>
+                <Input
+                  id="signedName"
+                  value={signedName}
+                  onChange={(e) => setSignedName(e.target.value)}
+                  disabled={isPending}
+                  placeholder="Jane Doe"
+                  autoComplete="name"
+                />
+                <p className="text-xs text-muted-foreground">
+                  By typing your name above and clicking Sign Waiver below, you
+                  consent to using an electronic signature with the same legal
+                  effect as a handwritten signature.
+                </p>
+              </div>
             </>
           )}
         </CardContent>
@@ -120,7 +151,7 @@ export default function WaiverPage() {
           <CardFooter>
             <Button
               onClick={handleSubmit}
-              disabled={!acknowledged || isPending}
+              disabled={!canSubmit || isPending}
               className="w-full"
             >
               {isPending ? 'Processing...' : 'Sign Waiver & Continue'}

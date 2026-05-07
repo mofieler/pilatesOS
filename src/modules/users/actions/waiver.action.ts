@@ -2,26 +2,39 @@
 
 import { z } from 'zod';
 import { db } from '@/db';
-import { users } from '@/db/schema';
+import { users, waivers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
+import { resolveClientIP } from '@/lib/security/client-ip';
+import { WAIVER_VERSION } from '@/constants/BOOKING_RULES';
 
 const signWaiverSchema = z.object({
   acknowledged: z.boolean().refine((val) => val === true, {
     message: 'You must acknowledge the waiver to continue',
   }),
+  signedName: z
+    .string()
+    .min(2, 'Please type your full legal name')
+    .max(255),
 });
 
 export type SignWaiverInput = z.infer<typeof signWaiverSchema>;
 
 /**
- * Sign the liability waiver
- * MVP: Simple flag update. Phase 2: Store IP, timestamp, version in waivers table.
+ * Sign the liability waiver.
+ *
+ * Persists an immutable row in the `waivers` table with the typed name, the
+ * version of the waiver text being signed, the timestamp, and the request's
+ * IP and user agent. Also flips users.hasSignedWaiver for fast lookups by
+ * the booking action's gate.
+ *
+ * Both writes happen in a single transaction so the flag and the audit row
+ * cannot diverge.
  */
 export async function signWaiverAction(input: unknown) {
   try {
-    // Auth check
     const session = await auth();
     if (!session?.user?.id) {
       return {
@@ -31,26 +44,34 @@ export async function signWaiverAction(input: unknown) {
       };
     }
 
-    // Validate input
     const validated = signWaiverSchema.safeParse(input);
     if (!validated.success) {
       return {
         success: false,
-        error: 'Please acknowledge the waiver to continue',
+        error: validated.error.issues[0]?.message ?? 'Invalid input',
         code: 'INVALID_STATE',
       };
     }
 
-    // Update user record
-    await db
-      .update(users)
-      .set({
-        hasSignedWaiver: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, session.user.id));
+    const headersList = await headers();
+    const resolvedIp = resolveClientIP(headersList);
+    const userAgent = headersList.get('user-agent');
 
-    // Revalidate paths to update UI
+    await db.transaction(async (tx) => {
+      await tx.insert(waivers).values({
+        userId: session.user.id,
+        waiverVersion: WAIVER_VERSION,
+        signedName: validated.data.signedName,
+        ipAddress: resolvedIp === 'untrusted' ? null : resolvedIp,
+        userAgent: userAgent ?? null,
+      });
+
+      await tx
+        .update(users)
+        .set({ hasSignedWaiver: true, updatedAt: new Date() })
+        .where(eq(users.id, session.user.id));
+    });
+
     revalidatePath('/dashboard');
     revalidatePath('/book');
     revalidatePath('/waiver');
@@ -70,7 +91,7 @@ export async function signWaiverAction(input: unknown) {
 }
 
 /**
- * Check if current user has signed the waiver
+ * Check if current user has signed the waiver.
  */
 export async function checkWaiverStatusAction() {
   try {
