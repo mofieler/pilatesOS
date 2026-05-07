@@ -1,16 +1,13 @@
 /**
- * Rate limiting for Server Actions
- * Uses IP-based limiting with in-memory store (sufficient for single-instance MVP)
- * For multi-instance deployment, upgrade to Redis-based limiting
+ * Rate limiting for Server Actions. Uses Redis when REDIS_URL is set,
+ * otherwise an in-memory Map. The store decision lives in rate-limit-store.ts;
+ * this module just composes the key from (prefix, IP, identifier) and calls
+ * the store.
  */
 
 import { headers } from 'next/headers';
 import { resolveClientIP } from './client-ip';
-
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
+import { rateLimitHit } from './rate-limit-store';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -18,21 +15,8 @@ interface RateLimitConfig {
   keyPrefix: string;
 }
 
-// In-memory store for rate limiting
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-// Cleanup old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, 5 * 60 * 1000); // Cleanup every 5 minutes
-
 /**
- * Get client IP from headers (Next.js 16 - must await headers())
+ * Get client IP from headers (Next.js 16 — must await headers()).
  * Honours TRUSTED_PROXY_COUNT to avoid trusting attacker-supplied XFF.
  */
 async function getClientIP(): Promise<string> {
@@ -41,39 +25,21 @@ async function getClientIP(): Promise<string> {
 }
 
 /**
- * Check rate limit for a given action and identifier
+ * Check rate limit for a given action and identifier. Returns success=true
+ * if the call fits within the window, false if the limit is exceeded.
  */
 export async function checkRateLimit(
   config: RateLimitConfig,
-  identifier: string
+  identifier: string,
 ): Promise<{ success: boolean; remaining: number; resetTime?: number }> {
   const ip = await getClientIP();
   const key = `${config.keyPrefix}:${ip}:${identifier}`;
-  const now = Date.now();
-
-  let entry = rateLimitStore.get(key);
-
-  if (!entry || now > entry.resetTime) {
-    // New window
-    entry = {
-      count: 1,
-      resetTime: now + config.windowMs,
-    };
-    rateLimitStore.set(key, entry);
-    return { success: true, remaining: config.maxRequests - 1, resetTime: entry.resetTime };
-  }
-
-  // Check limit
-  if (entry.count >= config.maxRequests) {
-    return { success: false, remaining: 0, resetTime: entry.resetTime };
-  }
-
-  // Increment counter
-  entry.count++;
-  return { success: true, remaining: config.maxRequests - entry.count, resetTime: entry.resetTime };
+  const result = await rateLimitHit(key, config.windowMs, config.maxRequests);
+  return { success: result.success, remaining: result.remaining, resetTime: result.resetTime };
 }
 
-// Predefined rate limiting configs
+// ─── Predefined rate limiting configs ────────────────────────────────────────
+
 export const authRateLimitConfig: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
   maxRequests: 5, // 5 attempts per 15 minutes

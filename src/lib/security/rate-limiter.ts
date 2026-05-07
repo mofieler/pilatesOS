@@ -1,59 +1,31 @@
+/**
+ * Rate limiting for Next.js API route handlers. Uses Redis when REDIS_URL is
+ * set, otherwise an in-memory Map (see rate-limit-store.ts).
+ */
+
 import { NextRequest } from 'next/server';
 import { resolveClientIP } from './client-ip';
-
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>();
+import { rateLimitHit } from './rate-limit-store';
 
 export interface RateLimitConfig {
-  windowMs: number; // Time window in milliseconds
-  maxRequests: number; // Max requests per window
+  windowMs: number;
+  maxRequests: number;
 }
 
-export function createRateLimiter(config: RateLimitConfig) {
-  return function rateLimit(request: NextRequest): { success: boolean; resetTime?: number } {
+export type ApiRateLimiter = (
+  request: NextRequest,
+) => Promise<{ success: boolean; resetTime?: number }>;
+
+export function createRateLimiter(config: RateLimitConfig): ApiRateLimiter {
+  return async function rateLimit(request: NextRequest) {
     const clientIp = resolveClientIP(request.headers);
-    const key = `${clientIp}:${request.nextUrl.pathname}`;
-    const now = Date.now();
-    
-    // Get or create entry
-    let entry = rateLimitStore.get(key);
-    
-    if (!entry || now > entry.resetTime) {
-      // New window
-      entry = {
-        count: 1,
-        resetTime: now + config.windowMs
-      };
-      rateLimitStore.set(key, entry);
-      return { success: true, resetTime: entry.resetTime };
-    }
-    
-    // Check limit
-    if (entry.count >= config.maxRequests) {
-      return { success: false, resetTime: entry.resetTime };
-    }
-    
-    // Increment counter
-    entry.count++;
-    return { success: true, resetTime: entry.resetTime };
+    const key = `api:${clientIp}:${request.nextUrl.pathname}`;
+    const result = await rateLimitHit(key, config.windowMs, config.maxRequests);
+    return { success: result.success, resetTime: result.resetTime };
   };
 }
 
 // Predefined rate limiters for different endpoints
-export const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 5 }); // 5 requests per 15 minutes
-export const bookingRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 10 }); // 10 requests per minute
-export const purchaseRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 3 }); // 3 purchases per minute
-
-// Cleanup old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, 5 * 60 * 1000); // Cleanup every 5 minutes
+export const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 5 }); // 5 per 15min
+export const bookingRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 10 }); // 10 per minute
+export const purchaseRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 3 }); // 3 per minute

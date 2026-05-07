@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { sanitizeError, createSafeServiceResult, handleApiError } from '@/lib/security/error-sanitizer';
-import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
+import { rateLimitHit } from '@/lib/security/rate-limit-store';
 import { auditLogger, auditHelpers } from '@/lib/security/audit-system';
 import { addSecurityHeaders } from '@/lib/security/security-headers';
 
@@ -87,49 +87,33 @@ describe('Security Tests', () => {
   });
 
   describe('Rate Limiting', () => {
-    let mockRedis: any;
-    let rateLimiter: RedisRateLimiter;
-
-    beforeAll(() => {
-      mockRedis = {
-        eval: vi.fn(),
-        del: vi.fn(),
-      };
-      
-      rateLimiter = new RedisRateLimiter(mockRedis, {
-        windowMs: 60000,
-        maxRequests: 10,
-        keyPrefix: 'test:',
-      });
-    });
+    // These tests exercise the in-memory fallback path (no REDIS_URL set).
+    // Each test uses a unique key so the global mem store doesn't bleed across.
 
     it('should allow requests within limit', async () => {
-      mockRedis.eval.mockResolvedValue([1, 60000, 9, true]);
-      
-      const result = await rateLimiter.checkLimit('test-user', 'fixed');
-      
+      const result = await rateLimitHit('test:within-limit', 60_000, 10);
       expect(result.success).toBe(true);
       expect(result.remaining).toBe(9);
-      expect(result.resetTime).toBeDefined();
+      expect(result.resetTime).toBeGreaterThan(Date.now());
     });
 
     it('should block requests exceeding limit', async () => {
-      mockRedis.eval.mockResolvedValue([11, 60000, 0, false, 30]);
-      
-      const result = await rateLimiter.checkLimit('test-user', 'fixed');
-      
+      const key = 'test:over-limit';
+      // Burn through the entire budget
+      for (let i = 0; i < 3; i++) {
+        await rateLimitHit(key, 60_000, 3);
+      }
+      const result = await rateLimitHit(key, 60_000, 3);
       expect(result.success).toBe(false);
       expect(result.remaining).toBe(0);
-      expect(result.retryAfter).toBe(30);
     });
 
-    it('should handle Redis failures gracefully', async () => {
-      mockRedis.eval.mockRejectedValue(new Error('Redis connection failed'));
-      
-      const result = await rateLimiter.checkLimit('test-user', 'fixed');
-      
-      expect(result.success).toBe(true); // Fail open
-      expect(result.remaining).toBe(10);
+    it('should track remaining budget across calls', async () => {
+      const key = 'test:remaining';
+      const r1 = await rateLimitHit(key, 60_000, 5);
+      expect(r1.remaining).toBe(4);
+      const r2 = await rateLimitHit(key, 60_000, 5);
+      expect(r2.remaining).toBe(3);
     });
   });
 
@@ -272,51 +256,23 @@ describe('Security Tests', () => {
   });
 
   describe('Rate Limiting Bypass Protection', () => {
-    it('should prevent IP-based bypass attempts', async () => {
-      const mockRedis = {
-        eval: vi.fn().mockResolvedValue([1, 60000, 9, true]),
-        del: vi.fn(),
-      };
-      
-      const rateLimiter = new RedisRateLimiter(mockRedis, {
-        windowMs: 60000,
-        maxRequests: 10,
-        keyPrefix: 'test:',
-      });
-      
-      // Simulate multiple requests from same IP
-      const ip = '192.168.1.1';
-      const results = await Promise.all([
-        rateLimiter.checkLimit(`ip:${ip}`, 'fixed'),
-        rateLimiter.checkLimit(`ip:${ip}`, 'fixed'),
-        rateLimiter.checkLimit(`ip:${ip}`, 'fixed'),
-      ]);
-      
-      // All should use the same Redis key
-      expect(mockRedis.eval).toHaveBeenCalledTimes(3);
-      mockRedis.eval.mock.calls.forEach(call => {
-        expect(call[1]).toBe(`test:ip:${ip}`);
-      });
+    it('should share state across calls with the same key', async () => {
+      const key = 'bypass:ip:192.168.1.1';
+      const r1 = await rateLimitHit(key, 60_000, 3);
+      const r2 = await rateLimitHit(key, 60_000, 3);
+      const r3 = await rateLimitHit(key, 60_000, 3);
+      const r4 = await rateLimitHit(key, 60_000, 3);
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true);
+      expect(r3.success).toBe(true);
+      expect(r4.success).toBe(false);
     });
 
-    it('should handle distributed rate limiting', async () => {
-      const mockRedis = {
-        eval: vi.fn().mockResolvedValue([5, 60000, 5, true]),
-        del: vi.fn(),
-      };
-      
-      const rateLimiter = new RedisRateLimiter(mockRedis, {
-        windowMs: 60000,
-        maxRequests: 10,
-        keyPrefix: 'distributed:',
-      });
-      
-      // Simulate requests from different servers but same user
-      const userId = 'user-123';
-      const result = await rateLimiter.checkLimit(`user:${userId}`, 'fixed');
-      
-      expect(result.success).toBe(true);
-      expect(result.remaining).toBe(5);
+    it('should isolate state across distinct keys', async () => {
+      const r1 = await rateLimitHit('isolated:user-A', 60_000, 1);
+      const r2 = await rateLimitHit('isolated:user-B', 60_000, 1);
+      expect(r1.success).toBe(true);
+      expect(r2.success).toBe(true); // user-B gets its own bucket
     });
   });
 });
@@ -327,15 +283,7 @@ describe('Security Integration Tests', () => {
     await auditHelpers.logUserLogin('user-123', '192.168.1.1', 'Mozilla/5.0');
     
     // 2. Rate limiting check
-    const mockRedis = {
-      eval: vi.fn().mockResolvedValue([1, 60000, 9, true]),
-      del: vi.fn(),
-    };
-    const rateLimiter = new RedisRateLimiter(mockRedis, {
-      windowMs: 60000,
-      maxRequests: 10,
-    });
-    const rateLimitResult = await rateLimiter.checkLimit('user-123', 'fixed');
+    const rateLimitResult = await rateLimitHit('integration:user-123', 60_000, 10);
     expect(rateLimitResult.success).toBe(true);
     
     // 3. Security headers applied

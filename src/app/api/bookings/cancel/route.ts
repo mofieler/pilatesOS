@@ -7,7 +7,7 @@ import { cancellationService } from '@/modules/booking/services/cancellation.ser
 
 export async function POST(request: Request) {
   // Rate limiting check
-  const rateLimitResult = bookingRateLimiter(request as any);
+  const rateLimitResult = await bookingRateLimiter(request as any);
   if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },

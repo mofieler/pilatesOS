@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   console.log('Credit purchase request received');
   
   // Rate limiting check
-  const rateLimitResult = purchaseRateLimiter(request as any);
+  const rateLimitResult = await purchaseRateLimiter(request as any);
   if (!rateLimitResult.success) {
     console.log('Rate limit exceeded');
     return NextResponse.json(
