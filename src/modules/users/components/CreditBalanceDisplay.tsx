@@ -3,7 +3,7 @@ import { Users, Dumbbell, Sparkles } from 'lucide-react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreditBalance = {
-  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
+  creditType: 'mat_group' | 'reformer_group' | 'private_session';
   balance: number;
   expiresAt: Date | null;
 };
@@ -37,42 +37,6 @@ const TIER = {
     dot: 'bg-[#4e2b22]',
     numberColor: 'text-[#4e2b22]',
     gradient: 'from-[#faf9f7] to-[#ede8e5]',
-  },
-  duo_group: {
-    label: 'Duo Classes',
-    icon: Users,
-    pill: 'bg-[#6366f1]/15 text-white border-[#6366f1]/20',
-    ring: 'ring-[#6366f1]/20',
-    dot: 'bg-[#6366f1]',
-    numberColor: 'text-white',
-    gradient: 'from-[#818cf8] to-[#4c1d95]',
-  },
-  general_group: {
-    label: 'Group Classes',
-    icon: Users,
-    pill: 'bg-[#0891b2]/15 text-white border-[#0891b2]/20',
-    ring: 'ring-[#0891b2]/20',
-    dot: 'bg-[#0891b2]',
-    numberColor: 'text-white',
-    gradient: 'from-[#0ea5e9] to-[#0891b2]',
-  },
-  online_class: {
-    label: 'Online Classes',
-    icon: Users,
-    pill: 'bg-[#ea580c]/15 text-white border-[#ea580c]/20',
-    ring: 'ring-[#ea580c]/20',
-    dot: 'bg-[#ea580c]',
-    numberColor: 'text-white',
-    gradient: 'from-[#f97316] to-[#ea580c]',
-  },
-  sound_healing: {
-    label: 'Sound Healing',
-    icon: Sparkles,
-    pill: 'bg-[#9333ea]/15 text-white border-[#9333ea]/20',
-    ring: 'ring-[#9333ea]/20',
-    dot: 'bg-[#9333ea]',
-    numberColor: 'text-white',
-    gradient: 'from-[#6366f1] to-[#9333ea]',
   },
 } as const;
 
@@ -123,7 +87,7 @@ function CreditCard({ balance }: { balance: CreditBalance }) {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing'];
+  const ALL_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session'];
 
   // Ensure all three tiers are always shown, even if balance row doesn't exist yet
   const filled = ALL_TYPES.map(
