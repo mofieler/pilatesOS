@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { registerAction } from '@/modules/users/actions/register.action';
+import { TurnstileWidget } from '@/components/security/turnstile-widget';
+
+const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,6 +20,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,10 +32,16 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (turnstileEnabled && !turnstileToken) {
+      setError('Please complete the captcha challenge before submitting.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const result = await registerAction(formData);
+      const result = await registerAction({ ...formData, turnstileToken });
 
       if (!result.success) {
         setError(result.error || 'Registration failed');
@@ -160,6 +170,8 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
+
+          <TurnstileWidget onToken={setTurnstileToken} className="pt-1" />
 
           {error && (
             <p className="text-sm text-[#c45c4a] bg-[#c45c4a]/10 p-3 rounded-xl">{error}</p>

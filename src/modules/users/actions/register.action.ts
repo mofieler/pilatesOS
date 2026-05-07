@@ -6,7 +6,10 @@ import { users, verificationTokens } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { headers } from 'next/headers';
 import { checkRateLimit, registerRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
+import { resolveClientIP } from '@/lib/security/client-ip';
+import { verifyTurnstileToken } from '@/lib/security/turnstile';
 import { sendVerificationEmail } from '@/lib/email/resend';
 
 const registerSchema = z.object({
@@ -14,6 +17,7 @@ const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(255),
   password: z.string().min(8, 'Password must be at least 8 characters').max(255),
   confirmPassword: z.string(),
+  turnstileToken: z.string().nullable().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -33,6 +37,19 @@ export async function registerAction(input: unknown) {
     }
 
     const validated = registerSchema.parse(input);
+
+    // Captcha verification BEFORE we hash a password (which is expensive) or
+    // touch the DB. If TURNSTILE_SECRET_KEY is unset (dev) the helper
+    // short-circuits to success.
+    const headersList = await headers();
+    const remoteIp = resolveClientIP(headersList);
+    const captcha = await verifyTurnstileToken(
+      validated.turnstileToken,
+      remoteIp === 'untrusted' ? undefined : remoteIp,
+    );
+    if (!captcha.success) {
+      return { success: false, error: captcha.error, code: 'CAPTCHA_FAILED' };
+    }
 
     const existingUser = await db
       .select({ id: users.id, emailVerified: users.emailVerified })
