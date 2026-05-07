@@ -15,7 +15,11 @@
 
 export type PaymentMethod = 'stripe' | 'pay_at_studio' | 'bank_transfer' | 'cash' | 'sound_healing_credits';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'overdue' | 'refunded';
-export type CreditPackCategory = 'standard' | 'premium' | 'vip' | 'specialty' | 'wellness';
+// Two-axis package model:
+// - 'credit'  → group-class credit packs (mat or reformer group classes)
+// - 'session' → private-session packs (mat or reformer equipment, 1:1 sessions)
+// The mat/reformer distinction lives on a separate `classType` column.
+export type CreditPackCategory = 'credit' | 'session';
 
 export interface PaymentMethodConfig {
   value: PaymentMethod;
@@ -27,22 +31,6 @@ export interface PaymentMethodConfig {
   supportedCurrencies: string[];
   processingFeePercent?: number;
   isActive: boolean;
-}
-
-export interface CreditPackTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: CreditPackCategory;
-  creditsAmount: number;
-  priceCents: number;
-  currency: string;
-  validityDays: number;
-  paymentMethods: PaymentMethod[];
-  sortOrder: number;
-  isActive: boolean;
-  stripePriceId?: string;
-  metadata?: Record<string, unknown>;
 }
 
 export interface FinancialConfig {
@@ -121,112 +109,21 @@ export const CREDIT_PACK_CATEGORIES: Record<CreditPackCategory, {
   badgeStyle: string;
   defaultValidityDays: number;
 }> = {
-  standard: {
-    value: 'standard',
-    label: 'Standard Packs',
-    description: 'Regular credit packages for classes',
-    badgeStyle: 'bg-slate-100 text-slate-700',
-    defaultValidityDays: 365,
-  },
-  premium: {
-    value: 'premium',
-    label: 'Premium Packs',
-    description: 'Enhanced packages with bonus credits',
+  credit: {
+    value: 'credit',
+    label: 'Credit Package',
+    description: 'Group class credits — students pick mat or reformer at booking',
     badgeStyle: 'bg-emerald-100 text-emerald-800',
     defaultValidityDays: 365,
   },
-  vip: {
-    value: 'vip',
-    label: 'VIP Packs',
-    description: 'Exclusive packages with maximum benefits',
+  session: {
+    value: 'session',
+    label: 'Session Package',
+    description: 'Private 1:1 sessions on mat or reformer equipment',
     badgeStyle: 'bg-amber-100 text-amber-800',
     defaultValidityDays: 365,
   },
-  specialty: {
-    value: 'specialty',
-    label: 'Specialty Packs',
-    description: 'Specialized packages for specific programs',
-    badgeStyle: 'bg-purple-100 text-purple-800',
-    defaultValidityDays: 180,
-  },
-  wellness: {
-    value: 'wellness',
-    label: 'Wellness Packs',
-    description: 'Holistic wellness and healing packages',
-    badgeStyle: 'bg-green-100 text-green-800',
-    defaultValidityDays: 180,
-  },
 } as const;
-
-// ─── DEFAULT CREDIT PACK TEMPLATES ─────────────────────────────────────────────
-
-export const DEFAULT_CREDIT_PACKS: CreditPackTemplate[] = [
-  {
-    id: 'mat-5-pack',
-    name: '5 Mat Classes',
-    description: 'Perfect for trying out our mat classes',
-    category: 'standard',
-    creditsAmount: 5,
-    priceCents: 7500,
-    currency: 'eur',
-    validityDays: 90,
-    paymentMethods: ['stripe', 'pay_at_studio', 'bank_transfer', 'cash'],
-    sortOrder: 10,
-    isActive: true,
-  },
-  {
-    id: 'mat-10-pack',
-    name: '10 Mat Classes',
-    description: 'Our most popular mat class package',
-    category: 'standard',
-    creditsAmount: 10,
-    priceCents: 14000,
-    currency: 'eur',
-    validityDays: 180,
-    paymentMethods: ['stripe', 'pay_at_studio', 'bank_transfer', 'cash'],
-    sortOrder: 20,
-    isActive: true,
-  },
-  {
-    id: 'reformer-5-pack',
-    name: '5 Reformer Classes',
-    description: 'Experience our reformer equipment',
-    category: 'premium',
-    creditsAmount: 5,
-    priceCents: 12500,
-    currency: 'eur',
-    validityDays: 90,
-    paymentMethods: ['stripe', 'pay_at_studio', 'bank_transfer', 'cash'],
-    sortOrder: 30,
-    isActive: true,
-  },
-  {
-    id: 'private-3-pack',
-    name: '3 Private Sessions',
-    description: 'Personalized one-on-one training',
-    category: 'vip',
-    creditsAmount: 3,
-    priceCents: 22500,
-    currency: 'eur',
-    validityDays: 120,
-    paymentMethods: ['stripe', 'pay_at_studio', 'bank_transfer', 'cash'],
-    sortOrder: 40,
-    isActive: true,
-  },
-  {
-    id: 'sound-healing-5-pack',
-    name: '5 Sound Healing Sessions',
-    description: 'Therapeutic sound healing experiences',
-    category: 'wellness',
-    creditsAmount: 5,
-    priceCents: 15000,
-    currency: 'eur',
-    validityDays: 180,
-    paymentMethods: ['stripe', 'pay_at_studio', 'sound_healing_credits'],
-    sortOrder: 50,
-    isActive: true,
-  },
-];
 
 // ─── FINANCIAL CONFIGURATION ─────────────────────────────────────────────────────
 
@@ -300,20 +197,6 @@ export function getPaymentMethodsForCurrency(currency: string): PaymentMethodCon
 }
 
 /**
- * Get default credit pack templates for a category
- */
-export function getCreditPacksForCategory(category: CreditPackCategory): CreditPackTemplate[] {
-  return DEFAULT_CREDIT_PACKS.filter(pack => pack.category === category && pack.isActive);
-}
-
-/**
- * Get all active credit pack templates
- */
-export function getActiveCreditPacks(): CreditPackTemplate[] {
-  return DEFAULT_CREDIT_PACKS.filter(pack => pack.isActive);
-}
-
-/**
  * Get select options for payment methods
  */
 export function getPaymentMethodSelectOptions(): Array<{ value: PaymentMethod; label: string; description?: string }> {
@@ -378,11 +261,3 @@ export function isCreditPackCategory(value: unknown): value is CreditPackCategor
   return typeof value === 'string' && isValidCreditPackCategory(value);
 }
 
-// ─── EXPORTS FOR LEGACY COMPATIBILITY ───────────────────────────────────────────
-
-/**
- * Legacy compatibility exports - these will be removed in future versions
- * @deprecated Use the new modular system instead
- */
-export const LEGACY_PAYMENT_METHODS = ['stripe', 'pay_at_studio'];
-export const LEGACY_PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'cancelled', 'overdue'];

@@ -42,7 +42,12 @@ async function getCreditBalances(userId: string): Promise<CreditBalance[]> {
     .from(creditBalances)
     .where(eq(creditBalances.userId, userId));
 
-  return rows;
+  // Dashboard CreditBalanceDisplay only renders the three primary tiers.
+  // Other balances (sound_healing, online_class, etc.) are surfaced elsewhere.
+  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session'];
+  return rows.filter((r): r is CreditBalance =>
+    (DISPLAY_TYPES as readonly string[]).includes(r.creditType),
+  );
 }
 
 async function getUpcomingBookings(userId: string): Promise<UpcomingBooking[]> {

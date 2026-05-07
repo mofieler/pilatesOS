@@ -1,6 +1,6 @@
 /**
  * TESTS FOR FINANCIAL CONFIGURATION
- * 
+ *
  * These tests ensure the financial configuration system works correctly
  * and maintains type safety throughout the application.
  */
@@ -9,7 +9,6 @@ import { describe, it, expect } from 'vitest';
 import {
   PAYMENT_METHODS,
   CREDIT_PACK_CATEGORIES,
-  DEFAULT_CREDIT_PACKS,
   FINANCIAL_CONFIG,
   getPaymentMethodValues,
   getCreditPackCategoryValues,
@@ -19,8 +18,6 @@ import {
   getCreditPackCategoryLabel,
   getActivePaymentMethods,
   getPaymentMethodsForCurrency,
-  getCreditPacksForCategory,
-  getActiveCreditPacks,
   getPaymentMethodSelectOptions,
   getCreditPackCategorySelectOptions,
   isValidPaymentMethod,
@@ -31,8 +28,6 @@ import {
   isCreditPackCategory,
   type PaymentMethod,
   type CreditPackCategory,
-  type PaymentMethodConfig,
-  type CreditPackTemplate,
 } from './financial-config';
 
 describe('Financial Configuration', () => {
@@ -92,7 +87,7 @@ describe('Financial Configuration', () => {
     it('should filter payment methods by currency', () => {
       const eurMethods = getPaymentMethodsForCurrency('eur');
       expect(eurMethods).toHaveLength(5);
-      
+
       const usdMethods = getPaymentMethodsForCurrency('usd');
       expect(usdMethods).toHaveLength(1);
       expect(usdMethods[0].value).toBe('stripe');
@@ -100,56 +95,35 @@ describe('Financial Configuration', () => {
   });
 
   describe('Credit Pack Categories', () => {
-    it('should have all expected categories', () => {
-      const expectedCategories: CreditPackCategory[] = ['standard', 'premium', 'vip', 'specialty', 'wellness'];
+    it('should have credit and session categories', () => {
+      const expectedCategories: CreditPackCategory[] = ['credit', 'session'];
       expect(getCreditPackCategoryValues()).toEqual(expectedCategories);
     });
 
-    it('should return correct category config', () => {
-      const wellnessConfig = getCreditPackCategoryConfig('wellness');
-      expect(wellnessConfig).toEqual({
-        value: 'wellness',
-        label: 'Wellness Packs',
-        description: 'Holistic wellness and healing packages',
-        badgeStyle: 'bg-green-100 text-green-800',
-        defaultValidityDays: 180,
-      });
+    it('should return correct category config for credit', () => {
+      const creditConfig = getCreditPackCategoryConfig('credit');
+      expect(creditConfig?.value).toBe('credit');
+      expect(creditConfig?.label).toBe('Credit Package');
+    });
+
+    it('should return correct category config for session', () => {
+      const sessionConfig = getCreditPackCategoryConfig('session');
+      expect(sessionConfig?.value).toBe('session');
+      expect(sessionConfig?.label).toBe('Session Package');
     });
 
     it('should validate categories correctly', () => {
-      expect(isValidCreditPackCategory('wellness')).toBe(true);
+      expect(isValidCreditPackCategory('credit')).toBe(true);
+      expect(isValidCreditPackCategory('session')).toBe(true);
+      expect(isValidCreditPackCategory('standard')).toBe(false);
       expect(isValidCreditPackCategory('invalid')).toBe(false);
     });
 
     it('should work as type guards', () => {
-      const unknownValue: unknown = 'wellness';
+      const unknownValue: unknown = 'session';
       if (isCreditPackCategory(unknownValue)) {
-        expect(unknownValue satisfies CreditPackCategory).toBe('wellness');
+        expect(unknownValue satisfies CreditPackCategory).toBe('session');
       }
-    });
-  });
-
-  describe('Credit Pack Templates', () => {
-    it('should have default credit packs', () => {
-      expect(DEFAULT_CREDIT_PACKS).toHaveLength(5);
-    });
-
-    it('should filter packs by category', () => {
-      const wellnessPacks = getCreditPacksForCategory('wellness');
-      expect(wellnessPacks).toHaveLength(1);
-      expect(wellnessPacks[0].category).toBe('wellness');
-    });
-
-    it('should filter active packs', () => {
-      const activePacks = getActiveCreditPacks();
-      expect(activePacks.every(pack => pack.isActive)).toBe(true);
-    });
-
-    it('should have sound healing pack with correct configuration', () => {
-      const soundHealingPack = DEFAULT_CREDIT_PACKS.find(pack => pack.id === 'sound-healing-5-pack');
-      expect(soundHealingPack).toBeDefined();
-      expect(soundHealingPack?.category).toBe('wellness');
-      expect(soundHealingPack?.paymentMethods).toContain('sound_healing_credits');
     });
   });
 
@@ -166,11 +140,8 @@ describe('Financial Configuration', () => {
 
     it('should generate correct category select options', () => {
       const options = getCreditPackCategorySelectOptions();
-      expect(options).toHaveLength(5);
-      expect(options[0]).toEqual({
-        value: 'standard',
-        label: 'Standard Packs',
-      });
+      expect(options).toHaveLength(2);
+      expect(options.map(o => o.value)).toEqual(['credit', 'session']);
     });
   });
 
@@ -233,26 +204,6 @@ describe('Financial Configuration', () => {
         expect(config).toHaveProperty('badgeStyle');
         expect(config).toHaveProperty('defaultValidityDays');
         expect(typeof config.defaultValidityDays).toBe('number');
-      });
-    });
-
-    it('should have all required fields in credit pack templates', () => {
-      DEFAULT_CREDIT_PACKS.forEach(pack => {
-        expect(pack).toHaveProperty('id');
-        expect(pack).toHaveProperty('name');
-        expect(pack).toHaveProperty('category');
-        expect(pack).toHaveProperty('creditsAmount');
-        expect(pack).toHaveProperty('priceCents');
-        expect(pack).toHaveProperty('currency');
-        expect(pack).toHaveProperty('validityDays');
-        expect(pack).toHaveProperty('paymentMethods');
-        expect(pack).toHaveProperty('sortOrder');
-        expect(pack).toHaveProperty('isActive');
-        expect(typeof pack.creditsAmount).toBe('number');
-        expect(typeof pack.priceCents).toBe('number');
-        expect(Array.isArray(pack.paymentMethods)).toBe(true);
-        expect(typeof pack.sortOrder).toBe('number');
-        expect(typeof pack.isActive).toBe('boolean');
       });
     });
   });

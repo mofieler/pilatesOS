@@ -18,35 +18,47 @@ import {
   updateCreditPackageAction,
   deleteCreditPackageAction,
 } from '@/modules/billing/actions/creditPackage.actions';
-import { getClassTemplatesAdminAction } from '@/modules/classes/actions/class.actions';
 import type { CreditPackage } from '@/db/schema';
+import type { CreditType } from '@/lib/config/class-types';
 import {
-  getCreditTypeLabel,
-  getCreditTypeBadgeStyle,
-  getCreditTypeSelectOptions,
-  type CreditType,
-} from '@/lib/config/class-types';
-import {
-  getCreditPackCategoryLabel,
-  getCreditPackCategorySelectOptions,
+  getCreditPackCategoryConfig,
   type CreditPackCategory,
 } from '@/lib/config/financial-config';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Props = { 
+type Props = {
   packages: CreditPackage[];
-  availableCreditTypes: CreditType[];
 };
 
-// ─── Package form dialog ──────────────────────────────────────────────────────
+type ClassType = 'mat' | 'reformer';
+
+// ─── Derivation helpers ──────────────────────────────────────────────────────
+
+/**
+ * Single source of truth for mapping (category, classType) → creditType.
+ * Booking and balance lookups all key on creditType, so this mapping is
+ * what gives the toggle its meaning end-to-end.
+ */
+function deriveCreditType(category: CreditPackCategory, classType: ClassType): CreditType {
+  if (category === 'session') return 'private_session';
+  return classType === 'mat' ? 'mat_group' : 'reformer_group';
+}
+
+function categoryClassTypeLabel(category: CreditPackCategory, classType: ClassType | null): string {
+  if (!classType) return getCreditPackCategoryConfig(category)?.label ?? category;
+  const equipment = classType === 'mat' ? 'Mat' : 'Reformer';
+  return category === 'session' ? `Private ${equipment}` : `${equipment} Group`;
+}
+
+// ─── Form state ──────────────────────────────────────────────────────────────
 
 type FormState = {
   name: string;
   description: string;
   creditsAmount: string;
-  creditType: CreditType;
   category: CreditPackCategory;
+  classType: ClassType;
   priceEur: string;
   validityWeeks: string;
   sortOrder: string;
@@ -55,32 +67,38 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', description: '', creditsAmount: '', creditType: 'mat_group', category: 'standard',
+  name: '', description: '', creditsAmount: '', category: 'credit', classType: 'mat',
   priceEur: '', validityWeeks: '52', sortOrder: '0', isActive: true, stripePriceId: '',
 };
 
 function fromPackage(p: CreditPackage): FormState {
+  // Derive classType for legacy packages that don't have it set
+  const inferredClassType: ClassType =
+    (p.classType as ClassType | null) ??
+    (p.creditType === 'reformer_group' ? 'reformer' : 'mat');
+
   return {
     name:          p.name,
     description:   p.description ?? '',
     creditsAmount: String(p.creditsAmount),
-    creditType:    p.creditType,
-    category:      p.category || 'standard',
+    category:      (p.category as CreditPackCategory) ?? 'credit',
+    classType:     inferredClassType,
     priceEur:      (p.priceCents / 100).toFixed(2),
-    validityWeeks: String((p as any).validityWeeks || Math.ceil((p as any).validityDays / 7) || 52),
+    validityWeeks: String(p.validityWeeks ?? Math.ceil((p.validityDays ?? 365) / 7)),
     sortOrder:     String(p.sortOrder),
     isActive:      p.isActive,
     stripePriceId: p.stripePriceId ?? '',
   };
 }
 
+// ─── Form dialog ─────────────────────────────────────────────────────────────
+
 function PackageFormDialog({
-  open, onOpenChange, editingPackage, availableCreditTypes,
+  open, onOpenChange, editingPackage,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editingPackage: CreditPackage | null;
-  availableCreditTypes: CreditType[];
 }) {
   const isEdit = editingPackage !== null;
   const [form, setForm] = useState<FormState>(
@@ -89,7 +107,6 @@ function PackageFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Reset form when dialog target changes
   const handleOpen = (v: boolean) => {
     if (!isPending) {
       if (v) setForm(isEdit ? fromPackage(editingPackage!) : EMPTY_FORM);
@@ -98,8 +115,15 @@ function PackageFormDialog({
     }
   };
 
-  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  const setText =
+    (k: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const isSession = form.category === 'session';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,20 +132,23 @@ function PackageFormDialog({
     const creditsAmount = parseInt(form.creditsAmount, 10);
     const priceCents    = Math.round(parseFloat(form.priceEur) * 100);
     const validityWeeks = parseInt(form.validityWeeks, 10);
-    const validityDays  = validityWeeks * 7; // Calculate days from weeks
+    const validityDays  = validityWeeks * 7;
     const sortOrder     = parseInt(form.sortOrder, 10);
 
     if (isNaN(creditsAmount) || creditsAmount < 1) { setError('Credits must be a positive whole number.'); return; }
     if (isNaN(priceCents)    || priceCents < 0)    { setError('Price must be 0 or more.'); return; }
-    if (isNaN(validityWeeks) || validityWeeks < 1)  { setError('Validity weeks must be positive.'); return; }
+    if (isNaN(validityWeeks) || validityWeeks < 1) { setError('Validity weeks must be positive.'); return; }
+
+    const derivedCreditType = deriveCreditType(form.category, form.classType);
 
     startTransition(async () => {
       const payload = {
         name:          form.name,
         description:   form.description || null,
         creditsAmount,
-        creditType:    form.creditType,
+        creditType:    derivedCreditType,
         category:      form.category,
+        classType:     form.classType,
         priceCents,
         currency:      'eur',
         validityDays,
@@ -144,55 +171,105 @@ function PackageFormDialog({
     });
   }
 
+  const dialogTitle = isEdit
+    ? `Edit ${isSession ? 'session' : 'credit'} package`
+    : `New ${isSession ? 'session' : 'credit'} package`;
+
+  const dialogDescription = isSession
+    ? 'Session packages grant private 1:1 sessions. Pick the equipment students will use.'
+    : 'Credit packages grant group-class credits. Pick the class type students can attend.';
+
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogContent className="sm:max-w-lg" showCloseButton>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit credit package' : 'New credit package'}</DialogTitle>
-          <DialogDescription>
-            Credit packages are what students purchase. Each package grants a set number of credits of a specific tier.
-          </DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Category toggle */}
+          <div className="space-y-1.5">
+            <Label className="text-[#6b3d32] font-medium">Package type *</Label>
+            <div className="inline-flex rounded-lg border border-[#ede8e5] bg-[#faf9f7] p-1 w-full">
+              {(['credit', 'session'] as CreditPackCategory[]).map((cat) => {
+                const cfg = getCreditPackCategoryConfig(cat);
+                const active = form.category === cat;
+                return (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => setField('category', cat)}
+                    disabled={isPending}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-white text-[#4e2b22] shadow-sm'
+                        : 'text-[#8b6b5c] hover:text-[#4e2b22]'
+                    }`}
+                  >
+                    {cfg?.label ?? cat}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-[#8b6b5c]">
+              {getCreditPackCategoryConfig(form.category)?.description}
+            </p>
+          </div>
+
           {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="pkg-name" className="text-[#6b3d32] font-medium">Name *</Label>
-            <Input id="pkg-name" value={form.name} onChange={set('name')} required placeholder="e.g. 10 Standard Classes" />
+            <Input
+              id="pkg-name"
+              value={form.name}
+              onChange={setText('name')}
+              required
+              placeholder={isSession ? 'e.g. 5 Private Reformer Sessions' : 'e.g. 10 Mat Classes'}
+            />
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="pkg-desc" className="text-[#6b3d32] font-medium">Description <span className="text-[#8b6b5c]">(optional)</span></Label>
+            <Label htmlFor="pkg-desc" className="text-[#6b3d32] font-medium">
+              Description <span className="text-[#8b6b5c]">(optional)</span>
+            </Label>
             <textarea
               id="pkg-desc"
               value={form.description}
-              onChange={set('description')}
+              onChange={setText('description')}
               rows={2}
               placeholder="Shown to students on the pricing page"
               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring resize-none"
             />
           </div>
 
-          {/* Credits + type */}
+          {/* Credits + class type */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pkg-credits" className="text-[#6b3d32] font-medium">Credits *</Label>
-              <Input id="pkg-credits" type="number" min={1} value={form.creditsAmount} onChange={set('creditsAmount')} required />
+              <Label htmlFor="pkg-credits" className="text-[#6b3d32] font-medium">
+                {isSession ? 'Sessions *' : 'Credits *'}
+              </Label>
+              <Input
+                id="pkg-credits"
+                type="number"
+                min={1}
+                value={form.creditsAmount}
+                onChange={setText('creditsAmount')}
+                required
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pkg-ctype" className="text-[#6b3d32] font-medium">Credit tier *</Label>
+              <Label htmlFor="pkg-classtype" className="text-[#6b3d32] font-medium">Class type *</Label>
               <select
-                id="pkg-ctype"
-                value={form.creditType}
-                onChange={set('creditType')}
+                id="pkg-classtype"
+                value={form.classType}
+                onChange={(e) => setField('classType', e.target.value as ClassType)}
+                disabled={isPending}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
               >
-                {availableCreditTypes.map((creditType) => (
-                  <option key={creditType} value={creditType}>
-                    {getCreditTypeLabel(creditType)}
-                  </option>
-                ))}
+                <option value="mat">Mat</option>
+                <option value="reformer">Reformer</option>
               </select>
             </div>
           </div>
@@ -201,12 +278,32 @@ function PackageFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="pkg-price" className="text-[#6b3d32] font-medium">Price (EUR) *</Label>
-              <Input id="pkg-price" type="number" min={0} step="0.01" value={form.priceEur} onChange={set('priceEur')} required placeholder="89.00" />
+              <Input
+                id="pkg-price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.priceEur}
+                onChange={setText('priceEur')}
+                required
+                placeholder="89.00"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pkg-validity-weeks" className="text-[#6b3d32] font-medium">Validity (weeks) *</Label>
-              <Input id="pkg-validity-weeks" type="number" min={1} value={form.validityWeeks} onChange={set('validityWeeks')} required />
-              <p className="text-xs text-[#8b6b5c] mt-1">Credits will expire after {form.validityWeeks} week(s) ({parseInt(form.validityWeeks) * 7} days)</p>
+              <Label htmlFor="pkg-validity-weeks" className="text-[#6b3d32] font-medium">
+                Validity (weeks) *
+              </Label>
+              <Input
+                id="pkg-validity-weeks"
+                type="number"
+                min={1}
+                value={form.validityWeeks}
+                onChange={setText('validityWeeks')}
+                required
+              />
+              <p className="text-xs text-[#8b6b5c] mt-1">
+                Credits expire after {form.validityWeeks || 0} week(s) ({(parseInt(form.validityWeeks) || 0) * 7} days)
+              </p>
             </div>
           </div>
 
@@ -214,11 +311,24 @@ function PackageFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="pkg-sort" className="text-[#6b3d32] font-medium">Sort order</Label>
-              <Input id="pkg-sort" type="number" min={0} value={form.sortOrder} onChange={set('sortOrder')} />
+              <Input
+                id="pkg-sort"
+                type="number"
+                min={0}
+                value={form.sortOrder}
+                onChange={setText('sortOrder')}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pkg-stripe" className="text-[#6b3d32] font-medium">Stripe Price ID <span className="text-[#8b6b5c]">(Phase 2)</span></Label>
-              <Input id="pkg-stripe" value={form.stripePriceId} onChange={set('stripePriceId')} placeholder="price_..." />
+              <Label htmlFor="pkg-stripe" className="text-[#6b3d32] font-medium">
+                Stripe Price ID <span className="text-[#8b6b5c]">(Phase 2)</span>
+              </Label>
+              <Input
+                id="pkg-stripe"
+                value={form.stripePriceId}
+                onChange={setText('stripePriceId')}
+                placeholder="price_..."
+              />
             </div>
           </div>
 
@@ -227,7 +337,7 @@ function PackageFormDialog({
             <input
               type="checkbox"
               checked={form.isActive}
-              onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+              onChange={(e) => setField('isActive', e.target.checked)}
               className="size-4 rounded border-slate-300"
             />
             <span className="text-sm text-[#4e2b22]">Active (visible to students)</span>
@@ -251,7 +361,7 @@ function PackageFormDialog({
 
 // ─── Public component ─────────────────────────────────────────────────────────
 
-export function CreditPackagesManager({ packages, availableCreditTypes }: Props) {
+export function CreditPackagesManager({ packages }: Props) {
   const [createOpen, setCreateOpen]       = useState(false);
   const [editTarget, setEditTarget]       = useState<CreditPackage | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<CreditPackage | null>(null);
@@ -300,78 +410,84 @@ export function CreditPackagesManager({ packages, availableCreditTypes }: Props)
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-left">
-              {['Package', 'Tier', 'Credits', 'Price', 'Validity', 'Status', ''].map((h) => (
+              {['Package', 'Type', 'Credits', 'Price', 'Validity', 'Status', ''].map((h) => (
                 <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#6b3d32]">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {packages.length === 0 && (
-              <tr><td colSpan={7} className="py-12 text-center text-sm text-[#8b6b5c]">No packages yet. Create your first credit package to get started.</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-sm text-[#8b6b5c]">No packages yet. Create your first credit or session package to get started.</td></tr>
             )}
-            {packages.map((pkg) => (
-              <tr key={pkg.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3">
-                  <p className="font-medium text-slate-900">{pkg.name}</p>
-                  {pkg.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{pkg.description}</p>}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getCreditTypeBadgeStyle(pkg.creditType)}`}>
-                    {getCreditTypeLabel(pkg.creditType)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 tabular-nums text-slate-700">{pkg.creditsAmount}</td>
-                <td className="px-4 py-3 tabular-nums text-slate-700">
-                  €{(pkg.priceCents / 100).toFixed(2)}
-                </td>
-                <td className="px-4 py-3 text-slate-500">{pkg.validityDays} days</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => toggleActive(pkg)}
-                    disabled={toggling}
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                      pkg.isActive
-                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
-                  >
-                    {pkg.isActive ? 'Active' : 'Inactive'}
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
+            {packages.map((pkg) => {
+              const cat = (pkg.category ?? 'credit') as CreditPackCategory;
+              const classType = (pkg.classType as ClassType | null) ??
+                (pkg.creditType === 'reformer_group' ? 'reformer' : 'mat');
+              const cfg = getCreditPackCategoryConfig(cat);
+              return (
+                <tr key={pkg.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-slate-900">{pkg.name}</p>
+                    {pkg.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{pkg.description}</p>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg?.badgeStyle ?? 'bg-slate-100 text-slate-700'}`}>
+                      {categoryClassTypeLabel(cat, classType)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-slate-700">{pkg.creditsAmount}</td>
+                  <td className="px-4 py-3 tabular-nums text-slate-700">
+                    €{(pkg.priceCents / 100).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{pkg.validityDays} days</td>
+                  <td className="px-4 py-3">
                     <button
-                      onClick={() => setEditTarget(pkg)}
-                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      onClick={() => toggleActive(pkg)}
+                      disabled={toggling}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                        pkg.isActive
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
                     >
-                      <PencilIcon className="size-3" />
-                      Edit
+                      {pkg.isActive ? 'Active' : 'Inactive'}
                     </button>
-                    <button
-                      onClick={() => { setDeleteError(null); setDeleteTarget(pkg); }}
-                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2Icon className="size-3" />
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditTarget(pkg)}
+                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <PencilIcon className="size-3" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => { setDeleteError(null); setDeleteTarget(pkg); }}
+                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2Icon className="size-3" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {/* Dialogs */}
-      <PackageFormDialog open={createOpen} onOpenChange={setCreateOpen} editingPackage={null} availableCreditTypes={availableCreditTypes} />
-      <PackageFormDialog open={editTarget !== null} onOpenChange={(v) => { if (!v) setEditTarget(null); }} editingPackage={editTarget} availableCreditTypes={availableCreditTypes} />
+      <PackageFormDialog open={createOpen} onOpenChange={setCreateOpen} editingPackage={null} />
+      <PackageFormDialog open={editTarget !== null} onOpenChange={(v) => { if (!v) setEditTarget(null); }} editingPackage={editTarget} />
 
       <AlertDialog open={deleteTarget !== null} onOpenChange={(v) => { if (!v && !deleting) { setDeleteTarget(null); setDeleteError(null); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{deleteTarget?.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the credit package. If students have purchased it, the delete will be blocked — deactivate it instead.
+              This permanently removes the package. If students have purchased it, the delete will be blocked — deactivate it instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{deleteError}</p>}

@@ -1,21 +1,10 @@
 import { getCreditPackagesAction } from '@/modules/billing/actions/creditPackage.actions';
-import { getClassTemplatesAdminAction } from '@/modules/classes/actions/class.actions';
 import { CreditPackagesManager } from '@/modules/billing/components/CreditPackagesManager';
-import type { CreditType } from '@/lib/config/class-types';
 
 export default async function CreditsPage() {
-  const [packagesResult, templatesResult] = await Promise.all([
-    getCreditPackagesAction(),
-    getClassTemplatesAdminAction(),
-  ]);
-  
+  const packagesResult = await getCreditPackagesAction();
+
   const packages = packagesResult.success ? packagesResult.data : [];
-  const templates = templatesResult.success ? templatesResult.data : [];
-  
-  // Extract unique credit types from templates
-  const availableCreditTypes = Array.from(
-    new Set(templates.map(template => template.creditType).filter(Boolean))
-  ) as CreditType[];
 
   return (
     <div className="space-y-6">
@@ -23,7 +12,7 @@ export default async function CreditsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Credit Packages</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Define what students can purchase. Each package grants a fixed number of credits of a specific tier.
+          Define what students can purchase. Choose Credit (group classes) or Session (private 1:1) for each package.
         </p>
       </div>
 
@@ -34,8 +23,7 @@ export default async function CreditsPage() {
         </div>
       )}
 
-      {/* Credit Packages Manager - handles empty state internally with New Package button */}
-      <CreditPackagesManager packages={packages} availableCreditTypes={availableCreditTypes} />
+      <CreditPackagesManager packages={packages} />
     </div>
   );
 }
