@@ -61,7 +61,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1]">
       <nav className="sticky top-0 z-50 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 backdrop-blur-xl px-6 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 overflow-x-hidden">
           {/* Brand + nav links */}
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Pilateq" className="h-8 w-auto" />
@@ -70,7 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               Admin
             </span>
 
-            <div className="hidden sm:flex items-center gap-1 ml-4">
+            <div className="hidden sm:flex items-center gap-1 ml-4 overflow-x-hidden">
               {NAV_LINKS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
