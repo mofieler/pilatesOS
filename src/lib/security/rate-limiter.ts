@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { resolveClientIP } from './client-ip';
 
 interface RateLimitEntry {
   count: number;
@@ -14,10 +15,7 @@ export interface RateLimitConfig {
 
 export function createRateLimiter(config: RateLimitConfig) {
   return function rateLimit(request: NextRequest): { success: boolean; resetTime?: number } {
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                    request.headers.get('x-real-ip') || 
-                    'unknown';
-    
+    const clientIp = resolveClientIP(request.headers);
     const key = `${clientIp}:${request.nextUrl.pathname}`;
     const now = Date.now();
     

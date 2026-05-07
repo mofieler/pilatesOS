@@ -5,13 +5,20 @@ import { APP_CONFIG } from '@/constants/APP_CONFIG';
 export function addSecurityHeaders(request: NextRequest, response: NextResponse) {
   // CSP without nonces — mixing nonces + unsafe-inline causes browsers to ignore
   // unsafe-inline entirely, which blocks Next.js hydration scripts.
+  // 'unsafe-inline' is retained for script/style because Next.js embeds inline
+  // hydration scripts and Tailwind ships some inline styles. The wide 'https:'
+  // allowlist is removed: it permits scripts/connects from any HTTPS origin,
+  // which defeats the whole point of CSP. img-src keeps 'https:' because
+  // user/instructor avatars come from arbitrary HTTPS origins (Google,
+  // Gravatar, etc.). Add specific origins here when integrating Stripe,
+  // Bunny CDN, etc.
   const cspHeader = [
     "default-src 'self';",
-    "script-src 'self' 'unsafe-inline' https:;",
-    "style-src 'self' 'unsafe-inline' https:;",
+    "script-src 'self' 'unsafe-inline';",
+    "style-src 'self' 'unsafe-inline';",
     "img-src 'self' blob: data: https:;",
-    "font-src 'self' data: https:;",
-    "connect-src 'self' https:;",
+    "font-src 'self' data:;",
+    "connect-src 'self';",
     "object-src 'none';",
     "base-uri 'self';",
     "form-action 'self';",

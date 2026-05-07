@@ -5,6 +5,7 @@
  */
 
 import { headers } from 'next/headers';
+import { resolveClientIP } from './client-ip';
 
 interface RateLimitEntry {
   count: number;
@@ -32,14 +33,11 @@ setInterval(() => {
 
 /**
  * Get client IP from headers (Next.js 16 - must await headers())
+ * Honours TRUSTED_PROXY_COUNT to avoid trusting attacker-supplied XFF.
  */
 async function getClientIP(): Promise<string> {
   const headersList = await headers();
-  const forwarded = headersList.get('x-forwarded-for');
-  const ip = forwarded?.split(',')[0] ||
-             headersList.get('x-real-ip') ||
-             'unknown';
-  return ip;
+  return resolveClientIP(headersList);
 }
 
 /**

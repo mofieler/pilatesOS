@@ -223,14 +223,18 @@ export async function getPurchaseStatsAction() {
   }
 
   try {
+    // Reference Drizzle columns so the generated SQL uses real snake_case
+    // names (payment_status, price_cents). The previous version embedded
+    // camelCase identifiers literally and threw "column ... does not exist"
+    // at runtime.
     const stats = await db
       .select({
         total: sql<number>`COUNT(*)`.mapWith(Number),
-        paid: sql<number>`SUM(CASE WHEN paymentStatus = 'paid' THEN 1 ELSE 0 END)`.mapWith(Number),
-        pending: sql<number>`SUM(CASE WHEN paymentStatus = 'pending' THEN 1 ELSE 0 END)`.mapWith(Number),
-        overdue: sql<number>`SUM(CASE WHEN paymentStatus = 'overdue' THEN 1 ELSE 0 END)`.mapWith(Number),
-        totalRevenue: sql<number>`SUM(CASE WHEN paymentStatus = 'paid' THEN priceCents ELSE 0 END)`.mapWith(Number),
-        outstanding: sql<number>`SUM(CASE WHEN paymentStatus IN ('pending', 'overdue') THEN priceCents ELSE 0 END)`.mapWith(Number),
+        paid: sql<number>`SUM(CASE WHEN ${creditPurchases.paymentStatus} = 'paid' THEN 1 ELSE 0 END)`.mapWith(Number),
+        pending: sql<number>`SUM(CASE WHEN ${creditPurchases.paymentStatus} = 'pending' THEN 1 ELSE 0 END)`.mapWith(Number),
+        overdue: sql<number>`SUM(CASE WHEN ${creditPurchases.paymentStatus} = 'overdue' THEN 1 ELSE 0 END)`.mapWith(Number),
+        totalRevenue: sql<number>`SUM(CASE WHEN ${creditPurchases.paymentStatus} = 'paid' THEN ${creditPurchases.priceCents} ELSE 0 END)`.mapWith(Number),
+        outstanding: sql<number>`SUM(CASE WHEN ${creditPurchases.paymentStatus} IN ('pending', 'overdue') THEN ${creditPurchases.priceCents} ELSE 0 END)`.mapWith(Number),
       })
       .from(creditPurchases);
 

@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { checkRateLimit, authRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 export const authConfig: NextAuthConfig = {
   session: { strategy: 'jwt' },
@@ -51,6 +52,20 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Rate limit credentials authorize() directly. The loginAction wrapper
+        // already enforces a limit, but Auth.js endpoints (e.g. POST to
+        // /api/auth/callback/credentials) bypass that wrapper. Without this,
+        // brute-force attempts against the credentials provider are unbounded.
+        // Keyed on the email so attackers can't dodge the limit by rotating
+        // identifiers; failures from one IP against many emails still pile up
+        // because each email's window fills independently.
+        const identifier = `credentials:${String(credentials.email).toLowerCase()}`;
+        const limit = await checkRateLimit(authRateLimitConfig, identifier);
+        if (!limit.success) {
+          console.warn('[AUTH] Rate limit hit on credentials authorize:', identifier);
+          return null;
+        }
 
         try {
           const user = await db

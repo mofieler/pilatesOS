@@ -37,6 +37,13 @@ export type InstructorCancellationResult = {
   affectedUserIds: string[];
 };
 
+class SessionCancellationError extends Error {
+  constructor(message: string, public readonly code: ServiceErrorCode) {
+    super(message);
+    this.name = 'SessionCancellationError';
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CANCELLATION SERVICE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,30 +223,32 @@ export const cancellationService = {
     cancelledByUserId: string,
     reason: string,
   ): Promise<ServiceResult<InstructorCancellationResult>> {
-    const [session] = await db
-      .select()
-      .from(classSessions)
-      .where(eq(classSessions.id, sessionId))
-      .limit(1);
-
-    if (!session) {
-      return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
-    }
-
-    if (session.status === 'cancelled') {
-      return { success: false, error: 'Session already cancelled.', code: 'ALREADY_CANCELLED' };
-    }
-
-    const confirmedBookings = await db
-      .select()
-      .from(bookings)
-      .where(and(eq(bookings.sessionId, sessionId), eq(bookings.status, 'confirmed')));
-
     try {
-      const affectedUserIds: string[] = [];
-      let totalCreditsRefunded = 0;
+      const result = await db.transaction(async (tx) => {
+        // Lock the session row first so no new bookings can be inserted or
+        // status-flipped while we cancel. The createBooking action also takes
+        // FOR UPDATE on this row, so the two paths serialize cleanly.
+        const [session] = await tx
+          .select()
+          .from(classSessions)
+          .where(eq(classSessions.id, sessionId))
+          .for('update')
+          .limit(1);
 
-      await db.transaction(async (tx) => {
+        if (!session) {
+          throw new SessionCancellationError('Session not found.', 'NOT_FOUND');
+        }
+        if (session.status === 'cancelled') {
+          throw new SessionCancellationError('Session already cancelled.', 'ALREADY_CANCELLED');
+        }
+
+        // Fetch confirmed bookings INSIDE the locked tx — anything that raced
+        // ahead of us is now visible and gets refunded along with the rest.
+        const confirmedBookings = await tx
+          .select()
+          .from(bookings)
+          .where(and(eq(bookings.sessionId, sessionId), eq(bookings.status, 'confirmed')));
+
         await tx
           .update(classSessions)
           .set({
@@ -250,6 +259,9 @@ export const cancellationService = {
             updatedAt: new Date(),
           })
           .where(eq(classSessions.id, sessionId));
+
+        const affectedUserIds: string[] = [];
+        let totalCreditsRefunded = 0;
 
         for (const booking of confirmedBookings) {
           await tx
@@ -280,16 +292,22 @@ export const cancellationService = {
           .update(waitlistEntries)
           .set({ status: 'cancelled', updatedAt: new Date() })
           .where(eq(waitlistEntries.sessionId, sessionId));
+
+        return {
+          totalBookingsCancelled: confirmedBookings.length,
+          totalCreditsRefunded,
+          affectedUserIds,
+        };
       });
 
       logger.info('Session cancelled by instructor', {
         sessionId,
         cancelledByUserId,
-        totalBookingsCancelled: confirmedBookings.length,
-        totalCreditsRefunded,
+        totalBookingsCancelled: result.totalBookingsCancelled,
+        totalCreditsRefunded: result.totalCreditsRefunded,
       });
 
-      // Phase 2: emailQueue.addBulk(affectedUserIds.map(userId =>
+      // Phase 2: emailQueue.addBulk(result.affectedUserIds.map(userId =>
       //   ({ name: 'class-cancelled-by-instructor', data: { userId, sessionId, reason } })
       // ));
 
@@ -300,12 +318,15 @@ export const cancellationService = {
         success: true,
         data: {
           sessionId,
-          totalBookingsCancelled: confirmedBookings.length,
-          totalCreditsRefunded,
-          affectedUserIds,
+          totalBookingsCancelled: result.totalBookingsCancelled,
+          totalCreditsRefunded: result.totalCreditsRefunded,
+          affectedUserIds: result.affectedUserIds,
         },
       };
     } catch (err) {
+      if (err instanceof SessionCancellationError) {
+        return { success: false, error: err.message, code: err.code };
+      }
       logger.error('Session cancellation transaction failed', { err, sessionId });
       return { success: false, error: 'Failed to cancel session.', code: 'DB_ERROR' };
     }
