@@ -28,7 +28,8 @@ export const creditPackages = pgTable(
     description: text('description'),
     creditsAmount: integer('credits_amount').notNull(),
     creditType: creditTypeEnum('credit_type').notNull(),
-    category: creditPackCategoryEnum('category').notNull().default('standard'),
+    category: creditPackCategoryEnum('category').notNull().default('credit'),
+    classType: varchar('class_type', { length: 50 }), // 'mat' or 'reformer' for session packages
     priceCents: integer('price_cents').notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('eur'),
     validityDays: integer('validity_days').notNull().default(365),

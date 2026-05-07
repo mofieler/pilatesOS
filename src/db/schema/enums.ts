@@ -90,11 +90,8 @@ export const paymentStatusEnum = pgEnum('payment_status', [
 ]);
 
 export const creditPackCategoryEnum = pgEnum('credit_pack_category', [
-  'standard',
-  'premium',
-  'vip',
-  'specialty',
-  'wellness'
+  'credit',   // Group class credit packages (mat_group, reformer_group, private_session tiers)
+  'session',  // Private session packages (mat/reformer class types)
 ]);
 
 export const vodStatusEnum = pgEnum('vod_status', [
