@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/db';
-import { creditPurchases, creditBalances, creditTransactions, users, creditPackages } from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { creditPurchases, users, creditPackages } from '@/db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { auditHelpers } from '@/lib/security/audit-system';
 import { handleApiError } from '@/lib/security/error-sanitizer';
@@ -89,98 +89,17 @@ export async function updateCreditPurchaseAction(input: z.infer<typeof updatePur
       return { success: false, error: 'Can only mark pending or overdue purchases as paid', code: 'INVALID_STATE' };
     }
 
-    // Start transaction for atomic updates
-    const updatedPurchase = await db.transaction(async (tx) => {
-      // Update purchase status
-      const updateData: any = {
+    // Credits are granted immediately when the purchase is created (in the API route).
+    // Admin marking as paid is a pure accounting/status update only.
+    const [updatedPurchase] = await db
+      .update(creditPurchases)
+      .set({
         paymentStatus,
         adminNotes: adminNotes || currentPurchase.adminNotes,
-      };
-
-      if (paymentStatus === 'paid') {
-        updateData.paidAt = new Date();
-      }
-
-      const [updated] = await tx
-        .update(creditPurchases)
-        .set(updateData)
-        .where(eq(creditPurchases.id, purchaseId))
-        .returning();
-
-      // Auto-add credits when marking as paid (pay-at-studio flow)
-      // This is idempotent - purchase ID serves as idempotency key
-      if (paymentStatus === 'paid' && ['pending', 'overdue'].includes(currentPurchase.paymentStatus)) {
-        // Check if credits were already added by looking for existing credit transaction with this purchase ID
-        // For pay-at-studio, we use a specific description pattern to track idempotency
-        const [existingCreditTx] = await tx
-          .select({ id: creditTransactions.id })
-          .from(creditTransactions)
-          .where(
-            and(
-              eq(creditTransactions.userId, currentPurchase.userId),
-              eq(creditTransactions.packageId, purchaseId),
-              eq(creditTransactions.type, 'purchase')
-            )
-          )
-          .limit(1);
-
-        if (!existingCreditTx) {
-          // Get or create credit balance row (with FOR UPDATE lock)
-          const [existingBalance] = await tx
-            .select()
-            .from(creditBalances)
-            .where(
-              and(
-                eq(creditBalances.userId, currentPurchase.userId),
-                eq(creditBalances.creditType, currentPurchase.creditType)
-              )
-            )
-            .for('update')
-            .limit(1);
-
-          let newBalance: number;
-          let balanceId: string;
-
-          if (existingBalance) {
-            newBalance = existingBalance.balance + currentPurchase.creditsAmount;
-            await tx
-              .update(creditBalances)
-              .set({
-                balance: newBalance,
-                expiresAt: existingBalance.expiresAt, // Keep existing expiry
-                updatedAt: new Date(),
-              })
-              .where(eq(creditBalances.id, existingBalance.id));
-            balanceId = existingBalance.id;
-          } else {
-            newBalance = currentPurchase.creditsAmount;
-            const [newBalanceRow] = await tx
-              .insert(creditBalances)
-              .values({
-                userId: currentPurchase.userId,
-                creditType: currentPurchase.creditType,
-                balance: newBalance,
-                expiresAt: null,
-              })
-              .returning({ id: creditBalances.id });
-            balanceId = newBalanceRow.id;
-          }
-
-          // Record the credit transaction
-          await tx.insert(creditTransactions).values({
-            userId: currentPurchase.userId,
-            packageId: purchaseId, // Use purchase ID as idempotency reference
-            type: 'purchase',
-            creditType: currentPurchase.creditType,
-            amount: currentPurchase.creditsAmount,
-            balanceAfter: newBalance,
-            description: `Pay-at-studio: ${currentPurchase.creditsAmount} ${currentPurchase.creditType} credits (Purchase: ${purchaseId})`,
-          });
-        }
-      }
-
-      return updated;
-    });
+        ...(paymentStatus === 'paid' ? { paidAt: new Date() } : {}),
+      })
+      .where(eq(creditPurchases.id, purchaseId))
+      .returning();
 
     // Log admin action
     await auditHelpers.logAdminAction(

@@ -55,7 +55,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   const { title, greeting, body, actionUrl, actionText, expiryText, footerText } = props;
 
   return `<!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -176,9 +176,9 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
               </table>
               
               <!-- Manual link fallback -->
-              <p class="text-muted" style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">Link funktioniert nicht?</p>
+              <p class="text-muted" style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">Link not working?</p>
               <p class="text-muted" style="margin: 0; font-size: 12px; line-height: 1.6; color: ${COLORS.textLighter}; word-break: break-all;">
-                Kopieren Sie diesen Link in Ihren Browser:<br>
+                Copy this link into your browser:<br>
                 <a href="${actionUrl}" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: underline;">${actionUrl}</a>
               </p>
               
@@ -333,15 +333,21 @@ export async function sendBookingConfirmationEmail(
 }
 
 /**
- * Send a booking cancellation email
+ * Send a booking cancellation email.
+ * refundIssued controls whether we tell the user their credit was returned.
  */
 export async function sendBookingCancellationEmail(
   email: string,
   name: string,
   classTitle: string,
   classDate: string,
+  refundIssued: boolean,
 ): Promise<void> {
   const link = `${APP_URL}/classes`;
+
+  const refundNote = refundIssued
+    ? 'Your credit has been returned to your account and is available for your next booking.'
+    : 'As the cancellation was made within 24 hours of the class, your credit could not be refunded per our late cancellation policy.';
 
   await getResend().emails.send({
     from: FROM,
@@ -349,13 +355,108 @@ export async function sendBookingCancellationEmail(
     subject: `Cancellation confirmation – ${APP_NAME}`,
     html: buildBaseTemplate({
       subject: 'Cancellation confirmation',
-      title: 'Class cancelled',
+      title: 'Booking cancelled',
       greeting: `Hi ${name},`,
-      body: `Your class <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> has been successfully cancelled.`,
+      body: `Your booking for <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> has been successfully cancelled.`,
       actionUrl: link,
       actionText: 'Book a new class',
-      expiryText: 'Your credit has been added to your account and is available for future bookings.',
+      expiryText: refundNote,
     }),
+  });
+}
+
+/**
+ * Send a class cancellation notice to a student when an admin/instructor cancels
+ * the entire session. Credits are always fully refunded in this case.
+ */
+export async function sendClassCancelledByAdminEmail(
+  email: string,
+  name: string,
+  classTitle: string,
+  classDate: string,
+  reason?: string,
+): Promise<void> {
+  const link = `${APP_URL}/classes`;
+
+  const reasonNote = reason
+    ? `Reason: <em>${reason}</em><br><br>`
+    : '';
+
+  await getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Class cancelled – ${APP_NAME}`,
+    html: buildBaseTemplate({
+      subject: 'Class cancelled',
+      title: 'Your class has been cancelled',
+      greeting: `Hi ${name},`,
+      body: `We're sorry to let you know that <strong>"${classTitle}"</strong> scheduled for <strong>${classDate}</strong> has been cancelled by the studio.<br><br>${reasonNote}Your credit has been fully refunded and is available for your next booking.`,
+      actionUrl: link,
+      actionText: 'Browse other classes',
+      expiryText: 'We apologise for the inconvenience. We hope to see you at another class soon.',
+    }),
+  });
+}
+
+/**
+ * Send credit purchase confirmation with PDF invoice attached.
+ * pdfBuffer is the raw @react-pdf/renderer output — pass null to skip attachment.
+ */
+export async function sendPurchaseConfirmationWithInvoice(
+  email: string,
+  name: string,
+  packageName: string,
+  creditsAmount: number,
+  priceCents: number,
+  currency: string,
+  invoiceNumber: string,
+  dueDate: Date,
+  pdfBuffer: Buffer | null,
+): Promise<void> {
+  const formatted = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(priceCents / 100);
+
+  const dueDateStr = dueDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const html = buildBaseTemplate({
+    subject: 'Credit purchase confirmation',
+    title: 'Your credit package is ready',
+    greeting: `Hi ${name},`,
+    body: `
+      Your purchase of <strong>${packageName}</strong> (${creditsAmount} credits) has been confirmed
+      and the credits are already available in your account.<br><br>
+      <strong>Invoice No.:</strong> ${invoiceNumber}<br>
+      <strong>Amount:</strong> ${formatted}<br>
+      <strong>Payment due:</strong> ${dueDateStr}<br><br>
+      Please bring payment to the studio by the due date.
+      Your invoice is attached to this email as a PDF.
+    `,
+    actionUrl: `${APP_URL}/credits`,
+    actionText: 'View my credits',
+    expiryText: `Payment is due in-studio by ${dueDateStr}. Invoice No. ${invoiceNumber}.`,
+  });
+
+  await getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Credit purchase confirmed – ${invoiceNumber} – ${APP_NAME}`,
+    html,
+    ...(pdfBuffer
+      ? {
+          attachments: [
+            {
+              filename: `Invoice-${invoiceNumber}.pdf`,
+              content: pdfBuffer,
+            },
+          ],
+        }
+      : {}),
   });
 }
 

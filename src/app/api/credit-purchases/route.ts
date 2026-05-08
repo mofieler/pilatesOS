@@ -1,128 +1,187 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { creditPurchases, creditPackages } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { creditPurchases, creditPackages, creditBalances, creditTransactions, users } from '@/db/schema';
+import { eq, and, like, desc, isNull } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import { requireUserOwnership } from '@/lib/auth/api-auth';
 import { purchaseRateLimiter } from '@/lib/security/rate-limiter';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { handleApiError } from '@/lib/security/error-sanitizer';
+import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
+import { sendPurchaseConfirmationWithInvoice } from '@/lib/email/resend';
 
 export async function POST(request: Request) {
-  console.log('Credit purchase request received');
-  
-  // Rate limiting check
   const rateLimitResult = await purchaseRateLimiter(request as any);
   if (!rateLimitResult.success) {
-    console.log('Rate limit exceeded');
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
-      { 
+      {
         status: 429,
-        headers: {
-          'X-RateLimit-Reset': rateLimitResult.resetTime?.toString() || ''
-        }
+        headers: { 'X-RateLimit-Reset': rateLimitResult.resetTime?.toString() || '' },
       }
     );
   }
 
   try {
     const body = await request.json();
-    console.log('Request body:', { ...body, userId: body.userId ? '[REDACTED]' : 'MISSING' });
-    
     const { packageId, userId, paymentMethod } = body;
 
     if (!packageId || !userId || !paymentMethod) {
-      console.error('Missing required fields:', { packageId: !!packageId, userId: !!userId, paymentMethod: !!paymentMethod });
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Authenticate and verify user ownership
-    console.log('Authenticating user:', userId);
     const authResult = await requireUserOwnership(request as any, userId);
-    if (authResult instanceof NextResponse) {
-      console.error('Authentication failed for user:', userId);
-      return authResult; // This is an error response
-    }
+    if (authResult instanceof NextResponse) return authResult;
+    const session = authResult;
 
-    const session = authResult; // This is the valid session
-    console.log('User authenticated successfully:', session.user.email);
-
-    // Log security event
     await logSecurityEvent({
       userId: session.user.id,
       action: 'credit_purchase_attempt',
       resource: 'credit_purchase',
-      details: { packageId, paymentMethod }
+      details: { packageId, paymentMethod },
     });
 
-    // Validate payment method.
-    // 'stripe' is intentionally rejected here: this route is the client-initiated
-    // path. Stripe purchases must originate from a Checkout Session and be
-    // confirmed by the Stripe webhook (which is the only place credits may be
-    // granted for a Stripe payment). Without that webhook, allowing 'stripe' here
-    // is a free-credits exploit — the client could just claim it paid.
+    // Only pay-at-studio is allowed here — Stripe must go through the webhook
     if (paymentMethod !== 'pay_at_studio') {
-      return NextResponse.json(
-        { error: 'Invalid payment method' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 });
     }
 
-    // Get the package details
-    console.log('Looking up package:', packageId);
     const [package_] = await db
       .select()
       .from(creditPackages)
       .where(eq(creditPackages.id, packageId));
 
     if (!package_) {
-      console.error('Package not found:', packageId);
-      return NextResponse.json(
-        { error: 'Package not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
     }
-    
-    console.log('Package found:', package_.name, '-', package_.creditsAmount, package_.creditType, 'credits');
 
-    // Create the pay-at-studio purchase record. Credits are NOT granted yet —
-    // they are added by the admin marking the purchase paid (see
-    // updateCreditPurchaseAction).
-    const purchase = await db
-      .insert(creditPurchases)
-      .values({
+    const dueDate = addDays(new Date(), 14);
+
+    // Atomic: generate invoice number + create purchase + grant credits
+    const { purchase, newBalance, invoiceNumber } = await db.transaction(async (tx) => {
+      // Sequential invoice number per calendar year (RE-YYYY-NNNN)
+      const year   = new Date().getFullYear();
+      const prefix = `RE-${year}-`;
+      const [lastRow] = await tx
+        .select({ num: creditPurchases.invoiceNumber })
+        .from(creditPurchases)
+        .where(like(creditPurchases.invoiceNumber, `${prefix}%`))
+        .orderBy(desc(creditPurchases.invoiceNumber))
+        .limit(1);
+
+      const lastSeq    = lastRow?.num ? parseInt(lastRow.num.slice(prefix.length), 10) : 0;
+      const invNumber  = `${prefix}${String(lastSeq + 1).padStart(4, '0')}`;
+      const now        = new Date();
+
+      const [newPurchase] = await tx
+        .insert(creditPurchases)
+        .values({
+          userId,
+          packageId,
+          creditsAmount: package_.creditsAmount,
+          creditType: package_.creditType,
+          priceCents: package_.priceCents,
+          currency: package_.currency,
+          paymentMethod,
+          paymentStatus: 'pending',
+          paymentDueDate: dueDate,
+          paidAt: null,
+          invoiceNumber: invNumber,
+          invoiceIssuedAt: now,
+        })
+        .returning();
+
+      // Upsert credit balance (FOR UPDATE prevents concurrent races)
+      const [existing] = await tx
+        .select()
+        .from(creditBalances)
+        .where(
+          and(
+            eq(creditBalances.userId, userId),
+            eq(creditBalances.creditType, package_.creditType),
+          ),
+        )
+        .for('update')
+        .limit(1);
+
+      let balance: number;
+      if (existing) {
+        balance = existing.balance + package_.creditsAmount;
+        await tx
+          .update(creditBalances)
+          .set({ balance, updatedAt: new Date() })
+          .where(eq(creditBalances.id, existing.id));
+      } else {
+        balance = package_.creditsAmount;
+        await tx.insert(creditBalances).values({
+          userId,
+          creditType: package_.creditType,
+          balance,
+        });
+      }
+
+      await tx.insert(creditTransactions).values({
         userId,
-        packageId,
-        creditsAmount: package_.creditsAmount,
+        packageId: package_.id,
+        type: 'purchase',
         creditType: package_.creditType,
-        priceCents: package_.priceCents,
-        currency: package_.currency,
-        paymentMethod,
-        paymentStatus: 'pending',
-        paymentDueDate: addDays(new Date(), 14),
-        paidAt: null,
-      })
-      .returning();
+        amount: package_.creditsAmount,
+        balanceAfter: balance,
+        description: `Pay-at-studio purchase: ${package_.creditsAmount} ${package_.creditType} credits (${invNumber})`,
+      });
 
-    console.log('Purchase record created:', purchase[0].id);
-
-    const response = {
-      success: true,
-      purchase: purchase[0],
-      dueDate: addDays(new Date(), 14).toISOString(),
-    };
-    
-    console.log('Purchase completed successfully:', { 
-      purchaseId: purchase[0].id, 
-      paymentMethod, 
-      creditsAmount: package_.creditsAmount 
+      return { purchase: newPurchase, newBalance: balance, invoiceNumber: invNumber };
     });
-    
-    return NextResponse.json(response);
+
+    // Fire-and-forget: generate PDF invoice and send confirmation email
+    Promise.resolve().then(async () => {
+      try {
+        const [userRow] = await db
+          .select({ email: users.email, name: users.name })
+          .from(users)
+          .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+          .limit(1);
+
+        if (!userRow?.email) return;
+
+        const pdfBuffer = await generateInvoicePDF({
+          invoiceNumber,
+          invoiceDate: new Date(),
+          dueDate,
+          customerName:    userRow.name ?? 'Customer',
+          customerEmail:   userRow.email,
+          customerAddress: null,
+          packageName:     package_.name,
+          creditsAmount:   package_.creditsAmount,
+          creditType:      package_.creditType,
+          priceCents:      package_.priceCents,
+          currency:        package_.currency,
+          paymentMethod:   'pay_at_studio',
+        });
+
+        await sendPurchaseConfirmationWithInvoice(
+          userRow.email,
+          userRow.name ?? 'there',
+          package_.name,
+          package_.creditsAmount,
+          package_.priceCents,
+          package_.currency,
+          invoiceNumber,
+          dueDate,
+          pdfBuffer,
+        );
+      } catch (err) {
+        console.warn('[invoice] Failed to generate/send invoice:', err);
+      }
+    }).catch(() => {});
+
+    return NextResponse.json({
+      success: true,
+      purchase,
+      newBalance,
+      invoiceNumber,
+      dueDate: dueDate.toISOString(),
+    });
   } catch (error) {
     const errorResponse = handleApiError(error, 'credit-purchase');
     return NextResponse.json(errorResponse, { status: 500 });

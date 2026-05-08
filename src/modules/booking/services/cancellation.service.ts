@@ -1,7 +1,8 @@
 import { db } from '@/db';
-import { bookings, users, classSessions, waitlistEntries } from '@/db/schema';
+import { bookings, users, classSessions, classTemplates, waitlistEntries } from '@/db/schema';
 import type { Booking } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
+import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail } from '@/lib/email/resend';
 import { differenceInHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
 import { creditService } from '@/modules/billing/services/credit.service';
@@ -137,6 +138,20 @@ export const cancellationService = {
     // ── 7. Atomic DB transaction ────────────────────────────────────────────
     try {
       const updatedBooking = await db.transaction(async (tx) => {
+        // Re-read booking under lock — prevents double-refund if two cancel
+        // requests race (e.g. user + admin simultaneously). Without this, both
+        // could read 'confirmed' outside the tx and both issue a refund.
+        const [locked] = await tx
+          .select({ status: bookings.status })
+          .from(bookings)
+          .where(eq(bookings.id, bookingId))
+          .for('update')
+          .limit(1);
+
+        if (locked?.status === 'cancelled') {
+          throw new SessionCancellationError('Booking already cancelled.', 'ALREADY_CANCELLED');
+        }
+
         const [result] = await tx
           .update(bookings)
           .set({
@@ -181,10 +196,27 @@ export const cancellationService = {
       logger.info('Booking cancelled', { bookingId, refundIssued, mercyApplied, creditsRefunded });
 
       // ── 8. Fire-and-forget side effects (outside transaction) ─────────────
-      // Phase 2: emailQueue.add('booking-cancelled', { bookingId, refundIssued, mercyApplied });
-
-      // Phase 2: replace with waitlistService.promoteNextInLine(session.id)
-      // after waitlistService is extracted to its own module file.
+      Promise.resolve().then(async () => {
+        try {
+          const [tmpl] = await db
+            .select({ name: classTemplates.name })
+            .from(classTemplates)
+            .where(eq(classTemplates.id, session.templateId!))
+            .limit(1);
+          const classDate = session.startsAt.toLocaleDateString('en-GB', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          });
+          await sendBookingCancellationEmail(
+            student.email!,
+            student.name ?? 'there',
+            tmpl?.name ?? 'your class',
+            classDate,
+            refundIssued,
+          );
+        } catch (err) {
+          console.warn('[email] Cancellation email failed:', err);
+        }
+      }).catch(() => {});
 
       revalidatePath('/book');
       revalidatePath('/dashboard');
@@ -204,6 +236,9 @@ export const cancellationService = {
         },
       };
     } catch (err) {
+      if (err instanceof SessionCancellationError) {
+        return { success: false, error: err.message, code: err.code };
+      }
       logger.error('Cancellation transaction failed', { err, bookingId });
       return {
         success: false,
@@ -307,9 +342,42 @@ export const cancellationService = {
         totalCreditsRefunded: result.totalCreditsRefunded,
       });
 
-      // Phase 2: emailQueue.addBulk(result.affectedUserIds.map(userId =>
-      //   ({ name: 'class-cancelled-by-instructor', data: { userId, sessionId, reason } })
-      // ));
+      // Fire-and-forget emails to all affected students
+      Promise.resolve().then(async () => {
+        try {
+          if (result.affectedUserIds.length === 0) return;
+          const [sessionRow, affectedUsers] = await Promise.all([
+            db.select({ startsAt: classSessions.startsAt, title: classTemplates.name })
+              .from(classSessions)
+              .innerJoin(classTemplates, eq(classSessions.templateId, classTemplates.id))
+              .where(eq(classSessions.id, sessionId))
+              .limit(1)
+              .then((rows) => rows[0]),
+            db.select({ id: users.id, email: users.email, name: users.name })
+              .from(users)
+              .where(inArray(users.id, result.affectedUserIds)),
+          ]);
+          if (!sessionRow) return;
+          const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          });
+          await Promise.allSettled(
+            affectedUsers
+              .filter((u) => u.email)
+              .map((u) =>
+                sendClassCancelledByAdminEmail(
+                  u.email!,
+                  u.name ?? 'there',
+                  sessionRow.title,
+                  classDate,
+                  reason,
+                ),
+              ),
+          );
+        } catch (err) {
+          console.warn('[email] Class cancellation emails failed:', err);
+        }
+      }).catch(() => {});
 
       revalidatePath('/book');
       revalidatePath('/admin/classes');

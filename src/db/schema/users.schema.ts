@@ -22,6 +22,7 @@ export const users = pgTable(
     // Business logic flags
     hasSignedWaiver: boolean('has_signed_waiver').notNull().default(false),
     firstMercyUsed: boolean('first_mercy_used').notNull().default(false),
+    profileCompleted: boolean('profile_completed').notNull().default(false),
 
     // Gamification counters — pre-allocated for schema stability across phases
     totalClassesAttended: integer('total_classes_attended').notNull().default(0),

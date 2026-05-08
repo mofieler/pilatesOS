@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { auth, signOut } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
+import { ProfileCompletionOverlay } from '@/components/shared/ProfileCompletionOverlay';
+import { CookieNotice } from '@/components/shared/CookieNotice';
 
 // Heroicons-style SVG icons - professional, consistent
 const DashboardIcon = () => (
@@ -50,6 +52,8 @@ export default async function DashboardLayout({ children }:  { children: React.R
   const session = await auth();
 
   if (!session) redirect('/login');
+
+  const needsProfileCompletion = (session.user as any)?.needsProfileCompletion === true;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1]">
@@ -108,7 +112,24 @@ export default async function DashboardLayout({ children }:  { children: React.R
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-6">{children}</main>
+      <main className="max-w-7xl mx-auto p-6 flex-1">{children}</main>
+
+      <footer className="border-t border-[#ede8e5]/60 bg-[#faf9f7]/80 px-6 py-4 mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center justify-between">
+          <p className="text-xs text-[#a6856f]">
+            &copy; {new Date().getFullYear()} Paquita Pilates Reformer GbR
+          </p>
+          <div className="flex gap-4 text-xs">
+            <Link href="/impressum"  className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
+            <Link href="/datenschutz" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
+          </div>
+        </div>
+      </footer>
+
+      {needsProfileCompletion && (
+        <ProfileCompletionOverlay initialName={session.user?.name ?? ''} />
+      )}
+      <CookieNotice />
     </div>
   );
 }

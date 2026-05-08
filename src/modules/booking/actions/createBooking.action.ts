@@ -10,6 +10,7 @@ import { auth } from '@/lib/auth/auth';
 import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import { checkRateLimit, bookingRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
+import { sendBookingConfirmationEmail } from '@/lib/email/resend';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -152,6 +153,37 @@ export async function createBookingAction(
 
     revalidatePath('/book');
     revalidatePath('/dashboard');
+
+    // Fire-and-forget — email failure must never roll back a successful booking
+    Promise.resolve().then(async () => {
+      try {
+        const [[userRow], [sessionRow]] = await Promise.all([
+          db.select({ email: users.email, name: users.name })
+            .from(users).where(eq(users.id, userId)).limit(1),
+          db.select({ startsAt: classSessions.startsAt, title: classTemplates.name })
+            .from(classSessions)
+            .innerJoin(classTemplates, eq(classSessions.templateId, classTemplates.id))
+            .where(eq(classSessions.id, sessionId)).limit(1),
+        ]);
+        if (userRow?.email && sessionRow) {
+          const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          });
+          const classTime = sessionRow.startsAt.toLocaleTimeString('en-GB', {
+            hour: '2-digit', minute: '2-digit',
+          });
+          await sendBookingConfirmationEmail(
+            userRow.email,
+            userRow.name ?? 'there',
+            sessionRow.title,
+            classDate,
+            classTime,
+          );
+        }
+      } catch (err) {
+        console.warn('[email] Booking confirmation email failed:', err);
+      }
+    }).catch(() => {});
 
     return { success: true, data: booking as Booking };
   } catch (err) {

@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth/auth';
 import { addSecurityHeaders } from '@/lib/security/security-headers';
 import '@/lib/config/env-init';
 
-const PUBLIC_PREFIXES = ['/login', '/register', '/verify-email', '/complete-profile', '/forgot-password', '/reset-password'];
+const PUBLIC_PREFIXES = ['/login', '/register', '/verify-email', '/complete-profile', '/forgot-password', '/reset-password', '/impressum', '/datenschutz'];
 const PUBLIC_EXACT = ['/'];
 
 export async function middleware(request: NextRequest) {
@@ -24,15 +24,6 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(request, NextResponse.redirect(loginUrl));
   }
 
-  // New Google OAuth users must complete their profile first
-  const needsProfileCompletion = (session.user as any).needsProfileCompletion;
-  if (needsProfileCompletion && !pathname.startsWith('/complete-profile')) {
-    return addSecurityHeaders(
-      request,
-      NextResponse.redirect(new URL('/complete-profile', request.url)),
-    );
-  }
-
   // /admin/* requires admin or instructor role
   if (pathname.startsWith('/admin')) {
     const role = session.user.role as string | undefined;
@@ -45,5 +36,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|otf|eot|mp4|webm|pdf|txt|xml|json)$).*)',
+  ],
 };

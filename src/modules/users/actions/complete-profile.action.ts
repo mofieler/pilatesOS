@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth, unstable_update } from '@/lib/auth/auth';
+import { sendWelcomeEmail } from '@/lib/email/resend';
 
 const completeProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(255),
@@ -23,12 +24,23 @@ export async function completeProfileAction(input: unknown) {
       .set({
         name: validated.name,
         phone: validated.phone ?? null,
+        profileCompleted: true,
         updatedAt: new Date(),
       })
       .where(eq(users.id, session.user.id));
 
     // Clear the needsProfileCompletion flag in the JWT
     await unstable_update({ needsProfileCompletion: false } as any);
+
+    // Fire-and-forget — welcome email failure must not block profile completion
+    const userEmail = session.user.email;
+    if (userEmail) {
+      Promise.resolve().then(() =>
+        sendWelcomeEmail(userEmail, validated.name).catch((err) =>
+          console.warn('[email] Welcome email failed:', err),
+        ),
+      ).catch(() => {});
+    }
 
     return { success: true };
   } catch (error) {

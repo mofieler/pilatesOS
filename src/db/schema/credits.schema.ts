@@ -150,7 +150,11 @@ export const creditPurchases = pgTable(
     
     // Admin notes for manual payments
     adminNotes: text('admin_notes'),
-    
+
+    // Invoice tracking (§14 UStG)
+    invoiceNumber: varchar('invoice_number', { length: 50 }),
+    invoiceIssuedAt: timestamp('invoice_issued_at', { withTimezone: true, mode: 'date' }),
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
@@ -165,5 +169,36 @@ export const creditPurchases = pgTable(
     methodIdx: index('credit_purchases_method_idx').on(table.paymentMethod),
     dueDateIdx: index('credit_purchases_due_date_idx').on(table.paymentDueDate),
     stripeSessionIdx: index('credit_purchases_stripe_session_idx').on(table.stripeSessionId),
+    invoiceNumberIdx: index('credit_purchases_invoice_number_idx').on(table.invoiceNumber),
+  }),
+);
+
+// Manual credit adjustments — §147 AO audit trail for all admin-initiated changes.
+// Records are immutable once written (never update, only insert).
+export const creditAdjustments = pgTable(
+  'credit_adjustments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // [FIX-3] RESTRICT — adjustment records are financial audit entries
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    // SET NULL — record survives admin account removal
+    adminId: uuid('admin_id').references(() => users.id, { onDelete: 'set null' }),
+    creditType: creditTypeEnum('credit_type').notNull(),
+    amountDelta: integer('amount_delta').notNull(), // positive = add, negative = deduct
+    reason: text('reason').notNull(),
+    newBalance: integer('new_balance').notNull(), // immutable balance snapshot after adjustment
+    notes: text('notes'),
+    // [FIX-2] withTimezone: true — immutable audit timestamp
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('credit_adjustments_user_id_idx').on(table.userId),
+    adminIdIdx: index('credit_adjustments_admin_id_idx').on(table.adminId),
+    userCreatedAtIdx: index('credit_adjustments_user_created_at_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
   }),
 );

@@ -131,10 +131,11 @@ export const authConfig: NextAuthConfig = {
           .then((rows) => rows[0]);
 
         if (existing) {
-          // Returning Google user — populate user object for jwt callback
+          // Returning Google user — re-check profileCompleted so skipping
+          // only dismisses the overlay for one session, not permanently.
           user.id = existing.id;
           (user as any).role = existing.role;
-          (user as any).needsProfileCompletion = false;
+          (user as any).needsProfileCompletion = !existing.profileCompleted;
         } else {
           // First-time Google user — create account, mark profile incomplete
           const [newUser] = await db

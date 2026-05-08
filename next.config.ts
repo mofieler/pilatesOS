@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@react-pdf/renderer'],
   output: 'standalone',
   compress: true,
   productionBrowserSourceMaps: false,
