@@ -27,7 +27,6 @@ async function seedSimple() {
         email: 'admin@pilatesos.com',
         name: 'Admin User',
         role: 'admin',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       }).returning();
       console.log('✅ Admin user created:', adminUser[0].email);
@@ -48,7 +47,6 @@ async function seedSimple() {
         email: 'test@example.com',
         name: 'Test User',
         role: 'student',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       }).returning();
       console.log('✅ Test user created:', testUser[0].email);
