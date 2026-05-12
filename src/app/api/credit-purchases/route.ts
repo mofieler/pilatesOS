@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       userId: session.user.id,
       action: 'credit_purchase_attempt',
       resource: 'credit_purchase',
-      details: { packageId, paymentMethod, acceptedTerms, waivedWithdrawal },
+      details: { packageId, paymentMethod, acceptedTerms },
     });
 
     // Only pay-at-studio is allowed here — Stripe must go through the webhook
