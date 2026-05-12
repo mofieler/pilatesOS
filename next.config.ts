@@ -11,17 +11,21 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
-      // Add future avatar hosts here (S3, Bunny, etc.)
+      {
+        protocol: 'https',
+        hostname: 'pilateq.de',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.pilateq.de',
+      },
       // {
       //   protocol: 'https',
       //   hostname: '*.s3.amazonaws.com',
       // },
     ],
-    domains: [
-      'pilateq.de', // Add your production domain here
-    ],
     formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
+    minimumCacheTTL: 60 * 60 * 24 * 365,
   },
   // Standalone build: ensure public assets are served correctly
   assetPrefix: process.env.ASSET_PREFIX || '',

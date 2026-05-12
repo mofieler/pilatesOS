@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   addDays,
@@ -8,6 +8,7 @@ import {
   startOfWeek,
   isSameDay,
   isToday,
+  isThisWeek,
   parseISO,
   startOfToday,
 } from 'date-fns';
@@ -122,14 +123,35 @@ function WeekViewInner({
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedDate = parseDateParam(searchParams.get(DATE_PARAM));
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const isCurrentWeek = isThisWeek(weekStart, { weekStartsOn: 1 });
+
+  // Auto-scroll: center today if visible, otherwise scroll to start
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const todayEl = container.querySelector<HTMLElement>('[data-today]');
+    if (todayEl) {
+      const left = todayEl.offsetLeft - container.offsetWidth / 2 + todayEl.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, left), behavior: 'instant' });
+    } else {
+      container.scrollTo({ left: 0, behavior: 'instant' });
+    }
+  }, [weekStart]);
 
   function navigate(weeks: -1 | 1) {
     const newDate = addDays(weekStart, weeks * 7);
     const params = new URLSearchParams(searchParams.toString());
     params.set(DATE_PARAM, format(newDate, 'yyyy-MM-dd'));
+    router.push(`?${params.toString()}`, { scroll: false });
+  }
+
+  function jumpToToday() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(DATE_PARAM, format(startOfToday(), 'yyyy-MM-dd'));
     router.push(`?${params.toString()}`, { scroll: false });
   }
 
@@ -142,99 +164,124 @@ function WeekViewInner({
   return (
     <div>
       {/* Week navigation */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => navigate(-1)}
           aria-label="Previous week"
-          className="flex size-9 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm active:scale-95"
         >
           <ChevronLeftIcon className="size-4" />
         </button>
 
-        <span className="text-sm font-semibold text-[#4e2b22] tabular-nums">
-          {format(weekStart, 'd MMM')}
-          {' – '}
-          {format(addDays(weekStart, 6), 'd MMM yyyy')}
-        </span>
+        <div className="flex flex-col items-center gap-1 min-w-0">
+          <span className="text-sm font-semibold text-[#4e2b22] tabular-nums whitespace-nowrap">
+            {format(weekStart, 'd MMM')}
+            {' – '}
+            {format(addDays(weekStart, 6), 'd MMM yyyy')}
+          </span>
+          {!isCurrentWeek && (
+            <button
+              type="button"
+              onClick={jumpToToday}
+              className="text-[11px] font-semibold text-[#6b8e6b] hover:text-[#4a7c4a] transition-colors underline underline-offset-2"
+            >
+              Jump to today
+            </button>
+          )}
+        </div>
 
         <button
           type="button"
           onClick={() => navigate(1)}
           aria-label="Next week"
-          className="flex size-9 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm"
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm active:scale-95"
         >
           <ChevronRightIcon className="size-4" />
         </button>
       </div>
 
-      {/* 7-column grid — horizontally scrollable on small screens */}
-      <div className="overflow-x-auto rounded-xl border border-[#ede8e5]/80 bg-[#faf9f7] shadow-[0_4px_14px_rgba(78,43,34,0.04)]">
-        <div className="flex min-w-[700px] divide-x divide-[#ede8e5]/60">
-          {weekDays.map((day) => {
-            const current = isToday(day);
-            const selected = isSameDay(day, selectedDate);
-            const daySessions = sessions
-              .filter((s) => isSameDay(s.startsAt, day))
-              .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+      {/* 7-column grid — horizontally scrollable, no visible scrollbar */}
+      <div className="relative">
+        {/* Left fade hint */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-white/60 to-transparent z-10 rounded-l-xl" />
+        {/* Right fade hint */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-white/60 to-transparent z-10 rounded-r-xl" />
 
-            return (
-              <div
-                key={day.toISOString()}
-                className={[
-                  'flex min-w-0 flex-1 flex-col',
-                  current ? 'bg-[#6b8e6b]/5' : 'bg-[#faf9f7]',
-                ].join(' ')}
-              >
-                {/* Day header */}
-                <button
-                  type="button"
-                  onClick={() => selectDay(day)}
+        <div
+          ref={scrollRef}
+          className="overflow-x-auto rounded-xl border border-[#ede8e5]/80 bg-[#faf9f7] shadow-[0_4px_14px_rgba(78,43,34,0.04)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex min-w-[700px] divide-x divide-[#ede8e5]/60">
+            {weekDays.map((day) => {
+              const current = isToday(day);
+              const selected = isSameDay(day, selectedDate);
+              const daySessions = sessions
+                .filter((s) => isSameDay(s.startsAt, day))
+                .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  {...(current ? { 'data-today': '' } : {})}
                   className={[
-                    'group flex flex-col items-center border-b px-1 py-2.5 transition-all',
-                    current ? 'border-[#6b8e6b]/20 hover:bg-[#6b8e6b]/10' : 'border-[#ede8e5]/60 hover:bg-[#ede8e5]/40',
-                    selected && !current ? 'bg-[#ede8e5]/60' : '',
+                    'flex min-w-0 flex-1 flex-col',
+                    current ? 'bg-[#6b8e6b]/5' : 'bg-[#faf9f7]',
                   ].join(' ')}
                 >
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-widest ${
-                      current ? 'text-[#6b8e6b]' : 'text-[#8b6b5c] group-hover:text-[#6b3d32]'
-                    }`}
+                  {/* Day header */}
+                  <button
+                    type="button"
+                    onClick={() => selectDay(day)}
+                    className={[
+                      'group flex flex-col items-center border-b px-1 py-2.5 transition-all',
+                      current ? 'border-[#6b8e6b]/20 hover:bg-[#6b8e6b]/10' : 'border-[#ede8e5]/60 hover:bg-[#ede8e5]/40',
+                      selected && !current ? 'bg-[#ede8e5]/60' : '',
+                    ].join(' ')}
                   >
-                    {format(day, 'EEE')}
-                  </span>
-                  <span
-                    className={`mt-1 flex size-7 items-center justify-center rounded-full text-sm font-bold tabular-nums transition-colors ${
-                      current
-                        ? 'bg-[#4e2b22] text-[#faf9f7]'
-                        : selected
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-widest ${
+                        current ? 'text-[#6b8e6b]' : 'text-[#8b6b5c] group-hover:text-[#6b3d32]'
+                      }`}
+                    >
+                      {format(day, 'EEE')}
+                    </span>
+                    <span
+                      className={`mt-1 flex size-7 items-center justify-center rounded-full text-sm font-bold tabular-nums transition-colors ${
+                        current
                           ? 'bg-[#4e2b22] text-[#faf9f7]'
-                          : 'text-[#4e2b22] group-hover:bg-[#ede8e5]'
-                    }`}
-                  >
-                    {format(day, 'd')}
-                  </span>
-                </button>
+                          : selected
+                            ? 'bg-[#4e2b22] text-[#faf9f7]'
+                            : 'text-[#4e2b22] group-hover:bg-[#ede8e5]'
+                      }`}
+                    >
+                      {format(day, 'd')}
+                    </span>
+                    {current && (
+                      <span className="mt-1 size-1 rounded-full bg-[#6b8e6b]" />
+                    )}
+                  </button>
 
-                {/* Session blocks */}
-                <div className="flex flex-col gap-1.5 p-1.5">
-                  {daySessions.length === 0 ? (
-                    <div className="flex items-center justify-center py-6">
-                      <span className="text-[10px] font-medium text-[#c4a88a]/50">–</span>
-                    </div>
-                  ) : (
-                    daySessions.map((session) => (
-                      <SessionBlock
-                        key={session.id}
-                        session={session}
-                        onClick={onBook}
-                      />
-                    ))
-                  )}
+                  {/* Session blocks */}
+                  <div className="flex flex-col gap-1.5 p-1.5">
+                    {daySessions.length === 0 ? (
+                      <div className="flex items-center justify-center py-6">
+                        <span className="text-[10px] font-medium text-[#c4a88a]/50">–</span>
+                      </div>
+                    ) : (
+                      daySessions.map((session) => (
+                        <SessionBlock
+                          key={session.id}
+                          session={session}
+                          onClick={onBook}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 

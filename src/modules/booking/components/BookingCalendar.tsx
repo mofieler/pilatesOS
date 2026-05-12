@@ -164,7 +164,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
               <DateScroller />
             ) : (
               /* placeholder keeps the header height consistent */
-              <div className="h-10" />
+              <div className="h-11" />
             )}
           </div>
           <ViewToggle view={view} onChange={setView} />

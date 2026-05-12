@@ -20,6 +20,20 @@ WORKDIR /app
 # Increase Node.js heap size for builds with large type-checking
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
+# ── Build-time public variables (safe to bake into the client bundle) ─────────
+# These are the ONLY variables that belong here as ARG/ENV.
+# ⚠️  DO NOT add DATABASE_URL, AUTH_SECRET, STRIPE_*, RESEND_*, or any other
+#     runtime secret as a build ARG — set those as Coolify environment variables
+#     (runtime), not build arguments. Secrets in build args appear in docker
+#     build logs and layer history in plain text.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_APP_NAME
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
