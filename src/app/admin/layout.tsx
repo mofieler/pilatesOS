@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1]">
       <nav className="sticky top-0 z-50 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 backdrop-blur-xl px-6 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Brand + nav links */}
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Pilateq" className="h-8 w-auto" />
@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           {/* Right: email + sign out */}
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-2">
+            <div className="hidden md:flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-2">
               <div className="size-7 rounded-full bg-gradient-to-br from-[#4e2b22] to-[#6b3d32] flex items-center justify-center text-[#faf9f7] text-xs font-semibold">
                 {session.user?.name?.charAt(0) || session.user?.email?.charAt(0)}
               </div>

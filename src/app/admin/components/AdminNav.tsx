@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import { MenuIcon, XIcon, ChevronDownIcon } from 'lucide-react';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -48,15 +49,6 @@ const SyncIcon = () => (
   </svg>
 );
 
-const ChevronIcon = ({ open }: { open: boolean }) => (
-  <svg
-    className={`size-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-  </svg>
-);
-
 // ── Nav structure ─────────────────────────────────────────────────────────────
 
 const NAV_GROUPS = [
@@ -65,8 +57,8 @@ const NAV_GROUPS = [
     label: 'Scheduling',
     icon: CalendarIcon,
     items: [
-      { href: '/admin/classes',    label: 'Classes',   icon: CalendarIcon,  desc: 'Manage classes & sessions' },
-      { href: '/admin/templates',  label: 'Templates', icon: TemplateIcon,  desc: 'Edit class templates' },
+      { href: '/admin/classes',   label: 'Classes',   icon: CalendarIcon, desc: 'Manage classes & sessions' },
+      { href: '/admin/templates', label: 'Templates', icon: TemplateIcon, desc: 'Edit class templates' },
     ],
   },
   {
@@ -74,9 +66,9 @@ const NAV_GROUPS = [
     label: 'Billing',
     icon: PaymentIcon,
     items: [
-      { href: '/admin/credits',       label: 'Packages',      icon: CoinsIcon,   desc: 'Credit packages & pricing' },
-      { href: '/admin/user-credits',  label: 'User Credits',  icon: UsersIcon,   desc: 'Balances & transactions' },
-      { href: '/admin/payments',      label: 'Payments',      icon: PaymentIcon, desc: 'Invoices & payment history' },
+      { href: '/admin/credits',      label: 'Packages',     icon: CoinsIcon,   desc: 'Credit packages & pricing' },
+      { href: '/admin/user-credits', label: 'User Credits', icon: UsersIcon,   desc: 'Balances & transactions' },
+      { href: '/admin/payments',     label: 'Payments',     icon: PaymentIcon, desc: 'Invoices & payment history' },
     ],
   },
   {
@@ -89,13 +81,9 @@ const NAV_GROUPS = [
   },
 ];
 
-// ── Dropdown component ────────────────────────────────────────────────────────
+// ── Desktop dropdown ──────────────────────────────────────────────────────────
 
-function NavDropdown({
-  group,
-}: {
-  group: (typeof NAV_GROUPS)[number];
-}) {
+function NavDropdown({ group }: { group: (typeof NAV_GROUPS)[number] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -108,6 +96,9 @@ function NavDropdown({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close on navigation
+  useEffect(() => { setOpen(false); }, [pathname]);
 
   return (
     <div ref={ref} className="relative">
@@ -123,7 +114,10 @@ function NavDropdown({
           <group.icon />
         </span>
         {group.label}
-        <ChevronIcon open={open} />
+        <ChevronDownIcon
+          className={`size-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          strokeWidth={2.5}
+        />
       </button>
 
       {open && (
@@ -159,33 +153,111 @@ function NavDropdown({
   );
 }
 
-// ── Main nav ──────────────────────────────────────────────────────────────────
+// ── Mobile full-screen menu ───────────────────────────────────────────────────
 
-export function AdminNav() {
+function MobileMenu({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const isDashboard = pathname === '/admin';
 
   return (
-    <div className="hidden sm:flex items-center gap-1 ml-4">
-      {/* Dashboard — direct link */}
-      <Link
-        href="/admin"
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-          isDashboard
-            ? 'bg-[#4e2b22]/10 text-[#4e2b22]'
-            : 'text-[#6b3d32] hover:bg-[#ede8e5]/60 hover:text-[#4e2b22]'
-        }`}
-      >
-        <span className={isDashboard ? 'text-[#4e2b22]' : 'text-[#8b6b5c]'}>
+    <div className="fixed inset-0 top-15 z-40 flex flex-col bg-[#faf9f7] overflow-y-auto">
+      <nav className="flex flex-col gap-1 p-4">
+        {/* Dashboard */}
+        <Link
+          href="/admin"
+          onClick={onClose}
+          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+            isDashboard
+              ? 'bg-[#4e2b22]/10 text-[#4e2b22]'
+              : 'text-[#6b3d32] hover:bg-[#ede8e5]/60'
+          }`}
+        >
           <DashboardIcon />
-        </span>
-        Dashboard
-      </Link>
+          Dashboard
+        </Link>
 
-      {/* Grouped dropdowns */}
-      {NAV_GROUPS.map((group) => (
-        <NavDropdown key={group.id} group={group} />
-      ))}
+        {/* Groups */}
+        {NAV_GROUPS.map((group) => (
+          <div key={group.id} className="mt-3">
+            {/* Group label */}
+            <p className="mb-1 px-4 text-[10px] font-bold uppercase tracking-widest text-[#c4a88a]">
+              {group.label}
+            </p>
+            {group.items.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                    active
+                      ? 'bg-[#4e2b22]/10 text-[#4e2b22] font-semibold'
+                      : 'text-[#6b3d32] hover:bg-[#ede8e5]/60 hover:text-[#4e2b22]'
+                  }`}
+                >
+                  <span className={active ? 'text-[#4e2b22]' : 'text-[#8b6b5c]'}>
+                    <item.icon />
+                  </span>
+                  <div>
+                    <p className="leading-tight">{item.label}</p>
+                    <p className="text-[11px] text-[#8b6b5c] mt-0.5">{item.desc}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
     </div>
+  );
+}
+
+// ── Main nav ──────────────────────────────────────────────────────────────────
+
+export function AdminNav() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const isDashboard = pathname === '/admin';
+
+  // Close mobile menu on route change
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  return (
+    <>
+      {/* ── Desktop ── */}
+      <div className="hidden md:flex items-center gap-1 ml-4">
+        <Link
+          href="/admin"
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            isDashboard
+              ? 'bg-[#4e2b22]/10 text-[#4e2b22]'
+              : 'text-[#6b3d32] hover:bg-[#ede8e5]/60 hover:text-[#4e2b22]'
+          }`}
+        >
+          <span className={isDashboard ? 'text-[#4e2b22]' : 'text-[#8b6b5c]'}>
+            <DashboardIcon />
+          </span>
+          Dashboard
+        </Link>
+
+        {NAV_GROUPS.map((group) => (
+          <NavDropdown key={group.id} group={group} />
+        ))}
+      </div>
+
+      {/* ── Mobile hamburger ── */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen((v) => !v)}
+        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        className="md:hidden ml-3 flex size-9 items-center justify-center rounded-lg border border-[#ede8e5] text-[#6b3d32] transition-all hover:bg-[#ede8e5]/60"
+      >
+        {mobileOpen ? <XIcon className="size-4" /> : <MenuIcon className="size-4" />}
+      </button>
+
+      {/* ── Mobile panel ── */}
+      {mobileOpen && <MobileMenu onClose={() => setMobileOpen(false)} />}
+    </>
   );
 }
