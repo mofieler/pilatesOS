@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -211,6 +212,10 @@ export default function CreditsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  // Legal consent — required by German Button-Lösung (§ 312j BGB)
+  // and § 356 Abs. 5 BGB (waiver of withdrawal for immediately delivered digital services)
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [waivedWithdrawal, setWaivedWithdrawal] = useState(false);
 
   // Fetch credit packages on mount
   useEffect(() => {
@@ -232,6 +237,10 @@ export default function CreditsPage() {
       setPurchaseError('Authentication required. Please sign in.');
       return;
     }
+    if (!acceptedTerms || !waivedWithdrawal) {
+      setPurchaseError('Please confirm the AGB and the withdrawal waiver before ordering.');
+      return;
+    }
 
     setIsProcessing(true);
     setPurchaseError(null);
@@ -244,6 +253,8 @@ export default function CreditsPage() {
           packageId: selectedPkg.id,
           userId: session.user.id,
           paymentMethod,
+          acceptedTerms,
+          waivedWithdrawal,
         }),
       });
 
@@ -278,9 +289,9 @@ export default function CreditsPage() {
           <div className="inline-flex items-center justify-center size-16 rounded-full bg-[#6b8e6b]/10 mb-4">
             <CheckCircle className="size-8 text-[#6b8e6b]" />
           </div>
-          <h1 className="text-2xl font-bold text-primary mb-2">Purchase Requested!</h1>
+          <h1 className="text-2xl font-bold text-primary mb-2">Credits added — book away!</h1>
           <p className="text-muted">
-            Your {purchaseDetails.packageName} is reserved
+            Your {purchaseDetails.packageName} is already in your account.
           </p>
         </div>
 
@@ -290,13 +301,14 @@ export default function CreditsPage() {
               <Clock className="size-5 text-[#d4a574]" />
             </div>
             <div>
-              <p className="font-semibold text-primary">Payment Due Date</p>
+              <p className="font-semibold text-primary">Payment due at the studio by</p>
               <p className="text-sm text-secondary">{purchaseDetails.dueDate}</p>
             </div>
           </div>
           <p className="text-sm text-muted">
-            Please visit the studio and pay within 14 days to activate your credits.
-            Your credits will be added to your account once payment is confirmed.
+            Your credits are <strong>already available</strong> — you can book classes right away.
+            Please bring the invoice amount in cash or by card to the studio within the next 14 days.
+            Your invoice (PDF) has been sent to your email.
           </p>
         </div>
 
@@ -484,21 +496,76 @@ export default function CreditsPage() {
             {paymentMethod === 'pay_at_studio' && (
               <div className="rounded-xl bg-[#d4a574]/10 p-4 mb-4">
                 <p className="text-sm text-secondary">
-                  <span className="font-medium">Pay at Studio:</span> You will have{' '}
-                  <span className="font-semibold">14 days</span> to complete your payment at the
-                  studio. Your credits will be activated once payment is received.
+                  <span className="font-medium">Pay at Studio:</span> Your credits are added to your
+                  account <span className="font-semibold">immediately</span> so you can book classes
+                  right away. Please bring the invoice amount to the studio within{' '}
+                  <span className="font-semibold">14 days</span>. An invoice (PDF) will be emailed
+                  to you. If overdue, further purchases and bookings are paused until the invoice is
+                  settled.
                 </p>
               </div>
             )}
+
+            {/* Legal consent — Button-Lösung (§ 312j BGB) + waiver of withdrawal (§ 356 V BGB) */}
+            <div className="space-y-3 mb-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-[#c4a88a] text-[#4e2b22] focus:ring-[#4e2b22]"
+                />
+                <span className="text-xs text-[#6b3d32] leading-relaxed">
+                  I have read and accept the{' '}
+                  <Link href="/agb" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
+                    Allgemeine Geschäftsbedingungen (AGB)
+                  </Link>{' '}
+                  and the{' '}
+                  <Link href="/datenschutz" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
+                    Datenschutzerklärung
+                  </Link>.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={waivedWithdrawal}
+                  onChange={(e) => setWaivedWithdrawal(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-[#c4a88a] text-[#4e2b22] focus:ring-[#4e2b22]"
+                />
+                <span className="text-xs text-[#6b3d32] leading-relaxed">
+                  I expressly request that the credits be made available <strong>immediately</strong> after
+                  ordering, before the 14-day withdrawal period ends. I acknowledge that my right of
+                  withdrawal will expire once the credits are credited to my account
+                  (§ 356 Abs. 5 BGB). See{' '}
+                  <Link href="/widerrufsrecht" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
+                    Widerrufsbelehrung
+                  </Link>.
+                </span>
+              </label>
+            </div>
 
             <Button
               variant="boutique"
               className="w-full"
               onClick={handlePurchase}
-              disabled={isProcessing || status !== 'authenticated'}
+              disabled={
+                isProcessing ||
+                status !== 'authenticated' ||
+                !acceptedTerms ||
+                !waivedWithdrawal
+              }
             >
-              {isProcessing ? 'Processing...' : status !== 'authenticated' ? 'Please sign in' : 'Complete Purchase'}
+              {isProcessing
+                ? 'Processing...'
+                : status !== 'authenticated'
+                  ? 'Please sign in'
+                  : 'Order with obligation to pay'}
             </Button>
+            <p className="text-[10px] text-center text-[#a6856f] mt-2 leading-snug">
+              By clicking the button you place a binding order. Payment is due in person at the studio within 14 days.
+            </p>
           </div>
         </section>
       )}

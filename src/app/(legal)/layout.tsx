@@ -24,9 +24,11 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           <p className="text-xs text-[#a6856f]">
             &copy; {new Date().getFullYear()} Paquita Pilates Reformer GbR
           </p>
-          <div className="flex gap-4 text-xs">
-            <Link href="/impressum" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
-            <Link href="/datenschutz" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
+          <div className="flex gap-4 text-xs flex-wrap">
+            <Link href="/impressum"      className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
+            <Link href="/datenschutz"    className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
+            <Link href="/agb"            className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">AGB</Link>
+            <Link href="/widerrufsrecht" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Widerrufsrecht</Link>
           </div>
         </div>
       </footer>

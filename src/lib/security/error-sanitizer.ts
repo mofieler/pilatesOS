@@ -17,6 +17,7 @@ const PUBLIC_ERROR_MESSAGES: Record<ServiceErrorCode, string> = {
   'DB_ERROR': 'An unexpected error occurred. Please try again.',
   'WAIVER_REQUIRED': 'Please sign the liability waiver before booking.',
   'RATE_LIMITED': 'Too many requests. Please try again later.',
+  'OVERDUE_BILLS': 'You have overdue invoices. Please settle them at the studio first.',
 };
 
 // Internal error codes that should never be exposed to users

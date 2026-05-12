@@ -24,7 +24,8 @@ export type ServiceErrorCode =
   | 'DUPLICATE_PAYMENT'
   | 'DB_ERROR'
   | 'WAIVER_REQUIRED'
-  | 'RATE_LIMITED';
+  | 'RATE_LIMITED'
+  | 'OVERDUE_BILLS';
 
 // ─── Param Types ──────────────────────────────────────────────────────────────
 

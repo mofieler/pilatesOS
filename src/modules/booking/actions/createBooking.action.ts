@@ -11,6 +11,7 @@ import { creditService, InsufficientCreditsError } from '@/modules/billing/servi
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import { checkRateLimit, bookingRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 import { sendBookingConfirmationEmail } from '@/lib/email/resend';
+import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -53,6 +54,20 @@ export async function createBookingAction(
       success: false,
       error: 'Please sign the liability waiver before booking. Visit /waiver to sign.',
       code: 'WAIVER_REQUIRED',
+    };
+  }
+
+  // ── 1c. Overdue bills check ──────────────────────────────────────────────────
+  // Users with overdue pay-at-studio invoices cannot create new bookings until
+  // they settle the outstanding amount. Uses the same source of truth as the
+  // /api/credit-purchases guard so the policy is enforced consistently.
+  const billing = await getUserBillingStatus(userId);
+  if (billing.blockActions) {
+    return {
+      success: false,
+      error:
+        'You have overdue invoices. Please settle them at the studio before booking more classes.',
+      code: 'OVERDUE_BILLS',
     };
   }
 

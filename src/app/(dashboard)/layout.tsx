@@ -3,6 +3,7 @@ import { auth, signOut } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { ProfileCompletionOverlay } from '@/components/shared/ProfileCompletionOverlay';
 import { CookieNotice } from '@/components/shared/CookieNotice';
+import { BillingReminderPopup } from '@/modules/billing/components/BillingReminderPopup';
 
 // Heroicons-style SVG icons - professional, consistent
 const DashboardIcon = () => (
@@ -119,9 +120,11 @@ export default async function DashboardLayout({ children }:  { children: React.R
           <p className="text-xs text-[#a6856f]">
             &copy; {new Date().getFullYear()} Paquita Pilates Reformer GbR
           </p>
-          <div className="flex gap-4 text-xs">
-            <Link href="/impressum"  className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
-            <Link href="/datenschutz" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
+          <div className="flex gap-4 text-xs flex-wrap">
+            <Link href="/impressum"      className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
+            <Link href="/datenschutz"    className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
+            <Link href="/agb"            className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">AGB</Link>
+            <Link href="/widerrufsrecht" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Widerrufsrecht</Link>
           </div>
         </div>
       </footer>
@@ -130,6 +133,7 @@ export default async function DashboardLayout({ children }:  { children: React.R
         <ProfileCompletionOverlay initialName={session.user?.name ?? ''} />
       )}
       <CookieNotice />
+      <BillingReminderPopup />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { handleApiError } from '@/lib/security/error-sanitizer';
 import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendPurchaseConfirmationWithInvoice } from '@/lib/email/resend';
+import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 
 export async function POST(request: Request) {
   const rateLimitResult = await purchaseRateLimiter(request as any);
@@ -24,10 +25,20 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { packageId, userId, paymentMethod } = body;
+    const { packageId, userId, paymentMethod, acceptedTerms, waivedWithdrawal } = body;
 
     if (!packageId || !userId || !paymentMethod) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Trust-but-verify: client checkboxes are re-validated server-side so the order
+    // cannot be placed by curl-ing the API. Required for German Button-Lösung
+    // (§ 312j Abs. 3 BGB) and waiver of withdrawal (§ 356 Abs. 5 BGB).
+    if (acceptedTerms !== true || waivedWithdrawal !== true) {
+      return NextResponse.json(
+        { error: 'You must accept the AGB and the withdrawal waiver before ordering.' },
+        { status: 400 },
+      );
     }
 
     const authResult = await requireUserOwnership(request as any, userId);
@@ -38,12 +49,28 @@ export async function POST(request: Request) {
       userId: session.user.id,
       action: 'credit_purchase_attempt',
       resource: 'credit_purchase',
-      details: { packageId, paymentMethod },
+      details: { packageId, paymentMethod, acceptedTerms, waivedWithdrawal },
     });
 
     // Only pay-at-studio is allowed here — Stripe must go through the webhook
     if (paymentMethod !== 'pay_at_studio') {
       return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 });
+    }
+
+    // Block new purchases while the user has overdue invoices.
+    // Same guard runs in createBookingAction — both must use billingStatus.service
+    // so the policy stays in one place.
+    const billing = await getUserBillingStatus(userId);
+    if (billing.blockActions) {
+      return NextResponse.json(
+        {
+          error:
+            'You have overdue invoices. Please settle them at the studio before purchasing more credits.',
+          code: 'OVERDUE_BILLS',
+          overdueCount: billing.overdueBills.length,
+        },
+        { status: 402 }, // 402 Payment Required
+      );
     }
 
     const [package_] = await db
