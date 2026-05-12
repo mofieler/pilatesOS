@@ -263,7 +263,7 @@ function WeekViewInner({
                   </button>
 
                   {/* Session blocks */}
-                  <div className="flex flex-col gap-1.5 p-1.5">
+                  <div className="flex flex-col gap-1.5 pt-1.5 px-1.5">
                     {daySessions.length === 0 ? (
                       <div className="flex items-center justify-center py-6">
                         <span className="text-[10px] font-medium text-[#c4a88a]/50">–</span>

@@ -38,13 +38,13 @@ function ViewToggle({
   onChange: (v: ViewMode) => void;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[#ede8e5] bg-[#faf9f7]/80 p-0.5">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[#ede8e5] p-0.5">
       <button
         type="button"
         onClick={() => onChange('list')}
         aria-pressed={view === 'list'}
         className={[
-          'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+          'flex items-center gap-1.5 rounded-lg px-3 py-2 h-9 text-xs font-semibold transition-all',
           view === 'list'
             ? 'bg-[#faf9f7] text-[#4e2b22] shadow-sm ring-1 ring-[#ede8e5]'
             : 'text-[#8b6b5c] hover:text-[#6b3d32]',
@@ -58,7 +58,7 @@ function ViewToggle({
         onClick={() => onChange('week')}
         aria-pressed={view === 'week'}
         className={[
-          'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+          'flex items-center gap-1.5 rounded-lg px-3 py-2 h-9 text-xs font-semibold transition-all',
           view === 'week'
             ? 'bg-[#faf9f7] text-[#4e2b22] shadow-sm ring-1 ring-[#ede8e5]'
             : 'text-[#8b6b5c] hover:text-[#6b3d32]',
