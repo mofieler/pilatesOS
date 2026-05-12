@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle } from 'lucide-react';
+import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { LEGACY_CREDIT_TYPE_LABELS, LEGACY_CREDIT_TYPE_STYLES } from '@/lib/config/class-types';
+import { BillsSection } from '@/modules/billing/components/BillsSection';
+import { useSearchParams } from 'next/navigation';
 
 // Types - match database schema exactly
 interface CreditPackage {
@@ -199,6 +201,7 @@ function PaymentMethodCard({
 
 export default function CreditsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay_at_studio');
@@ -216,6 +219,11 @@ export default function CreditsPage() {
   // and § 356 Abs. 5 BGB (waiver of withdrawal for immediately delivered digital services)
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [waivedWithdrawal, setWaivedWithdrawal] = useState(false);
+
+  // Tab functionality
+  const currentTab = searchParams.get('tab') || 'purchase';
+  const isBillsTab = currentTab === 'bills';
+  const isPurchaseTab = currentTab === 'purchase';
 
   // Fetch credit packages on mount
   useEffect(() => {
@@ -337,13 +345,46 @@ export default function CreditsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header with Tabs */}
       <div>
-        <p className="text-sm font-medium text-[#6b3d32]">Purchase Credits</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#4e2b22]">Buy Class Credits</h1>
+        <p className="text-sm font-medium text-[#6b3d32]">Credit Management</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#4e2b22]">
+          {isBillsTab ? 'Bills & History' : 'Buy Class Credits'}
+        </h1>
         <p className="mt-2 text-sm text-[#6b3d32]">
-          Select a credit package and payment method to get started
+          {isBillsTab 
+            ? 'View your billing history and manage open invoices'
+            : 'Select a credit package and payment method to get started'
+          }
         </p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-[#ede8e5] bg-[#faf9f7]/80 p-0.5">
+        <button
+          onClick={() => router.push('/credits?tab=purchase')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+            isPurchaseTab
+              ? 'bg-[#faf9f7] text-[#4e2b22] shadow-sm ring-1 ring-[#ede8e5]'
+              : 'text-[#8b6b5c] hover:text-[#6b3d32]'
+          )}
+        >
+          <WalletCardsIcon className="size-3.5" />
+          Buy Credits
+        </button>
+        <button
+          onClick={() => router.push('/credits?tab=bills')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+            isBillsTab
+              ? 'bg-[#faf9f7] text-[#4e2b22] shadow-sm ring-1 ring-[#ede8e5]'
+              : 'text-[#8b6b5c] hover:text-[#6b3d32]'
+          )}
+        >
+          <FileText className="size-3.5" />
+          Bills
+        </button>
       </div>
 
       {/* Error State - only show if there's an actual error and packages exist */}
@@ -569,6 +610,9 @@ export default function CreditsPage() {
           </div>
         </section>
       )}
+
+      {/* Bills Section */}
+      <BillsSection isOpen={isBillsTab} />
     </div>
   );
 }

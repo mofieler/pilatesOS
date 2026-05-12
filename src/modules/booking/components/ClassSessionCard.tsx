@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CheckCircleIcon, ClockIcon, MapPinIcon, UsersIcon, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { WaiverModal } from './WaiverModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,10 @@ export type ClassSessionCardProps = {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
+  /** Marked true when the instructor has an overlapping external Google Calendar event. */
+  isBlocked?: boolean;
+  /** Tooltip/label shown when isBlocked is true. */
+  blockReason?: string | null;
   onBook?: (sessionId: string) => void;
   onJoinWaitlist?: (sessionId: string) => void;
 };
@@ -198,9 +204,57 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
     creditCost,
     creditType,
     location,
+    isBlocked = false,
+    blockReason,
     onBook,
     onJoinWaitlist,
   } = props;
+
+  const [showWaiverModal, setShowWaiverModal] = useState(false);
+  const [hasSignedWaiver, setHasSignedWaiver] = useState<boolean | null>(null);
+  const [isCheckingWaiver, setIsCheckingWaiver] = useState(false);
+
+  // Check waiver status on component mount
+  useEffect(() => {
+    async function checkWaiverStatus() {
+      try {
+        setIsCheckingWaiver(true);
+        const response = await fetch('/api/waiver/status', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setHasSignedWaiver(data.hasSignedWaiver);
+        } else {
+          setHasSignedWaiver(false);
+        }
+      } catch (error) {
+        console.error('Failed to check waiver status:', error);
+        setHasSignedWaiver(false);
+      } finally {
+        setIsCheckingWaiver(false);
+      }
+    }
+
+    checkWaiverStatus();
+  }, []); // Only run on mount
+
+  function handleBookClick() {
+    if (hasSignedWaiver === true) {
+      onBook?.(id);
+    } else if (hasSignedWaiver === false) {
+      setShowWaiverModal(true);
+    }
+    // If null (still checking), do nothing
+  }
+
+  function handleWaiverSigned() {
+    setHasSignedWaiver(true);
+    // Proceed with booking after waiver is signed - use callback instead of timeout
+    onBook?.(id);
+  }
 
   const state = deriveState(props);
   const spotsLeft = Math.max(0, maxCapacity - bookedCount);
@@ -232,8 +286,10 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         "backdrop-blur-xl shadow-[0_4px_20px_rgba(78,43,34,0.04),0_8px_40px_rgba(78,43,34,0.02)]",
         "hover:shadow-[0_8px_30px_rgba(78,43,34,0.08),0_16px_60px_rgba(78,43,34,0.04)]",
         "hover:-translate-y-1 hover:border-[#c4a88a]/30",
-        isCancelled && "opacity-60 grayscale"
+        isCancelled && "opacity-60 grayscale",
+        isBlocked && !isCancelled && "opacity-70"
       )}
+      title={isBlocked ? blockReason ?? 'Instructor unavailable' : undefined}
     >
       {/* ── Top row: class type + state badge ── */}
       <div className="mb-4 flex items-start justify-between gap-2">
@@ -316,7 +372,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
           </span>
         </div>
 
-        {!isCancelled && !isBookedByUser && (
+        {!isCancelled && !isBookedByUser && !isBlocked && (
           <>
             {state === 'full' ? (
               <Button
@@ -330,13 +386,20 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
             ) : (
               <Button
                 size="sm"
-                onClick={() => onBook?.(id)}
+                onClick={handleBookClick}
+                disabled={isCheckingWaiver || hasSignedWaiver === null}
                 className="rounded-xl bg-gradient-to-r from-[#4e2b22] to-[#6b3d32] text-[#faf9f7] hover:from-[#5a3228] hover:to-[#7a4538] shadow-[0_4px_14px_rgba(78,43,34,0.25)] hover:shadow-[0_6px_20px_rgba(78,43,34,0.35)] transition-all duration-200"
               >
-                Book Class
+                {isCheckingWaiver ? 'Checking...' : hasSignedWaiver === false ? 'Sign Waiver First' : 'Book Class'}
               </Button>
             )}
           </>
+        )}
+
+        {isBlocked && !isCancelled && !isBookedByUser && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8b6b5c]">
+            Instructor unavailable
+          </span>
         )}
 
         {isBookedByUser && (
@@ -346,6 +409,13 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
           </span>
         )}
       </div>
+
+      {/* Waiver Modal */}
+      <WaiverModal
+        isOpen={showWaiverModal}
+        onClose={() => setShowWaiverModal(false)}
+        onWaiverSigned={handleWaiverSigned}
+      />
     </article>
   );
 }

@@ -66,6 +66,21 @@ export const classSessions = pgTable(
     cancelledAt: timestamp('cancelled_at', { withTimezone: true, mode: 'date' }),
     // [FIX-3] SET NULL — admin/instructor who cancelled; nullable, auditable
     cancelledBy: uuid('cancelled_by').references(() => users.id, { onDelete: 'set null' }),
+
+    // Google Calendar sync — populated when the instructor's account has an active
+    // calendar connection and we've pushed an event. Null = not synced yet.
+    // googleCalendarEventId is the event ID in the instructor's calendar.
+    // googleCalendarId is the calendar this event lives in (may differ if instructor
+    // reselects calendar — we use it to know where to PATCH/DELETE).
+    googleCalendarEventId: text('google_calendar_event_id'),
+    googleCalendarId: text('google_calendar_id'),
+    // [FIX-2] withTimezone: true
+    googleCalendarSyncedAt: timestamp('google_calendar_synced_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    googleCalendarSyncError: text('google_calendar_sync_error'),
+
     // [FIX-2] withTimezone: true
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
@@ -79,5 +94,7 @@ export const classSessions = pgTable(
     instructorIdx: index('class_sessions_instructor_idx').on(table.instructorId),
     // Composite index for the most common query: upcoming scheduled sessions
     scheduleIdx: index('class_sessions_schedule_idx').on(table.startsAt, table.status),
+    // Retry-sweep worker queries sessions with non-null sync errors
+    syncErrorIdx: index('class_sessions_sync_error_idx').on(table.googleCalendarSyncError),
   }),
 );

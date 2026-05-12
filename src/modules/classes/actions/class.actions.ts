@@ -303,6 +303,19 @@ export async function createClassSessionAction(
     revalidatePath('/admin/classes');
     revalidatePath('/book');
 
+    // Fire-and-forget Google Calendar push so the new session appears in the
+    // instructor's calendar with an empty attendee list.
+    (async () => {
+      try {
+        const { pushSession } = await import(
+          '@/modules/calendar/services/calendar-sync.service'
+        );
+        await pushSession(session.id);
+      } catch (err) {
+        console.warn('[calendar] New session GCal push failed:', err);
+      }
+    })();
+
     return { success: true, data: session as ClassSession };
   } catch (err) {
     console.error(JSON.stringify({ level: 'error', msg: 'createClassSessionAction failed', err }));
@@ -460,9 +473,33 @@ export async function deleteClassSessionAction(
     return { success: false, error: 'Only cancelled sessions or sessions with no bookings can be deleted.', code: 'INVALID_STATE' };
   }
 
+  // Snapshot the GCal IDs BEFORE deleting — we need them to remove the event in Google.
+  const googleEventId = session.googleCalendarEventId;
+  const googleCalendarId = session.googleCalendarId;
+  const instructorId = session.instructorId;
+
   try {
     await db.delete(classSessions).where(eq(classSessions.id, parsed.data.id));
     revalidatePath('/admin/classes');
+
+    // Fire-and-forget GCal cleanup — delete the mirror event if one existed.
+    if (googleEventId && googleCalendarId && instructorId) {
+      (async () => {
+        try {
+          const { deleteEventDirect } = await import(
+            '@/modules/calendar/services/calendar-sync.service'
+          );
+          await deleteEventDirect({
+            instructorDbId: instructorId,
+            googleCalendarId,
+            googleEventId,
+          });
+        } catch (err) {
+          console.warn('[calendar] Session delete GCal cleanup failed:', err);
+        }
+      })();
+    }
+
     return { success: true, data: null };
   } catch (err: unknown) {
     console.error(JSON.stringify({ level: 'error', msg: 'deleteClassSessionAction failed', err }));

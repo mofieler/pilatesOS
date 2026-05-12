@@ -6,6 +6,7 @@ export * from './bookings.schema';
 export * from './waitlist.schema';
 export * from './credits.schema';
 export * from './waivers.schema';
+export * from './calendar.schema';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export * from './enums';
@@ -24,6 +25,7 @@ import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
 import type { creditPackages, creditBalances, creditTransactions, creditPurchases, creditAdjustments } from './credits.schema';
 import type { waivers } from './waivers.schema';
+import type { calendarConnections, externalCalendarBlocks } from './calendar.schema';
 import type {
   userRoleEnum,
   classTypeEnum,
@@ -92,6 +94,13 @@ export type NewCreditAdjustment = InferInsertModel<typeof creditAdjustments>;
 // Waivers
 export type Waiver = InferSelectModel<typeof waivers>;
 export type NewWaiver = InferInsertModel<typeof waivers>;
+
+// Calendar
+export type CalendarConnection = InferSelectModel<typeof calendarConnections>;
+export type NewCalendarConnection = InferInsertModel<typeof calendarConnections>;
+
+export type ExternalCalendarBlock = InferSelectModel<typeof externalCalendarBlocks>;
+export type NewExternalCalendarBlock = InferInsertModel<typeof externalCalendarBlocks>;
 
 // ─── Enum value types — use these instead of raw strings ─────────────────────
 export type UserRole = (typeof userRoleEnum.enumValues)[number];

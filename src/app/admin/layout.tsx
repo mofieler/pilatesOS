@@ -45,6 +45,12 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
+const SyncIcon = () => (
+  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+  </svg>
+);
+
 const NAV_LINKS = [
   { href: '/admin',           label: 'Dashboard', icon: DashboardIcon },
   { href: '/admin/admin/classes',   label: 'Classes',   icon: CalendarIcon },
@@ -52,6 +58,7 @@ const NAV_LINKS = [
   { href: '/admin/admin/credits',      label: 'Credits',     icon: CoinsIcon },
   { href: '/admin/admin/user-credits', label: 'User Credits', icon: UsersIcon },
   { href: '/admin/admin/payments',     label: 'Payments',    icon: PaymentIcon },
+  { href: '/admin/calendar-sync',      label: 'Calendar Sync', icon: SyncIcon },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

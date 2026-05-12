@@ -103,6 +103,27 @@ export async function createBookingAction(
         throw new BookingError('This class is full.', 'CLASS_FULL');
       }
 
+      // Instructor unavailable? Reject server-side too — UI might be stale
+      // or the user might call the action directly.
+      if (classSession.instructorId) {
+        const { getBlocksInRange } = await import(
+          '@/modules/calendar/services/calendar-sync.service'
+        );
+        const blocks = await getBlocksInRange(classSession.startsAt, classSession.endsAt);
+        const overlap = blocks.find(
+          (b) =>
+            b.instructorId === classSession.instructorId &&
+            b.startsAt < classSession.endsAt &&
+            b.endsAt > classSession.startsAt,
+        );
+        if (overlap) {
+          throw new BookingError(
+            'The instructor is unavailable for this class. Please choose another session.',
+            'INVALID_STATE',
+          );
+        }
+      }
+
       // Prevent duplicate bookings for the same user + session
       const [existing] = await tx
         .select({ id: bookings.id })
@@ -199,6 +220,19 @@ export async function createBookingAction(
         console.warn('[email] Booking confirmation email failed:', err);
       }
     }).catch(() => {});
+
+    // Fire-and-forget Google Calendar sync (updates attendee list in description).
+    // Lazy import keeps googleapis out of the booking hot path's bundle graph.
+    (async () => {
+      try {
+        const { updateAttendeesInDescription } = await import(
+          '@/modules/calendar/services/calendar-sync.service'
+        );
+        await updateAttendeesInDescription(sessionId);
+      } catch (err) {
+        console.warn('[calendar] Booking GCal sync failed:', err);
+      }
+    })();
 
     return { success: true, data: booking as Booking };
   } catch (err) {

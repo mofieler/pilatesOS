@@ -221,6 +221,18 @@ export const cancellationService = {
       revalidatePath('/book');
       revalidatePath('/dashboard');
 
+      // Fire-and-forget Google Calendar sync (refresh attendee list).
+      (async () => {
+        try {
+          const { updateAttendeesInDescription } = await import(
+            '@/modules/calendar/services/calendar-sync.service'
+          );
+          await updateAttendeesInDescription(booking.sessionId);
+        } catch (err) {
+          console.warn('[calendar] Cancel GCal sync failed:', err);
+        }
+      })();
+
       return {
         success: true,
         data: {
@@ -381,6 +393,18 @@ export const cancellationService = {
 
       revalidatePath('/book');
       revalidatePath('/admin/classes');
+
+      // Fire-and-forget Google Calendar — delete the event since the class is cancelled.
+      (async () => {
+        try {
+          const { deleteEvent } = await import(
+            '@/modules/calendar/services/calendar-sync.service'
+          );
+          await deleteEvent(sessionId);
+        } catch (err) {
+          console.warn('[calendar] Session cancellation GCal delete failed:', err);
+        }
+      })();
 
       return {
         success: true,

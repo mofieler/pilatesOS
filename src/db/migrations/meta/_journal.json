@@ -22,6 +22,13 @@
       "when": 1777972700149,
       "tag": "0002_charming_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778591190818,
+      "tag": "0003_brief_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

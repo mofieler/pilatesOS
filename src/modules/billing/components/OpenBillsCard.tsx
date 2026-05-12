@@ -85,10 +85,10 @@ export function OpenBillsCard({ openBills }: { openBills: OpenBill[] }) {
       </p>
 
       <Link
-        href="/credits"
+        href="/credits?tab=bills"
         className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#4e2b22] underline underline-offset-2 hover:text-[#6b3d32]"
       >
-        View credit account
+        View bills details
       </Link>
     </section>
   );
