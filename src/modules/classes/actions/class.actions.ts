@@ -5,7 +5,7 @@ import { addMinutes } from 'date-fns';
 import { db } from '@/db';
 import { classTemplates, classSessions, instructors, users } from '@/db/schema';
 import type { ClassSession, ClassTemplate, Instructor, User } from '@/db/schema';
-import { asc, eq, and, isNull } from 'drizzle-orm';
+import { asc, eq, and, isNull, gte, lte, lt, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth/auth';
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
@@ -303,18 +303,18 @@ export async function createClassSessionAction(
     revalidatePath('/admin/classes');
     revalidatePath('/book');
 
-    // Fire-and-forget Google Calendar push so the new session appears in the
-    // instructor's calendar with an empty attendee list.
-    (async () => {
-      try {
-        const { pushSession } = await import(
-          '@/modules/calendar/services/calendar-sync.service'
-        );
-        await pushSession(session.id);
-      } catch (err) {
-        console.warn('[calendar] New session GCal push failed:', err);
-      }
-    })();
+    // Push to Google Calendar — awaited so the push completes before the
+    // server action returns (fire-and-forget IIFEs can be killed early in
+    // Next.js server action context). pushSession never throws; failures are
+    // written to googleCalendarSyncError and retried by the cron sweep.
+    try {
+      const { pushSession } = await import(
+        '@/modules/calendar/services/calendar-sync.service'
+      );
+      await pushSession(session.id);
+    } catch (err) {
+      console.warn('[calendar] New session GCal push failed:', err);
+    }
 
     return { success: true, data: session as ClassSession };
   } catch (err) {
@@ -541,6 +541,195 @@ export async function updateClassTemplateAction(
     return { success: false, error: 'Failed to update template.', code: 'DB_ERROR' };
   }
 }
+
+// ─── Week View ────────────────────────────────────────────────────────────────
+
+export type WeekViewSessionData = {
+  id: string;
+  templateName: string;
+  classType: ClassType;
+  creditType: CreditType;
+  creditCost: number;
+  durationMinutes: number;
+  instructorId: string | null;
+  instructorName: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  bookedCount: number;
+  maxCapacity: number;
+  status: string;
+};
+
+export async function getSessionsForRangeAction(
+  from: Date,
+  to: Date,
+): Promise<ServiceResult<WeekViewSessionData[]>> {
+  const authSession = await requireAdminOrInstructor();
+  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+
+  try {
+    const rows = await db.query.classSessions.findMany({
+      with: {
+        template: true,
+        instructor: { with: { user: true } },
+      },
+      where: (s, { and, gte, lte }) => and(gte(s.startsAt, from), lte(s.startsAt, to)),
+      orderBy: (s, { asc }) => [asc(s.startsAt)],
+    });
+
+    return {
+      success: true,
+      data: rows.map((r) => ({
+        id: r.id,
+        templateName: r.template?.name ?? '—',
+        classType: (r.template?.classType ?? 'group') as ClassType,
+        creditType: (r.template?.creditType ?? 'mat_group') as CreditType,
+        creditCost: r.template?.creditCost ?? 0,
+        durationMinutes: r.template?.durationMinutes ?? 60,
+        instructorId: r.instructorId,
+        instructorName: r.instructor?.user?.name ?? null,
+        startsAt: r.startsAt,
+        endsAt: r.endsAt,
+        bookedCount: r.bookedCount,
+        maxCapacity: r.maxCapacity,
+        status: r.status,
+      })),
+    };
+  } catch (err) {
+    console.error(JSON.stringify({ level: 'error', msg: 'getSessionsForRangeAction failed', err }));
+    return { success: false, error: 'Failed to fetch sessions.', code: 'DB_ERROR' };
+  }
+}
+
+// ─── Slot availability check ──────────────────────────────────────────────────
+
+export type ConflictItem = {
+  type: 'session' | 'gcal_block';
+  summary: string;
+  startsAt: Date;
+  endsAt: Date;
+};
+
+export type AvailabilityResult = {
+  conflicts: ConflictItem[];
+  suggestions: string[]; // HH:MM time strings for the same date
+};
+
+const checkSlotSchema = z.object({
+  instructorId: z.string().uuid().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  durationMinutes: z.number().int().positive(),
+});
+
+export async function checkSlotAvailabilityAction(
+  input: z.infer<typeof checkSlotSchema>,
+): Promise<ServiceResult<AvailabilityResult>> {
+  const authSession = await requireAdminOrInstructor();
+  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+
+  const parsed = checkSlotSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: 'Invalid input.', code: 'INVALID_STATE' };
+
+  const { instructorId, date, time, durationMinutes } = parsed.data;
+  const startsAt = new Date(`${date}T${time}:00`);
+  const endsAt = addMinutes(startsAt, durationMinutes);
+
+  try {
+    const { getBlocksInRange } = await import(
+      '@/modules/calendar/services/calendar-sync.service'
+    );
+
+    const conflicts: ConflictItem[] = [];
+
+    if (instructorId) {
+      // Check Pilateq sessions that overlap the slot
+      const overlappingSessions = await db
+        .select({
+          startsAt: classSessions.startsAt,
+          endsAt: classSessions.endsAt,
+        })
+        .from(classSessions)
+        .where(
+          and(
+            eq(classSessions.instructorId, instructorId),
+            ne(classSessions.status, 'cancelled'),
+            lt(classSessions.startsAt, endsAt),
+            gte(classSessions.endsAt, startsAt),
+          ),
+        );
+
+      for (const s of overlappingSessions) {
+        conflicts.push({
+          type: 'session',
+          summary: 'Pilateq class',
+          startsAt: s.startsAt,
+          endsAt: s.endsAt,
+        });
+      }
+
+      // Check GCal blocks that overlap
+      const blocks = await getBlocksInRange(startsAt, endsAt);
+      for (const b of blocks) {
+        if (b.instructorId === instructorId) {
+          conflicts.push({
+            type: 'gcal_block',
+            summary: b.summary ?? 'Blocked (Google Calendar)',
+            startsAt: b.startsAt,
+            endsAt: b.endsAt,
+          });
+        }
+      }
+    }
+
+    // Build suggestions: scan 06:00–21:00 in 30-min steps on the same date
+    const suggestions: string[] = [];
+    if (instructorId && conflicts.length > 0) {
+      const dayStart = new Date(`${date}T00:00:00`);
+      const dayEnd = new Date(`${date}T23:59:59`);
+
+      const daySessions = await db
+        .select({ startsAt: classSessions.startsAt, endsAt: classSessions.endsAt })
+        .from(classSessions)
+        .where(
+          and(
+            eq(classSessions.instructorId, instructorId),
+            ne(classSessions.status, 'cancelled'),
+            gte(classSessions.startsAt, dayStart),
+            lte(classSessions.startsAt, dayEnd),
+          ),
+        );
+
+      const dayBlocks = await getBlocksInRange(dayStart, dayEnd);
+      const busyIntervals = [
+        ...daySessions,
+        ...dayBlocks.filter((b) => b.instructorId === instructorId),
+      ];
+
+      for (let h = 6; h <= 20; h++) {
+        for (const m of [0, 30]) {
+          const candidateStart = new Date(`${date}T${String(h).padStart(2, '0')}:${m === 0 ? '00' : '30'}:00`);
+          const candidateEnd = addMinutes(candidateStart, durationMinutes);
+          const busy = busyIntervals.some(
+            (b) => b.startsAt < candidateEnd && b.endsAt > candidateStart,
+          );
+          if (!busy) {
+            suggestions.push(`${String(h).padStart(2, '0')}:${m === 0 ? '00' : '30'}`);
+            if (suggestions.length >= 3) break;
+          }
+        }
+        if (suggestions.length >= 3) break;
+      }
+    }
+
+    return { success: true, data: { conflicts, suggestions } };
+  } catch (err) {
+    console.error(JSON.stringify({ level: 'error', msg: 'checkSlotAvailabilityAction failed', err }));
+    return { success: false, error: 'Failed to check availability.', code: 'DB_ERROR' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Return all active instructors for the optional instructor override dropdown.

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '@/db';
-import { calendarConnections, classSessions } from '@/db/schema';
-import { and, eq, gte, isNotNull } from 'drizzle-orm';
+import { calendarConnections, classSessions, instructors } from '@/db/schema';
+import { and, eq, gte, isNotNull, isNull, or, ne } from 'drizzle-orm';
 import {
   listActiveConnections,
   pullBlocks,
@@ -81,31 +81,51 @@ async function runPullSweep() {
 }
 
 async function runPushRetrySweep() {
-  // Sessions that errored before AND start in the future (or just past).
-  // Past failures are skipped — no point pushing to GCal events for finished classes.
+  // Find sessions that need a push:
+  //   • Never synced (googleCalendarEventId IS NULL), OR
+  //   • Previously errored (googleCalendarSyncError IS NOT NULL)
+  // Both cases: upcoming/recent, not cancelled, and instructor has an active
+  // calendar connection with a selected calendar — JOIN ensures we don't
+  // endlessly retry sessions with no matching connection.
   const cutoff = new Date(Date.now() - 60 * 60 * 1000);
-  const failed = await db
-    .select({ id: classSessions.id })
+  const toRetry = await db
+    .selectDistinct({ id: classSessions.id })
     .from(classSessions)
+    .innerJoin(instructors, eq(classSessions.instructorId, instructors.id))
+    .innerJoin(
+      calendarConnections,
+      and(
+        eq(calendarConnections.userId, instructors.userId),
+        eq(calendarConnections.syncEnabled, true),
+        isNotNull(calendarConnections.selectedCalendarId),
+      ),
+    )
     .where(
       and(
-        isNotNull(classSessions.googleCalendarSyncError),
+        ne(classSessions.status, 'cancelled'),
         gte(classSessions.startsAt, cutoff),
+        or(
+          isNull(classSessions.googleCalendarEventId),
+          isNotNull(classSessions.googleCalendarSyncError),
+        ),
       ),
     )
     .limit(50);
 
   let succeeded = 0;
-  for (const row of failed) {
+  for (const row of toRetry) {
     await pushSession(row.id);
     const [after] = await db
-      .select({ err: classSessions.googleCalendarSyncError })
+      .select({
+        eventId: classSessions.googleCalendarEventId,
+        err: classSessions.googleCalendarSyncError,
+      })
       .from(classSessions)
       .where(eq(classSessions.id, row.id))
       .limit(1);
-    if (!after?.err) succeeded += 1;
+    if (after?.eventId && !after?.err) succeeded += 1;
   }
-  return { retriedPushes: failed.length, retriedSuccesses: succeeded };
+  return { retriedPushes: toRetry.length, retriedSuccesses: succeeded };
 }
 
 export async function POST(req: NextRequest) {

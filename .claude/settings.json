@@ -24,7 +24,8 @@
       "PowerShell(pnpm lint 2>&1)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\db\\\\schema\" -Filter \"*calendar*\" -ErrorAction SilentlyContinue)",
       "Bash(pnpm db:generate)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Find . -type f -name \"*.tsx\" -o -name \"*.ts\")"
     ]
   }
 }
