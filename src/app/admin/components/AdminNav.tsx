@@ -85,25 +85,28 @@ const NAV_GROUPS = [
 
 function NavDropdown({ group }: { group: (typeof NAV_GROUPS)[number] }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
   const isActive = group.items.some((item) => pathname.startsWith(item.href));
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
-  // Close on navigation
-  useEffect(() => { setOpen(false); }, [pathname]);
+  function cancelClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }
+
+  function scheduleClose() {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 200);
+  }
 
   return (
-    <div ref={ref} className="relative">
+    <div
+      className="relative"
+      onMouseEnter={() => { cancelClose(); setOpen(true); }}
+      onMouseLeave={scheduleClose}
+    >
       <button
-        onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
           isActive
             ? 'bg-[#4e2b22]/10 text-[#4e2b22]'
@@ -121,7 +124,10 @@ function NavDropdown({ group }: { group: (typeof NAV_GROUPS)[number] }) {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 w-56 rounded-xl border border-[#ede8e5] bg-white shadow-lg shadow-[#4e2b22]/10 z-50 overflow-hidden">
+        <div
+          className="absolute top-full left-0 mt-1.5 w-56 rounded-xl border border-[#ede8e5] bg-white shadow-lg shadow-[#4e2b22]/10 z-50 overflow-hidden"
+          onMouseEnter={cancelClose}
+        >
           <div className="p-1.5">
             {group.items.map((item) => {
               const active = pathname.startsWith(item.href);
@@ -129,7 +135,6 @@ function NavDropdown({ group }: { group: (typeof NAV_GROUPS)[number] }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
                   className={`flex items-start gap-3 rounded-lg px-3 py-2.5 transition-all ${
                     active
                       ? 'bg-[#4e2b22]/10 text-[#4e2b22]'
@@ -219,9 +224,6 @@ export function AdminNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const isDashboard = pathname === '/admin';
-
-  // Close mobile menu on route change
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   return (
     <>
