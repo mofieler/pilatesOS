@@ -2,7 +2,7 @@
 -- New tables: calendar_connections, external_calendar_blocks
 -- class_sessions extension: google_calendar_* columns
 -- Note: only the calendar-related parts are kept here; the rest of the diff
--- (credit_purchases, credit_packages, waivers, credit_adjustments, profile_completed)
+-- (credit_purchases, credit_packages, credit_adjustments, profile_completed)
 -- was already applied via manual migrations 0003_fix_credit_enum.sql through
 -- 0012_add_invoice_and_adjustments.sql. Keeping those statements would cause
 -- "already exists" failures.
