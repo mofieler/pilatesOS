@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MenuIcon, XIcon, ChevronDownIcon } from 'lucide-react';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -258,8 +259,11 @@ export function AdminNav() {
         {mobileOpen ? <XIcon className="size-4" /> : <MenuIcon className="size-4" />}
       </button>
 
-      {/* ── Mobile panel ── */}
-      {mobileOpen && <MobileMenu onClose={() => setMobileOpen(false)} />}
+      {/* ── Mobile panel — portal escapes the nav's backdrop-filter containing block ── */}
+      {mobileOpen && createPortal(
+        <MobileMenu onClose={() => setMobileOpen(false)} />,
+        document.body,
+      )}
     </>
   );
 }
