@@ -216,8 +216,9 @@ export default function CreditsPage() {
   const [error, setError] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   // Legal consent — required by German Button-Lösung (§ 312j BGB)
-  // and § 356 Abs. 5 BGB (for immediately delivered digital services)
+  // and § 356 Abs. 5 BGB (waiver of withdrawal for immediately delivered digital services)
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [waivedWithdrawal, setWaivedWithdrawal] = useState(false);
 
   // Tab functionality
   const currentTab = searchParams.get('tab') || 'purchase';
@@ -244,8 +245,8 @@ export default function CreditsPage() {
       setPurchaseError('Authentication required. Please sign in.');
       return;
     }
-    if (!acceptedTerms) {
-      setPurchaseError('Please confirm the AGB before ordering.');
+    if (!acceptedTerms || !waivedWithdrawal) {
+      setPurchaseError('Please confirm the AGB and the withdrawal waiver before ordering.');
       return;
     }
 
@@ -546,7 +547,7 @@ export default function CreditsPage() {
               </div>
             )}
 
-            {/* Legal consent — Button-Lösung (§ 312j BGB) */}
+            {/* Legal consent — Button-Lösung (§ 312j BGB) + withdrawal information (§ 356 V BGB) */}
             <div className="space-y-3 mb-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -567,6 +568,19 @@ export default function CreditsPage() {
                 </span>
               </label>
 
+              <div className="text-xs text-[#6b3d32] leading-relaxed p-3 bg-[#ede8e5]/30 rounded-lg">
+                <p className="mb-2">
+                  <strong>Withdrawal Information:</strong> Credits will be made available <strong>immediately</strong> after ordering.
+                  Please note that according to § 356 Abs. 5 BGB, your right of withdrawal may expire once the credits are credited to your account.
+                </p>
+                <p>
+                  See our{' '}
+                  <Link href="/widerrufsrecht" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
+                    Widerrufsbelehrung
+                  </Link>{' '}
+                  for detailed information about your withdrawal rights.
+                </p>
+              </div>
             </div>
 
             <Button
