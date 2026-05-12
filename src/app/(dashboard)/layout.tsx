@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { ProfileCompletionOverlay } from '@/components/shared/ProfileCompletionOverlay';
 import { CookieNotice } from '@/components/shared/CookieNotice';
 import { BillingReminderPopup } from '@/modules/billing/components/BillingReminderPopup';
+import { UserMobileNav } from './components/UserMobileNav';
 
 // Heroicons-style SVG icons - professional, consistent
 const DashboardIcon = () => (
@@ -57,11 +58,11 @@ export default async function DashboardLayout({ children }:  { children: React.R
   const needsProfileCompletion = (session.user as any)?.needsProfileCompletion === true;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1]">
+    <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f1] overflow-x-clip">
       <nav className="sticky top-0 z-50 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 backdrop-blur-xl px-6 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           {/* Brand + nav links */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <Link
               href="/"
               className="flex items-center gap-2 text-base font-bold tracking-tight text-[#4e2b22] hover:text-[#6b3d32] transition-colors"
@@ -70,7 +71,10 @@ export default async function DashboardLayout({ children }:  { children: React.R
               Pilateq
             </Link>
 
-            <div className="hidden sm:flex items-center gap-1 overflow-x-hidden">
+            {/* Mobile hamburger — portal handles the panel */}
+            <UserMobileNav />
+
+            <div className="hidden sm:flex items-center gap-1">
               {NAV_LINKS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
