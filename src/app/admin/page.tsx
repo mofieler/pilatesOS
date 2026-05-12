@@ -198,7 +198,7 @@ export default async function AdminDashboard() {
         <h2 className="text-lg font-semibold text-[#4e2b22] mb-4">Quick Actions</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Link
-            href="/admin/admin/classes"
+            href="/admin/classes"
             className="rounded-lg border border-[#ede8e5]/60 bg-white/60 p-4 hover:bg-[#faf9f7]/80 transition-all"
           >
             <CalendarDays className="h-6 w-6 text-[#4e2b22] mb-2" />
@@ -206,7 +206,7 @@ export default async function AdminDashboard() {
             <p className="text-sm text-[#8b6b5c] mt-1">Schedule and manage class sessions</p>
           </Link>
           <Link
-            href="/admin/admin/templates"
+            href="/admin/templates"
             className="rounded-lg border border-[#ede8e5]/60 bg-white/60 p-4 hover:bg-[#faf9f7]/80 transition-all"
           >
             <CalendarDays className="h-6 w-6 text-[#4e2b22] mb-2" />
@@ -214,7 +214,7 @@ export default async function AdminDashboard() {
             <p className="text-sm text-[#8b6b5c] mt-1">Create and edit class templates</p>
           </Link>
           <Link
-            href="/admin/admin/credits"
+            href="/admin/credits"
             className="rounded-lg border border-[#ede8e5]/60 bg-white/60 p-4 hover:bg-[#faf9f7]/80 transition-all"
           >
             <CreditCard className="h-6 w-6 text-[#4e2b22] mb-2" />
@@ -222,7 +222,7 @@ export default async function AdminDashboard() {
             <p className="text-sm text-[#8b6b5c] mt-1">Manage credit packages and pricing</p>
           </Link>
           <Link
-            href="/admin/admin/payments"
+            href="/admin/payments"
             className="rounded-lg border border-[#ede8e5]/60 bg-white/60 p-4 hover:bg-[#faf9f7]/80 transition-all"
           >
             <TrendingUp className="h-6 w-6 text-[#4e2b22] mb-2" />

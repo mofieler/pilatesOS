@@ -48,7 +48,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
   }
 
   function handleDisconnect() {
-    if (!confirm('Calendar wirklich trennen? Externe Blocks werden gelöscht.')) return;
+    if (!confirm('Disconnect this calendar? All external blocks will be removed.')) return;
     startTransition(async () => {
       await disconnectMyCalendar();
       router.refresh();
@@ -58,7 +58,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
   function handleSyncNow() {
     startTransition(async () => {
       const res = await syncNow();
-      if (!res.success) alert(`Sync fehlgeschlagen: ${res.error}`);
+      if (!res.success) alert(`Sync failed: ${res.error}`);
       router.refresh();
     });
   }
@@ -72,7 +72,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
           <h3 className="text-base font-semibold text-[#4e2b22]">
             {connection.ownerName}
             {connection.isCurrentUser && (
-              <span className="ml-2 text-xs font-normal text-[#8b6b5c]">(du)</span>
+              <span className="ml-2 text-xs font-normal text-[#8b6b5c]">(you)</span>
             )}
           </h3>
           <p className="text-xs text-[#6b3d32] mt-0.5">{connection.ownerEmail}</p>
@@ -85,15 +85,15 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
 
       <dl className="space-y-2 text-sm text-[#6b3d32] mb-4">
         <div className="flex justify-between gap-3">
-          <dt className="font-medium text-[#8b6b5c]">Google Konto:</dt>
+          <dt className="font-medium text-[#8b6b5c]">Google account:</dt>
           <dd className="text-right break-all">{connection.googleAccountEmail}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="font-medium text-[#8b6b5c]">Letzter Sync:</dt>
+          <dt className="font-medium text-[#8b6b5c]">Last sync:</dt>
           <dd className="text-right">
             {connection.lastSyncAt
               ? format(connection.lastSyncAt, 'dd MMM HH:mm')
-              : 'Noch nie'}
+              : 'Never'}
           </dd>
         </div>
       </dl>
@@ -106,7 +106,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
       )}
 
       <label className="block text-xs font-semibold text-[#8b6b5c] mb-1.5">
-        Synchronisierter Kalender
+        Synced calendar
       </label>
       <div className="flex items-center gap-2">
         <CalendarIcon className="size-4 text-[#8b6b5c] shrink-0" />
@@ -116,9 +116,9 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
           disabled={isPending || connection.calendars.length === 0}
           className="flex-1 rounded-lg border border-[#ede8e5] bg-white px-3 py-2 text-sm text-[#4e2b22] focus:outline-none focus:ring-2 focus:ring-[#4e2b22]/30 disabled:opacity-50"
         >
-          {connection.calendars.length === 0 && <option value="">Keine Kalender gefunden</option>}
+          {connection.calendars.length === 0 && <option value="">No calendars found</option>}
           {connection.calendars.length > 0 && !selectedId && (
-            <option value="">— bitte auswählen —</option>
+            <option value="">— please select —</option>
           )}
           {connection.calendars.map((c) => (
             <option key={c.id} value={c.id}>
@@ -136,7 +136,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#4e2b22] px-3 py-2 text-xs font-semibold text-[#faf9f7] hover:bg-[#6b3d32] disabled:opacity-50 transition-colors"
         >
           <RefreshCw className={`size-3.5 ${isPending ? 'animate-spin' : ''}`} />
-          Jetzt synchronisieren
+          Sync now
         </button>
         <button
           onClick={handleDisconnect}
@@ -144,7 +144,7 @@ export function CalendarConnectionPanel({ connection }: { connection: Connection
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#c4a88a]/50 bg-white px-3 py-2 text-xs font-semibold text-[#4e2b22] hover:bg-error/10 hover:border-error/40 hover:text-error transition-colors disabled:opacity-50"
         >
           <Unlink className="size-3.5" />
-          Trennen
+          Disconnect
         </button>
       </div>
     </div>

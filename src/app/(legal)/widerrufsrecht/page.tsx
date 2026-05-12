@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { STUDIO } from '@/lib/config/studio';
 
 export const metadata: Metadata = {
   title: 'Widerrufsbelehrung – Pilateq',
@@ -23,10 +24,10 @@ export default function WiderrufsrechtPage() {
           Um Ihr Widerrufsrecht auszuüben, müssen Sie uns
         </p>
         <p className="pl-4 border-l-2 border-[#c4a88a] italic">
-          Paquita Pilates Reformer GbR<br />
-          Haußmannstr. 126<br />
-          70188 Stuttgart<br />
-          E-Mail: [E-Mail-Adresse des Studios]
+          {STUDIO.name}<br />
+          {STUDIO.address}<br />
+          {STUDIO.city}<br />
+          E-Mail: <a href={`mailto:${STUDIO.email}`} className="underline underline-offset-2">{STUDIO.email}</a>
         </p>
         <p>
           mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder eine
@@ -85,7 +86,7 @@ export default function WiderrufsrechtPage() {
         </p>
         <div className="rounded-lg bg-[#f5f3f1] border border-[#ede8e5] p-4 text-xs text-[#4e2b22] leading-relaxed">
           <p>
-            An die Paquita Pilates Reformer GbR, Haußmannstr. 126, 70188 Stuttgart:
+            An die {STUDIO.name}, {STUDIO.address}, {STUDIO.city}:
           </p>
           <p className="mt-3">
             Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über den

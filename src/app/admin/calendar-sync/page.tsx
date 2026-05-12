@@ -19,10 +19,10 @@ interface PageProps {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  access_denied: 'Zugriff wurde abgelehnt.',
-  missing_params: 'Google hat keinen Code zurückgegeben.',
-  invalid_state: 'Sicherheitsfehler — bitte erneut versuchen.',
-  token_exchange: 'Token-Austausch fehlgeschlagen. Bitte erneut versuchen.',
+  access_denied: 'Access was denied.',
+  missing_params: 'Google did not return an authorisation code.',
+  invalid_state: 'Security check failed — please try again.',
+  token_exchange: 'Token exchange failed. Please try again.',
 };
 
 async function loadConnectionsForUser(opts: {
@@ -106,8 +106,8 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
       <div>
         <h1 className="text-2xl font-bold text-[#4e2b22]">Google Calendar Sync</h1>
         <p className="mt-1 text-sm text-[#6b3d32]">
-          Verbinde deinen Google Kalender, damit Pilateq-Klassen automatisch eingetragen und
-          private Termine als belegte Slots in der Buchungs-UI erscheinen.
+          Connect your Google Calendar so Pilateq classes are automatically added and private
+          appointments appear as blocked slots in the booking UI.
         </p>
       </div>
 
@@ -115,9 +115,9 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
         <div className="flex items-start gap-2 rounded-xl bg-success/10 border border-success/30 p-4 text-sm text-success">
           <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Erfolgreich verbunden!</p>
+            <p className="font-semibold">Successfully connected!</p>
             <p className="text-success/80">
-              Wähle unten den Kalender aus, mit dem synchronisiert werden soll.
+              Select the calendar to sync with below.
             </p>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
         <div className="flex items-start gap-2 rounded-xl bg-error/10 border border-error/30 p-4 text-sm text-error">
           <AlertCircle className="size-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Fehler bei der Verbindung</p>
+            <p className="font-semibold">Connection error</p>
             <p className="text-error/80">{ERROR_MESSAGES[error] ?? error}</p>
           </div>
         </div>
@@ -137,11 +137,11 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
       {!currentUserHasConnection && (
         <div className="rounded-2xl border border-dashed border-[#c4a88a]/60 bg-[#faf9f7]/50 p-6 text-center">
           <p className="text-sm text-[#6b3d32] mb-3">
-            Du hast deinen Google Kalender noch nicht verbunden.
+            You haven&apos;t connected your Google Calendar yet.
           </p>
           <ConnectCalendarButton />
           <p className="mt-3 text-xs text-[#8b6b5c]">
-            Erforderlich:&nbsp;
+            Required scope:&nbsp;
             <code className="rounded bg-[#ede8e5] px-1.5 py-0.5">
               https://www.googleapis.com/auth/calendar
             </code>
@@ -162,11 +162,11 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
       {isAdmin && unconnectedInstructors.length > 0 && (
         <div className="rounded-2xl border border-[#ede8e5] bg-[#faf9f7] p-5">
           <h2 className="text-base font-semibold text-[#4e2b22] mb-1">
-            Nicht verbundene Instructors
+            Instructors without a connected calendar
           </h2>
           <p className="text-xs text-[#8b6b5c] mb-3">
-            Diese Instructors haben noch keinen Google Kalender verbunden. Sie müssen sich selbst
-            einloggen und den Connect-Button drücken.
+            These instructors have not yet connected a Google Calendar. They need to log in and
+            click the connect button themselves.
           </p>
           <ul className="space-y-1.5">
             {unconnectedInstructors.map((i) => (
@@ -183,20 +183,20 @@ export default async function CalendarSyncPage({ searchParams }: PageProps) {
       )}
 
       <div className="rounded-2xl bg-[#ede8e5]/40 p-5 text-xs text-[#6b3d32] space-y-1.5">
-        <p className="font-semibold text-[#4e2b22]">Wie funktioniert die Sync?</p>
+        <p className="font-semibold text-[#4e2b22]">How does the sync work?</p>
         <ul className="list-disc list-inside space-y-1">
           <li>
-            <strong>Pilateq → Google:</strong> Klassen, die dir zugewiesen sind, erscheinen sofort
-            in deinem ausgewählten Kalender mit aktueller Teilnehmerliste.
+            <strong>Pilateq → Google:</strong> Classes assigned to you appear immediately in your
+            selected calendar with the current attendee list.
           </li>
           <li>
-            <strong>Google → Pilateq:</strong> Termine, die du selbst im Kalender einträgst,
-            blockieren den entsprechenden Slot in der Buchungs-UI (alle 5 Min synchronisiert).
+            <strong>Google → Pilateq:</strong> Events you add to your calendar block the
+            corresponding slot in the booking UI (synced every 5 minutes).
           </li>
           <li>
-            <strong>Hinweis:</strong> Pilateq-eigene Events werden im Kalender mit{' '}
-            <code className="rounded bg-white px-1">[Pilateq]</code> markiert und sollten dort
-            nicht editiert werden — die nächste Sync überschreibt Änderungen.
+            <strong>Note:</strong> Pilateq-managed events are marked with{' '}
+            <code className="rounded bg-white px-1">[Pilateq]</code> and should not be edited in
+            Google Calendar — the next sync will overwrite any manual changes.
           </li>
         </ul>
       </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { STUDIO } from '@/lib/config/studio';
 
 export const metadata: Metadata = {
   title: 'Impressum – Pilateq',
@@ -7,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function ImpressumPage() {
+  const bookingDomain = STUDIO.bookingUrl.replace(/^https?:\/\//, '');
+
   return (
     <article className="prose-sm max-w-none">
       <h1 className="text-3xl font-bold text-[#4e2b22] mb-2">Impressum</h1>
@@ -14,33 +17,39 @@ export default function ImpressumPage() {
 
       <Section title="Anbieter dieser Plattform">
         <Field label="Unternehmensform">Gesellschaft bürgerlichen Rechts (GbR)</Field>
-        <Field label="Name">Paquita Pilates Reformer GbR</Field>
+        <Field label="Name">{STUDIO.name}</Field>
         <Field label="Adresse">
-          {/* UPDATE: insert street + city here */}
-          [Straße und Hausnummer]<br />
-          [PLZ] [Ort]<br />
-          Deutschland
+          {STUDIO.address}<br />
+          {STUDIO.city}<br />
+          {STUDIO.country}
         </Field>
+        {STUDIO.phone && (
+          <Field label="Telefon">
+            <a href={`tel:${STUDIO.phone.replace(/\s/g, '')}`} className="text-[#6b3d32] underline underline-offset-2">
+              {STUDIO.phone}
+            </a>
+          </Field>
+        )}
         <Field label="E-Mail">
-          <a href="mailto:info@paquitapilatesreformer.de" className="text-[#6b3d32] underline underline-offset-2">
-            info@paquitapilatesreformer.de
+          <a href={`mailto:${STUDIO.email}`} className="text-[#6b3d32] underline underline-offset-2">
+            {STUDIO.email}
           </a>
         </Field>
         <Field label="Website (Studio)">
-          <a href="https://www.paquitapilatesreformer.de" target="_blank" rel="noopener noreferrer" className="text-[#6b3d32] underline underline-offset-2">
-            www.paquitapilatesreformer.de
+          <a href={STUDIO.website} target="_blank" rel="noopener noreferrer" className="text-[#6b3d32] underline underline-offset-2">
+            {STUDIO.website.replace(/^https?:\/\//, '')}
           </a>
         </Field>
         <Field label="Booking-Plattform">
-          <a href="https://paquita.pilateq.de" className="text-[#6b3d32] underline underline-offset-2">
-            paquita.pilateq.de
+          <a href={STUDIO.bookingUrl} className="text-[#6b3d32] underline underline-offset-2">
+            {bookingDomain}
           </a>
         </Field>
       </Section>
 
       <Section title="Steuerliche Angaben">
-        <Field label="Steuernummer">93150/09800</Field>
-        <Field label="Zuständiges Finanzamt">[Finanzamt eintragen]</Field>
+        <Field label="Steuernummer">{STUDIO.steuernummer}</Field>
+        <Field label="Zuständiges Finanzamt">{STUDIO.finanzamt}</Field>
         <p className="text-sm text-[#8b6b5c] mt-2">
           Die GbR übt ausschließlich freiberufliche Tätigkeiten im Sinne des § 18 EStG aus
           (Unterricht / Bewegungspädagogik). Es wird keine Gewerbesteuer erhoben.
@@ -49,10 +58,17 @@ export default function ImpressumPage() {
       </Section>
 
       <Section title="Verantwortliche Personen (§ 55 Abs. 2 RStV)">
-        <p className="text-sm text-[#6b3d32]">
-          [Name der GbR-Gesellschafter eintragen]<br />
-          Anschrift wie oben
-        </p>
+        {STUDIO.partners ? (
+          <p className="text-sm text-[#6b3d32] whitespace-pre-line">
+            {STUDIO.partners}<br />
+            Anschrift wie oben
+          </p>
+        ) : (
+          <p className="text-sm text-[#6b3d32]">
+            {STUDIO.name}<br />
+            {STUDIO.address}, {STUDIO.city}
+          </p>
+        )}
       </Section>
 
       <Section title="Haftungshinweis">
@@ -85,9 +101,7 @@ export default function ImpressumPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-10">
-      <h2 className="text-lg font-bold text-[#4e2b22] mb-4 pb-2 border-b border-[#ede8e5]">
-        {title}
-      </h2>
+      <h2 className="text-lg font-bold text-[#4e2b22] mb-4 pb-2 border-b border-[#ede8e5]">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );

@@ -2,7 +2,7 @@
 
 import { Plus } from 'lucide-react';
 
-export function ConnectCalendarButton({ label = 'Google Calendar verbinden' }: { label?: string }) {
+export function ConnectCalendarButton({ label = 'Connect Google Calendar' }: { label?: string }) {
   return (
     <a
       href="/api/calendar/oauth/start"

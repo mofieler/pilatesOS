@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { STUDIO } from '@/lib/config/studio';
 
 export const metadata: Metadata = {
   title: 'Datenschutzerklärung – Pilateq',
@@ -6,9 +7,9 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-const CONTROLLER = 'Paquita Pilates Reformer GbR';
-const CONTACT_EMAIL = 'info@paquitapilatesreformer.de';
-const PLATFORM_URL = 'paquita.pilateq.de';
+const CONTROLLER = STUDIO.name;
+const CONTACT_EMAIL = STUDIO.email;
+const PLATFORM_URL = STUDIO.bookingUrl.replace(/^https?:\/\//, '');
 
 export default function DatenschutzPage() {
   return (
@@ -25,7 +26,7 @@ export default function DatenschutzPage() {
       <Section title="1. Verantwortlicher (Art. 4 Nr. 7 DSGVO)">
         <p>
           {CONTROLLER}<br />
-          [Straße und Hausnummer], [PLZ] [Ort], Deutschland<br />
+          {STUDIO.address}, {STUDIO.city}, {STUDIO.country}<br />
           E-Mail:{' '}
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-[#6b3d32] underline underline-offset-2">
             {CONTACT_EMAIL}

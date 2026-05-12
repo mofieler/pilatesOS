@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           {/* Right: email + sign out */}
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-2">
+            <div className="hidden lg:flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-2">
               <div className="size-7 rounded-full bg-gradient-to-br from-[#4e2b22] to-[#6b3d32] flex items-center justify-center text-[#faf9f7] text-xs font-semibold">
                 {session.user?.name?.charAt(0) || session.user?.email?.charAt(0)}
               </div>
