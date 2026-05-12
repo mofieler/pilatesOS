@@ -26,7 +26,7 @@ async function checkUser() {
       console.log('👤 Name:', adminUser[0].name);
       console.log('🔑 Role:', adminUser[0].role);
       console.log('🔐 Has Password Hash:', !!adminUser[0].passwordHash);
-      console.log('📝 Has Signed Waiver:', adminUser[0].hasSignedWaiver);
+      console.log('📝 Waiver Status: No longer required - removed from system');
       
       // Test password verification
       const bcrypt = require('bcryptjs');
