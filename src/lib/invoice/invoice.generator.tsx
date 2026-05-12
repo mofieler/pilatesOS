@@ -11,10 +11,10 @@ import {
 // Studio info from env — set these in Coolify
 function getStudio() {
   return {
-    name:       process.env.STUDIO_NAME        ?? 'Pilateq',
-    address:    process.env.STUDIO_ADDRESS     ?? 'Musterstraße 1, 10115 Berlin',
-    city:       process.env.STUDIO_CITY        ?? 'Berlin',
-    country:    process.env.STUDIO_COUNTRY     ?? 'Deutschland',
+    name:       process.env.STUDIO_NAME        ?? 'Paquita Pilates Reformer GbR',
+    address:    process.env.STUDIO_ADDRESS     ?? 'Haußmannstr. 126',
+    city:       process.env.STUDIO_CITY        ?? '70188 Stuttgart',
+    country:    process.env.STUDIO_COUNTRY     ?? 'Germany',
     phone:      process.env.STUDIO_PHONE       ?? '',
     email:      process.env.STUDIO_EMAIL       ?? process.env.EMAIL_FROM ?? '',
     taxId:      process.env.STUDIO_TAX_ID      ?? '93150/09800', // Steuernummer (GbR freiberuflich)
@@ -269,12 +269,17 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
     borderTopStyle: 'solid',
     paddingTop: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
   footerText: {
     fontSize: 7,
     color: C.muted,
+  },
+  footerCenter: {
+    fontSize: 7,
+    color: C.muted,
+    textAlign: 'center' as const,
+    marginTop: 4,
   },
 });
 
@@ -355,7 +360,7 @@ function InvoicePDF({ data, studio }: { data: InvoiceData; studio: ReturnType<ty
             <Text style={styles.sectionLabel}>From / Rechnungsaussteller</Text>
             <Text style={styles.addressName}>{studio.name}</Text>
             <Text style={styles.addressLine}>{studio.address}</Text>
-            {studio.taxId  ? <Text style={styles.addressLine}>Steuernr.: {studio.taxId}</Text>  : null}
+            <Text style={styles.addressLine}>{studio.city}</Text>
             {studio.vatId  ? <Text style={styles.addressLine}>USt-IdNr.: {studio.vatId}</Text>   : null}
             {studio.phone  ? <Text style={styles.addressLine}>Tel: {studio.phone}</Text>         : null}
             {studio.email  ? <Text style={styles.addressLine}>{studio.email}</Text>              : null}
@@ -454,8 +459,13 @@ function InvoicePDF({ data, studio }: { data: InvoiceData; studio: ReturnType<ty
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{studio.name} · {studio.address}</Text>
-          <Text style={styles.footerText}>{data.invoiceNumber} · {fmtDate(data.invoiceDate)}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+            <Text style={styles.footerText}>{studio.name} · {studio.address}, {studio.city}</Text>
+            <Text style={styles.footerText}>{data.invoiceNumber} · {fmtDate(data.invoiceDate)}</Text>
+          </View>
+          {studio.taxId ? (
+            <Text style={styles.footerCenter}>Steuernr.: {studio.taxId}</Text>
+          ) : null}
         </View>
 
       </Page>

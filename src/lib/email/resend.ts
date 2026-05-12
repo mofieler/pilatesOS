@@ -17,6 +17,7 @@ function getResend(): Resend {
 const FROM = process.env.EMAIL_FROM ?? 'onboarding@resend.dev';
 const APP_URL = APP_CONFIG.APP_URL;
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Pilateq';
+const STUDIO_NAME = process.env.STUDIO_NAME ?? 'Paquita Pilates Studio';
 
 // Brand Colors - matching the app's brown palette
 const COLORS = {
@@ -106,6 +107,11 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       .text-muted { color: #a09088 !important; }
       .border-color { border-color: #3a3a3a !important; }
       .footer-bg { background-color: #1f1f1f !important; }
+      /* Header: keep light text even when iOS Mail inverts the header background */
+      .header-title { color: #faf9f7 !important; }
+      .header-subtitle { color: #c4a88a !important; }
+      /* CTA button: keep light text on dark backgrounds */
+      .cta-button { color: #faf9f7 !important; background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important; }
     }
   </style>
 </head>
@@ -131,8 +137,8 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
                 <tr>
                   <td style="text-align: center;">
                     <!-- Logo placeholder - can be replaced with actual logo image -->
-                    <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #faf9f7; letter-spacing: -0.5px; text-transform: none;">${APP_NAME}</h1>
-                    <p style="margin: 8px 0 0; font-size: 13px; color: ${COLORS.accent}; font-weight: 400; letter-spacing: 0.3px;">Boutique Pilates Studio Booking System</p>
+                    <h1 class="header-title" style="margin: 0; font-size: 26px; font-weight: 700; color: #faf9f7; letter-spacing: -0.5px; text-transform: none;">${APP_NAME}</h1>
+                    <p class="header-subtitle" style="margin: 8px 0 0; font-size: 13px; color: ${COLORS.accent}; font-weight: 400; letter-spacing: 0.3px;">Boutique Pilates Studio Booking System</p>
                   </td>
                 </tr>
               </table>
@@ -156,7 +162,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 28px;">
                 <tr>
                   <td>
-                    <a href="${actionUrl}" class="button" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryLight} 100%); color: #faf9f7; text-decoration: none; border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; box-shadow: 0 2px 8px rgba(78, 43, 34, 0.25); transition: transform 0.2s;">
+                    <a href="${actionUrl}" class="button cta-button" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryLight} 100%); color: #faf9f7 !important; text-decoration: none; border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; box-shadow: 0 2px 8px rgba(78, 43, 34, 0.25); transition: transform 0.2s;">
                       ${actionText}
                     </a>
                   </td>
@@ -477,7 +483,7 @@ export async function sendWelcomeEmail(
       subject: 'Welcome',
       title: `Welcome to ${APP_NAME}`,
       greeting: `Hi ${name},`,
-      body: `great to have you here! Your account is now fully set up. Explore our class offerings and book your first Pilates session.`,
+      body: `great to have you here! ${APP_NAME} is the digital booking system for your classes at ${STUDIO_NAME} — explore our schedule and book your first Pilates session.`,
       actionUrl: link,
       actionText: 'Explore classes',
       expiryText: 'Have questions? Simply reply to this email or visit us at the studio.',
