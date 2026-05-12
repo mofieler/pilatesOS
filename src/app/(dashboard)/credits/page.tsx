@@ -216,9 +216,8 @@ export default function CreditsPage() {
   const [error, setError] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   // Legal consent — required by German Button-Lösung (§ 312j BGB)
-  // and § 356 Abs. 5 BGB (waiver of withdrawal for immediately delivered digital services)
+  // and § 356 Abs. 5 BGB (for immediately delivered digital services)
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [waivedWithdrawal, setWaivedWithdrawal] = useState(false);
 
   // Tab functionality
   const currentTab = searchParams.get('tab') || 'purchase';
@@ -245,8 +244,8 @@ export default function CreditsPage() {
       setPurchaseError('Authentication required. Please sign in.');
       return;
     }
-    if (!acceptedTerms || !waivedWithdrawal) {
-      setPurchaseError('Please confirm the AGB and the withdrawal waiver before ordering.');
+    if (!acceptedTerms) {
+      setPurchaseError('Please confirm AGB before ordering.');
       return;
     }
 
@@ -262,7 +261,6 @@ export default function CreditsPage() {
           userId: session.user.id,
           paymentMethod,
           acceptedTerms,
-          waivedWithdrawal,
         }),
       });
 
@@ -590,8 +588,7 @@ export default function CreditsPage() {
               disabled={
                 isProcessing ||
                 status !== 'authenticated' ||
-                !acceptedTerms ||
-                !waivedWithdrawal
+                !acceptedTerms
               }
             >
               {isProcessing

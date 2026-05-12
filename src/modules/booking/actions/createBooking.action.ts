@@ -41,7 +41,6 @@ export async function createBookingAction(
     };
   }
 
-  
   // ── 1b. Overdue bills check ──────────────────────────────────────────────────
   // Users with overdue pay-at-studio invoices cannot create new bookings until
   // they settle the outstanding amount. Uses the same source of truth as the

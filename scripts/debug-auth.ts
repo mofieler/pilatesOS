@@ -31,7 +31,7 @@ async function debugAuth() {
     console.log(`📊 Found ${allUsers.length} users:`);
     
     for (const user of allUsers) {
-      console.log(`   👤 ${user.email} | Role: ${user.role} | Has Password: ${!!user.passwordHash} | Waiver: ${user.hasSignedWaiver}`);
+      console.log(`   👤 ${user.email} | Role: ${user.role} | Has Password: ${!!user.passwordHash} | Waiver: No longer required`);
     }
 
     // Test password verification for admin
