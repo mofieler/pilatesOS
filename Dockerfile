@@ -17,6 +17,9 @@ RUN corepack enable pnpm && \
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Increase Node.js heap size for builds with large type-checking
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
