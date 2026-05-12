@@ -46,7 +46,6 @@ async function seed() {
       email: 'admin@pilatesos.com',
       name: 'Admin User',
       role: 'admin',
-      hasSignedWaiver: true,
       passwordHash: await bcrypt.hash('password123', 10),
     }).returning();
 
@@ -55,14 +54,12 @@ async function seed() {
         email: 'sarah@pilatesos.com',
         name: 'Sarah Johnson',
         role: 'instructor',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       },
       {
         email: 'mike@pilatesos.com',
         name: 'Mike Chen',
         role: 'instructor',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       },
     ]).returning();
@@ -72,21 +69,18 @@ async function seed() {
         email: 'alice@example.com',
         name: 'Alice Smith',
         role: 'student',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       },
       {
         email: 'bob@example.com',
         name: 'Bob Wilson',
         role: 'student',
-        hasSignedWaiver: true,
         passwordHash: await bcrypt.hash('password123', 10),
       },
       {
         email: 'carol@example.com',
         name: 'Carol Davis',
         role: 'student',
-        hasSignedWaiver: false,
         passwordHash: await bcrypt.hash('password123', 10),
       },
     ]).returning();
