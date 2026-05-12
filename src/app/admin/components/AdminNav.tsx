@@ -229,7 +229,7 @@ export function AdminNav() {
   return (
     <>
       {/* ── Desktop ── */}
-      <div className="hidden xl:flex items-center gap-1 ml-4">
+      <div className="hidden lg:flex items-center gap-1 ml-4">
         <Link
           href="/admin"
           className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -254,7 +254,7 @@ export function AdminNav() {
         type="button"
         onClick={() => setMobileOpen((v) => !v)}
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-        className="xl:hidden ml-3 flex size-9 items-center justify-center rounded-lg border border-[#ede8e5] text-[#6b3d32] transition-all hover:bg-[#ede8e5]/60"
+        className="lg:hidden ml-3 flex size-12 items-center justify-center rounded-lg border border-[#ede8e5] text-[#6b3d32] transition-all hover:bg-[#ede8e5]/60"
       >
         {mobileOpen ? <XIcon className="size-4" /> : <MenuIcon className="size-4" />}
       </button>
