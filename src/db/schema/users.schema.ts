@@ -20,7 +20,6 @@ export const users = pgTable(
     image: varchar('image', { length: 500 }),
 
     // Business logic flags
-    hasSignedWaiver: boolean('has_signed_waiver').notNull().default(false),
     firstMercyUsed: boolean('first_mercy_used').notNull().default(false),
     profileCompleted: boolean('profile_completed').notNull().default(false),
 

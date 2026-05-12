@@ -23,7 +23,6 @@ export type ServiceErrorCode =
   | 'INVALID_STATE'
   | 'DUPLICATE_PAYMENT'
   | 'DB_ERROR'
-  | 'WAIVER_REQUIRED'
   | 'RATE_LIMITED'
   | 'OVERDUE_BILLS';
 

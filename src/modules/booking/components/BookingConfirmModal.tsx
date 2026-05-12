@@ -52,7 +52,6 @@ function errorHint(code: ServiceErrorCode | undefined): string | undefined {
     case 'INSUFFICIENT_CREDITS': return 'Top up your credits to book more classes.';
     case 'CLASS_FULL':           return 'Try joining the waitlist instead.';
     case 'BOOKING_ALREADY_EXISTS': return 'This class is already in your upcoming bookings.';
-    case 'WAIVER_REQUIRED':      return 'Please sign the liability waiver before booking. Visit /waiver to sign.';
     default:                     return undefined;
   }
 }

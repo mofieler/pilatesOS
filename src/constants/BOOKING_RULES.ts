@@ -16,10 +16,3 @@ export const CREDIT_EXPIRY_DAYS = 365;
 export const FIRST_TIME_MERCY_AVAILABLE = true;
 
 export const STUDIO_TIMEZONE = 'Europe/Berlin';
-
-/**
- * Version string of the liability waiver text. Bump when the waiver text on
- * /waiver changes; existing signed-waiver rows preserve the version they
- * were signed under, so historical evidence stays accurate.
- */
-export const WAIVER_VERSION = '2026-05-1';

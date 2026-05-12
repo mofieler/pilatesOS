@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { CheckCircleIcon, ClockIcon, MapPinIcon, UsersIcon, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { WaiverModal } from './WaiverModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -210,51 +209,12 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
     onJoinWaitlist,
   } = props;
 
-  const [showWaiverModal, setShowWaiverModal] = useState(false);
-  const [hasSignedWaiver, setHasSignedWaiver] = useState<boolean | null>(null);
-  const [isCheckingWaiver, setIsCheckingWaiver] = useState(false);
 
-  // Check waiver status on component mount
-  useEffect(() => {
-    async function checkWaiverStatus() {
-      try {
-        setIsCheckingWaiver(true);
-        const response = await fetch('/api/waiver/status', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setHasSignedWaiver(data.hasSignedWaiver);
-        } else {
-          setHasSignedWaiver(false);
-        }
-      } catch (error) {
-        console.error('Failed to check waiver status:', error);
-        setHasSignedWaiver(false);
-      } finally {
-        setIsCheckingWaiver(false);
-      }
-    }
-
-    checkWaiverStatus();
-  }, []); // Only run on mount
 
   function handleBookClick() {
-    if (hasSignedWaiver === true) {
-      onBook?.(id);
-    } else if (hasSignedWaiver === false) {
-      setShowWaiverModal(true);
-    }
-    // If null (still checking), do nothing
-  }
-
-  function handleWaiverSigned() {
-    setHasSignedWaiver(true);
-    // Proceed with booking after waiver is signed - use callback instead of timeout
     onBook?.(id);
   }
+
 
   const state = deriveState(props);
   const spotsLeft = Math.max(0, maxCapacity - bookedCount);
@@ -387,10 +347,10 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
               <Button
                 size="sm"
                 onClick={handleBookClick}
-                disabled={isCheckingWaiver || hasSignedWaiver === null}
+                disabled={false}
                 className="rounded-xl bg-gradient-to-r from-[#4e2b22] to-[#6b3d32] text-[#faf9f7] hover:from-[#5a3228] hover:to-[#7a4538] shadow-[0_4px_14px_rgba(78,43,34,0.25)] hover:shadow-[0_6px_20px_rgba(78,43,34,0.35)] transition-all duration-200"
               >
-                {isCheckingWaiver ? 'Checking...' : hasSignedWaiver === false ? 'Sign Waiver First' : 'Book Class'}
+                Book Class
               </Button>
             )}
           </>
@@ -410,12 +370,6 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         )}
       </div>
 
-      {/* Waiver Modal */}
-      <WaiverModal
-        isOpen={showWaiverModal}
-        onClose={() => setShowWaiverModal(false)}
-        onWaiverSigned={handleWaiverSigned}
-      />
     </article>
   );
 }

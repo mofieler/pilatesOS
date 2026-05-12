@@ -41,23 +41,8 @@ export async function createBookingAction(
     };
   }
 
-  // ── 1b. Waiver Check ─────────────────────────────────────────────────────────
-  // Students must sign waiver before their first booking (liability protection)
-  const [user] = await db
-    .select({ hasSignedWaiver: users.hasSignedWaiver })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (!user?.hasSignedWaiver) {
-    return {
-      success: false,
-      error: 'Please sign the liability waiver before booking. Visit /waiver to sign.',
-      code: 'WAIVER_REQUIRED',
-    };
-  }
-
-  // ── 1c. Overdue bills check ──────────────────────────────────────────────────
+  
+  // ── 1b. Overdue bills check ──────────────────────────────────────────────────
   // Users with overdue pay-at-studio invoices cannot create new bookings until
   // they settle the outstanding amount. Uses the same source of truth as the
   // /api/credit-purchases guard so the policy is enforced consistently.

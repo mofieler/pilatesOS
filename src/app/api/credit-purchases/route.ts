@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { packageId, userId, paymentMethod, acceptedTerms, waivedWithdrawal } = body;
+    const { packageId, userId, paymentMethod, acceptedTerms } = body;
 
     if (!packageId || !userId || !paymentMethod) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -33,10 +33,10 @@ export async function POST(request: Request) {
 
     // Trust-but-verify: client checkboxes are re-validated server-side so the order
     // cannot be placed by curl-ing the API. Required for German Button-Lösung
-    // (§ 312j Abs. 3 BGB) and waiver of withdrawal (§ 356 Abs. 5 BGB).
-    if (acceptedTerms !== true || waivedWithdrawal !== true) {
+    // (§ 312j Abs. 3 BGB) and for immediately delivered digital services (§ 356 Abs. 5 BGB).
+    if (acceptedTerms !== true) {
       return NextResponse.json(
-        { error: 'You must accept the AGB and the withdrawal waiver before ordering.' },
+        { error: 'You must accept the AGB before ordering.' },
         { status: 400 },
       );
     }
