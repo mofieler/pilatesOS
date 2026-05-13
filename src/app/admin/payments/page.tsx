@@ -27,7 +27,7 @@ interface CreditPurchase {
   userEmail: string;
   packageName: string;
   creditsAmount: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
   priceCents: number;
   currency: string;
   paymentMethod: 'stripe' | 'pay_at_studio';
