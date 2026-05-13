@@ -92,68 +92,91 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       line-height: inherit !important;
     }
 
-    /* Responsive styles */
+    /* Responsive styles for mobile */
     @media screen and (max-width: 600px) {
-      .container { width: 100% !important; max-width: 100% !important; }
-      .content { padding: 24px 20px !important; }
-      .header { padding: 28px 20px !important; }
-      .button { width: 100% !important; display: block !important; text-align: center !important; }
+      .container { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+      .card-outer { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+      .content { padding: 20px 16px !important; box-sizing: border-box !important; }
+      .header { padding: 20px 16px !important; box-sizing: border-box !important; }
+      .card-footer { padding: 16px !important; box-sizing: border-box !important; }
+      .button { width: 100% !important; display: block !important; text-align: center !important; box-sizing: border-box !important; }
       .title { font-size: 20px !important; }
+      table { width: 100% !important; }
+      td { width: 100% !important; box-sizing: border-box !important; }
     }
 
     /* CRITICAL: Dark mode override for email clients that ignore color-scheme:light
        (Samsung Mail, Outlook for Android, some Gmail clients on dark mode).
-       Forces readable light colors on dark backgrounds. */
+       Forces readable light colors on dark backgrounds with !important everywhere. */
     @media (prefers-color-scheme: dark) {
-      /* Root and body */
+      /* Root and body - universal dark mode */
       html, body,
       .email-wrap,
       table[class="email-wrap"] {
         background-color: #1a1a1a !important;
         color: #f5f5f5 !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
 
-      /* Card styling */
-      .card-outer { background-color: #2a2a2a !important; }
+      /* Container and card styling */
+      .container { width: 100% !important; max-width: 100% !important; }
+      .card-outer {
+        background-color: #2a2a2a !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
       .card-body {
         background-color: #2a2a2a !important;
         color: #f5f5f5 !important;
+        width: 100% !important;
       }
       .card-footer {
         background-color: #1a1a1a !important;
         color: #d9d9d9 !important;
+        width: 100% !important;
       }
 
       /* All text elements MUST be light colored */
+      * { color: #f5f5f5 !important; }
       p { color: #f5f5f5 !important; }
       td { color: #f5f5f5 !important; }
       span { color: #f5f5f5 !important; }
       li { color: #f5f5f5 !important; }
+      div { color: #f5f5f5 !important; }
 
-      /* Headers */
-      h1, h2, h3, h4, h5, h6 { color: #ffd9b3 !important; }
-      h1.email-title { color: #ffd9b3 !important; }
-      .header-title { color: #faf9f7 !important; }
-      .header-subtitle { color: #c4a88a !important; }
+      /* Headers - MUST be bright white */
+      h1 { color: #ffffff !important; font-weight: 700 !important; }
+      h2 { color: #ffffff !important; }
+      h3, h4, h5, h6 { color: #ffffff !important; }
+      h1.email-title { color: #ffffff !important; font-weight: 700 !important; }
+      .email-title { color: #ffffff !important; font-weight: 700 !important; }
+      .header-title { color: #ffffff !important; font-weight: 700 !important; }
+      .header-subtitle { color: #d4af9a !important; }
+      .title { color: #ffffff !important; font-weight: 700 !important; }
 
-      /* Links and buttons */
-      a { color: #b8c9ff !important; }
+      /* Links and buttons - ensure excellent contrast */
+      a { color: #90b8ff !important; text-decoration: underline !important; }
       a.cta-button {
-        color: #faf9f7 !important;
+        color: #ffffff !important;
         background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important;
+        text-decoration: none !important;
       }
+      .button { color: #ffffff !important; background-color: #4e2b22 !important; }
+      button { color: #ffffff !important; background-color: #4e2b22 !important; }
 
-      /* Utility classes */
+      /* Text color utilities */
       .textLight { color: #d9d9d9 !important; }
       .textLighter { color: #d9d9d9 !important; }
-      .text-secondary { color: #b8c9ff !important; }
+      .text-secondary { color: #90b8ff !important; }
 
-      /* Borders */
+      /* Borders and dividers */
       .border { border-color: #444 !important; }
+      hr { border-color: #444 !important; }
     }
   </style>
 </head>
-<body class="email-wrap" style="margin: 0; padding: 0; background-color: ${COLORS.background}; color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${COLORS.text}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+<body class="email-wrap" style="margin: 0; padding: 0; background-color: ${COLORS.background}; color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${COLORS.text}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; word-break: break-word !important; -webkit-word-break: break-word !important;">
   
   <!-- Preview text (hidden) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
