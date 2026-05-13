@@ -108,6 +108,17 @@ export async function createBookingAction(
         }
       }
 
+      // Clean up any cancelled bookings for this user+session (allows rebooking)
+      await tx
+        .delete(bookings)
+        .where(
+          and(
+            eq(bookings.userId, userId),
+            eq(bookings.sessionId, sessionId),
+            eq(bookings.status, 'cancelled'),
+          ),
+        );
+
       // Prevent duplicate bookings for the same user + session
       const [existing] = await tx
         .select({ id: bookings.id })
