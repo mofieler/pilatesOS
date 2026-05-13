@@ -170,6 +170,7 @@ export function CreateSessionDialog({
     if (!templateId) { setError('Please select a class template.'); return; }
     if (!date) { setError('Please pick a date.'); return; }
     if (!time) { setError('Please pick a time.'); return; }
+    if (!instructorId) { setError('Please select an instructor.'); return; }
 
     startTransition(async () => {
       // Convert local date+time to UTC ISO string — browser applies local tz offset
@@ -344,24 +345,20 @@ export function CreateSessionDialog({
               </div>
             )}
 
-            {/* Optional instructor override */}
+            {/* Instructor (required) */}
             {instructors.length > 0 && (
               <div className="space-y-1.5">
                 <Label htmlFor="instructor" className="text-[#6b3d32] font-medium">
-                  Instructor override{' '}
-                  <span className="text-[#8b6b5c]">(optional)</span>
+                  Instructor *
                 </Label>
                 <select
                   id="instructor"
                   value={instructorId}
                   onChange={(e) => setInstructorId(e.target.value)}
+                  required
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">
-                    {selectedTemplate?.instructorName
-                      ? `Use template default (${selectedTemplate.instructorName})`
-                      : 'Use template default'}
-                  </option>
+                  <option value="">Select an instructor…</option>
                   {instructors.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name}
@@ -389,7 +386,7 @@ export function CreateSessionDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={isPending || !templateId}
+                disabled={isPending || !templateId || !instructorId}
                 className="bg-emerald-600 text-white hover:bg-emerald-700"
               >
                 {isPending ? (
