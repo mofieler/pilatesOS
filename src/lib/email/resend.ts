@@ -303,6 +303,103 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
 }
 
 // ============================================================================
+// EMAIL BLOCK HELPERS
+// ============================================================================
+
+function buildClassInfoBlock(classTitle: string, classDate: string, classTime: string): string {
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 4px; border-radius: 12px; overflow: hidden; border: 1px solid ${COLORS.border};">
+      <tr>
+        <td style="background-color: ${COLORS.background}; padding: 16px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr>
+              <td style="padding-bottom: 10px; border-bottom: 1px solid ${COLORS.border};">
+                <p style="margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: ${COLORS.textLighter};">
+                  <font color="${COLORS.textLighter}">Class</font>
+                </p>
+                <p style="margin: 4px 0 0; font-size: 15px; font-weight: 700; color: ${COLORS.primary};">
+                  <font color="${COLORS.primary}">${classTitle}</font>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-top: 10px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td width="50%" style="vertical-align: top;">
+                      <p style="margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: ${COLORS.textLighter};">
+                        <font color="${COLORS.textLighter}">Date</font>
+                      </p>
+                      <p style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: ${COLORS.text};">
+                        <font color="${COLORS.text}">${classDate}</font>
+                      </p>
+                    </td>
+                    <td width="50%" style="vertical-align: top;">
+                      <p style="margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: ${COLORS.textLighter};">
+                        <font color="${COLORS.textLighter}">Time</font>
+                      </p>
+                      <p style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: ${COLORS.text};">
+                        <font color="${COLORS.text}">${classTime}</font>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function buildCreditStatusBlock(refundIssued: boolean, adminCancelled = false): string {
+  const isGreen = refundIssued;
+  const bg      = isGreen ? '#f0faf0' : '#fff8f0';
+  const border  = isGreen ? '#b2dfb2' : '#f5cba7';
+  const icon    = isGreen ? '✓' : '✕';
+  const iconBg  = isGreen ? '#4a7c4a' : '#c0392b';
+  const label   = isGreen ? 'Credit refunded' : 'No refund issued';
+  const detail  = adminCancelled
+    ? 'Your credit has been fully refunded because the studio cancelled this class.'
+    : refundIssued
+      ? 'Cancelled more than 24 hours in advance — your credit has been returned to your account.'
+      : 'Late cancellation (within 24 hours) — your credit could not be refunded per our cancellation policy.';
+
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 12px 0 0; border-radius: 12px; overflow: hidden; border: 1px solid ${border};">
+      <tr>
+        <td style="background-color: ${bg}; padding: 14px 20px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+            <tr>
+              <td width="32" style="vertical-align: middle; padding-right: 12px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td bgcolor="${iconBg}" style="background-color: ${iconBg}; border-radius: 50%; width: 28px; height: 28px; text-align: center; vertical-align: middle;">
+                      <span style="font-size: 14px; font-weight: 700; color: #ffffff; line-height: 28px; display: block;">
+                        <font color="#ffffff">${icon}</font>
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td style="vertical-align: middle;">
+                <p style="margin: 0; font-size: 13px; font-weight: 700; color: ${isGreen ? '#2d6a2d' : '#7b2d00'};">
+                  <font color="${isGreen ? '#2d6a2d' : '#7b2d00'}">${label}</font>
+                </p>
+                <p style="margin: 3px 0 0; font-size: 12px; line-height: 1.5; color: ${isGreen ? '#3d7a3d' : '#8b4500'};">
+                  <font color="${isGreen ? '#3d7a3d' : '#8b4500'}">${detail}</font>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+// ============================================================================
 // PUBLIC API
 // ============================================================================
 
@@ -392,18 +489,20 @@ export async function sendBookingConfirmationEmail(
 ): Promise<void> {
   const link = `${APP_URL}`;
 
+  const classInfoBlock = buildClassInfoBlock(classTitle, classDate, classTime);
+
   await getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Booking confirmation – ${APP_NAME}`,
     html: buildBaseTemplate({
       subject: 'Booking confirmation',
-      title: 'Your class is confirmed',
+      title: 'Your class is confirmed ✓',
       greeting: `Hi ${name},`,
-      body: `Your class <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> at <strong>${classTime}</strong> has been successfully booked.`,
+      body: `Your class has been successfully booked. See you on the mat!<br><br>${classInfoBlock}`,
       actionUrl: link,
       actionText: 'View my classes',
-      expiryText: 'Please arrive at least 10 minutes before class starts. If you cannot attend, please cancel early.',
+      expiryText: 'Please arrive at least 10 minutes before class starts. If you cannot attend, please cancel more than 24 hours before the class to receive a full credit refund.',
     }),
   });
 }
@@ -417,13 +516,11 @@ export async function sendBookingCancellationEmail(
   name: string,
   classTitle: string,
   classDate: string,
+  classTime: string,
   refundIssued: boolean,
 ): Promise<void> {
-  const link = `${APP_URL}`;
-
-  const refundNote = refundIssued
-    ? 'Your credit has been returned to your account and is available for your next booking.'
-    : 'As the cancellation was made within 24 hours of the class, your credit could not be refunded per our late cancellation policy.';
+  const classInfoBlock    = buildClassInfoBlock(classTitle, classDate, classTime);
+  const creditStatusBlock = buildCreditStatusBlock(refundIssued, false);
 
   await getResend().emails.send({
     from: FROM,
@@ -433,10 +530,10 @@ export async function sendBookingCancellationEmail(
       subject: 'Cancellation confirmation',
       title: 'Booking cancelled',
       greeting: `Hi ${name},`,
-      body: `Your booking for <strong>"${classTitle}"</strong> on <strong>${classDate}</strong> has been successfully cancelled.`,
-      actionUrl: link,
+      body: `Your booking has been successfully cancelled.<br><br>${classInfoBlock}${creditStatusBlock}`,
+      actionUrl: APP_URL,
       actionText: 'Book a new class',
-      expiryText: refundNote,
+      expiryText: 'You can book another class anytime from the schedule.',
     }),
   });
 }
@@ -450,13 +547,12 @@ export async function sendClassCancelledByAdminEmail(
   name: string,
   classTitle: string,
   classDate: string,
+  classTime: string,
   reason?: string,
 ): Promise<void> {
-  const link = `${APP_URL}`;
-
-  const reasonNote = reason
-    ? `Reason: <em>${reason}</em><br><br>`
-    : '';
+  const classInfoBlock    = buildClassInfoBlock(classTitle, classDate, classTime);
+  const creditStatusBlock = buildCreditStatusBlock(true, true);
+  const reasonNote        = reason ? `<p style="margin: 16px 0 0; font-size: 14px; color: ${COLORS.textLight};"><font color="${COLORS.textLight}"><strong>Reason:</strong> <em>${reason}</em></font></p>` : '';
 
   await getResend().emails.send({
     from: FROM,
@@ -466,8 +562,8 @@ export async function sendClassCancelledByAdminEmail(
       subject: 'Class cancelled',
       title: 'Your class has been cancelled',
       greeting: `Hi ${name},`,
-      body: `We're sorry to let you know that <strong>"${classTitle}"</strong> scheduled for <strong>${classDate}</strong> has been cancelled by the studio.<br><br>${reasonNote}Your credit has been fully refunded and is available for your next booking.`,
-      actionUrl: link,
+      body: `We're sorry to let you know that this class has been cancelled by the studio.<br><br>${classInfoBlock}${creditStatusBlock}${reasonNote}`,
+      actionUrl: APP_URL,
       actionText: 'Browse other classes',
       expiryText: 'We apologise for the inconvenience. We hope to see you at another class soon.',
     }),

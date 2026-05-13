@@ -206,11 +206,15 @@ export const cancellationService = {
           const classDate = session.startsAt.toLocaleDateString('en-GB', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
           });
+          const classTime = session.startsAt.toLocaleTimeString('en-GB', {
+            hour: '2-digit', minute: '2-digit',
+          });
           await sendBookingCancellationEmail(
             student.email!,
             student.name ?? 'there',
             tmpl?.name ?? 'your class',
             classDate,
+            classTime,
             refundIssued,
           );
         } catch (err) {
@@ -373,6 +377,9 @@ export const cancellationService = {
           const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
           });
+          const classTime = sessionRow.startsAt.toLocaleTimeString('en-GB', {
+            hour: '2-digit', minute: '2-digit',
+          });
           await Promise.allSettled(
             affectedUsers
               .filter((u) => u.email)
@@ -382,6 +389,7 @@ export const cancellationService = {
                   u.name ?? 'there',
                   sessionRow.title,
                   classDate,
+                  classTime,
                   reason,
                 ),
               ),
