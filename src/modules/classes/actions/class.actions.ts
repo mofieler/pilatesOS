@@ -12,7 +12,7 @@ import { cancellationService } from '@/modules/booking/services/cancellation.ser
 import type { ServiceResult } from '@/modules/billing/services/credit.service';
 import type { InstructorCancellationResult } from '@/modules/booking/services/cancellation.service';
 import type { ClassType, CreditType } from '@/lib/config/class-types';
-import { getClassTypeValues, getCreditTypeValues } from '@/lib/config/class-types';
+import { getClassTypeValues, getCreditTypeValues, getCreditTypeForClassType } from '@/lib/config/class-types';
 
 // ─── Lookup Types (for dropdowns) ─────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ export async function createClassTemplateAction(
         durationMinutes,
         maxCapacity,
         creditCost,
-        creditType: creditType ?? 'mat_group',
+        creditType: getCreditTypeForClassType(classType),
         instructorId: instructorId || null,
         vibeTags: vibeTags ?? [],
         location: location || null,
@@ -521,6 +521,11 @@ export async function updateClassTemplateAction(
   }
 
   const { id, ...fields } = parsed.data;
+
+  // Credit type is always derived from class type — never stored independently.
+  if (fields.classType) {
+    fields.creditType = getCreditTypeForClassType(fields.classType);
+  }
 
   try {
     const [template] = await db

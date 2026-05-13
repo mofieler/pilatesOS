@@ -21,9 +21,11 @@ import {
 import type { AdminTemplateRow, InstructorOption } from '@/modules/classes/actions/class.actions';
 import {
   getClassTypeSelectOptions,
+  getCreditTypeSelectOptions,
   getClassTypeBadgeStyle,
   getCreditTypeBadgeStyle,
   getCreditTypeLabel,
+  getCreditTypeForClassType,
   type ClassType,
 } from '@/lib/config/class-types';
 
@@ -44,7 +46,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', classType: 'reformer', durationMinutes: '60',
-  maxCapacity: '10', creditCost: '1', creditType: 'mat_group' as const,
+  maxCapacity: '10', creditCost: '1', creditType: 'reformer_group' as const,
   instructorId: '', location: '', isActive: true,
 };
 
@@ -165,7 +167,14 @@ function TemplateFormDialog({
               <select
                 id="tpl-type"
                 value={form.classType}
-                onChange={set('classType')}
+                onChange={(e) => {
+                  const classType = e.target.value as ClassType;
+                  setForm((f) => ({
+                    ...f,
+                    classType,
+                    creditType: getCreditTypeForClassType(classType),
+                  }));
+                }}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
               >
                 {getClassTypeSelectOptions().map((option) => (
@@ -176,6 +185,15 @@ function TemplateFormDialog({
             <div className="space-y-1.5">
               <Label htmlFor="tpl-dur" className="text-[#6b3d32] font-medium">Duration (min) *</Label>
               <Input id="tpl-dur" type="number" min={1} value={form.durationMinutes} onChange={set('durationMinutes')} required />
+            </div>
+          </div>
+
+          {/* Credit type — derived from class type, read-only */}
+          <div className="space-y-1.5">
+            <Label className="text-[#6b3d32] font-medium">Credit type</Label>
+            <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
+              {getCreditTypeSelectOptions().find((o) => o.value === form.creditType)?.label ?? form.creditType}
+              <span className="ml-2 text-xs text-muted">(set by class type)</span>
             </div>
           </div>
 
