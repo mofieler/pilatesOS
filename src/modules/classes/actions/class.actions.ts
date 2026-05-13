@@ -801,3 +801,89 @@ export async function getInstructorsAction(): Promise<ServiceResult<InstructorOp
     return { success: false, error: 'Failed to fetch instructors.', code: 'DB_ERROR' };
   }
 }
+
+// ─── Update a scheduled session ──────────────────────────────────────────────
+
+const updateClassSessionSchema = z.object({
+  id: z.string().uuid('Invalid session ID'),
+  instructorId: z.string().uuid().nullable().optional(),
+  maxCapacity: z.number().int().positive().optional(),
+});
+
+/**
+ * Update a scheduled session (e.g., change instructor).
+ * Prevents credit changes if the session has bookings (to avoid confusion).
+ * Admins should cancel and recreate if they need to change credits.
+ */
+export async function updateClassSessionAction(
+  input: z.infer<typeof updateClassSessionSchema>,
+): Promise<ServiceResult<ClassSession>> {
+  const authSession = await requireAdminOrInstructor();
+  if (!authSession) {
+    return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  }
+
+  const parsed = updateClassSessionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input.',
+      code: 'INVALID_STATE',
+    };
+  }
+
+  const { id, instructorId, maxCapacity } = parsed.data;
+
+  try {
+    const [session] = await db
+      .select()
+      .from(classSessions)
+      .where(eq(classSessions.id, id))
+      .limit(1);
+
+    if (!session) {
+      return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
+    }
+
+    // Warn if there are bookings
+    if (session.bookedCount > 0 && maxCapacity !== undefined && maxCapacity < session.bookedCount) {
+      return {
+        success: false,
+        error: `Cannot reduce capacity below ${session.bookedCount} booked students.`,
+        code: 'INVALID_STATE',
+      };
+    }
+
+    const updates: Partial<ClassSession> = { updatedAt: new Date() };
+    if (instructorId !== undefined) updates.instructorId = instructorId;
+    if (maxCapacity !== undefined) updates.maxCapacity = maxCapacity;
+
+    const [updated] = await db
+      .update(classSessions)
+      .set(updates)
+      .where(eq(classSessions.id, id))
+      .returning();
+
+    revalidatePath('/admin/classes');
+    revalidatePath('/book');
+
+    // Fire-and-forget GCal sync if instructor changed
+    if (instructorId !== undefined && instructorId !== session.instructorId) {
+      (async () => {
+        try {
+          const { pushSession } = await import(
+            '@/modules/calendar/services/calendar-sync.service'
+          );
+          await pushSession(session.id);
+        } catch (err) {
+          console.warn('[calendar] Session update GCal push failed:', err);
+        }
+      })();
+    }
+
+    return { success: true, data: updated as ClassSession };
+  } catch (err) {
+    console.error(JSON.stringify({ level: 'error', msg: 'updateClassSessionAction failed', err }));
+    return { success: false, error: 'Failed to update session.', code: 'DB_ERROR' };
+  }
+}

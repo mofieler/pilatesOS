@@ -49,25 +49,15 @@ type Adjustment = {
 };
 
 const CREDIT_TYPE_LABELS: Record<string, string> = {
-  mat_group:        'Mat Group',
-  reformer_group:   'Reformer Group',
-  private_session:  'Private Session',
-  duo_group:        'Duo Group',
-  general_group:    'General Group',
-  online_class:     'Online Class',
-  sound_healing:    'Sound Healing',
+  mat:       'Mat Credits',
+  reformer:  'Reformer Credits',
 };
 
 const CREDIT_TYPES = Object.keys(CREDIT_TYPE_LABELS) as (keyof typeof CREDIT_TYPE_LABELS)[];
 
 const CREDIT_TYPE_COLORS: Record<string, string> = {
-  mat_group:        'bg-[#6b8e6b]/15 text-[#4a7c4a] border-[#6b8e6b]/30',
-  reformer_group:   'bg-[#4e7a9e]/15 text-[#2d5f82] border-[#4e7a9e]/30',
-  private_session:  'bg-[#9e6b4e]/15 text-[#7a4a2d] border-[#9e6b4e]/30',
-  duo_group:        'bg-[#7a4e9e]/15 text-[#5a2d82] border-[#7a4e9e]/30',
-  general_group:    'bg-[#9e9e4e]/15 text-[#7a7a2d] border-[#9e9e4e]/30',
-  online_class:     'bg-[#4e9e9e]/15 text-[#2d7a7a] border-[#4e9e9e]/30',
-  sound_healing:    'bg-[#c45c4a]/15 text-[#a33a29] border-[#c45c4a]/30',
+  mat:       'bg-[#6b8e6b]/15 text-[#4a7c4a] border-[#6b8e6b]/30',
+  reformer:  'bg-[#4e7a9e]/15 text-[#2d5f82] border-[#4e7a9e]/30',
 };
 
 function BalancePill({ creditType, balance }: { creditType: string; balance: number }) {

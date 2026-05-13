@@ -25,6 +25,7 @@ function toSessionRow(s: WeekViewSessionData): SessionRow {
     startsAt: s.startsAt,
     templateName: s.templateName,
     instructorName: s.instructorName ?? '—',
+    instructorId: s.instructorId,
     bookedCount: s.bookedCount,
     maxCapacity: s.maxCapacity,
     status: s.status as SessionRow['status'],
@@ -115,6 +116,11 @@ export function ClassesPageClient({
             >
               + New Class
             </button>
+          )}
+          {!hasTemplates && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+              Create a class template first to schedule classes
+            </div>
           )}
         </div>
       </div>

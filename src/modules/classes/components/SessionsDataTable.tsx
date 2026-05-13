@@ -8,7 +8,8 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { MoreHorizontalIcon } from 'lucide-react';
+import { MoreHorizontalIcon, Loader2Icon } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -24,6 +25,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,6 +48,7 @@ import { buttonVariants } from '@/components/ui/button';
 import {
   cancelClassSessionAction,
   deleteClassSessionAction,
+  updateClassSessionAction,
 } from '@/modules/classes/actions/class.actions';
 
 // ─── Row type ─────────────────────────────────────────────────────────────────
@@ -46,10 +58,135 @@ export type SessionRow = {
   startsAt: Date;
   templateName: string;
   instructorName: string;
+  instructorId: string | null;
   bookedCount: number;
   maxCapacity: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 };
+
+// ─── Session Edit Dialog ──────────────────────────────────────────────────────
+
+function SessionEditDialog({
+  row,
+  open,
+  onOpenChange,
+}: {
+  row: SessionRow;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [instructors, setInstructors] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedInstructor, setSelectedInstructor] = useState<string | null>(row.instructorId);
+  const [maxCapacity, setMaxCapacity] = useState<string>(String(row.maxCapacity));
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // Load instructors on mount
+  React.useEffect(() => {
+    if (open) {
+      startTransition(async () => {
+        const result = await getInstructorsAction();
+        if (result.success) {
+          setInstructors(result.data);
+        }
+      });
+    }
+  }, [open]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    const capacity = parseInt(maxCapacity, 10);
+    if (isNaN(capacity) || capacity < 1) {
+      setError('Capacity must be a positive number.');
+      return;
+    }
+
+    if (capacity < row.bookedCount) {
+      setError(`Cannot reduce capacity below ${row.bookedCount} booked students.`);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updateClassSessionAction({
+        id: row.id,
+        instructorId: selectedInstructor || null,
+        maxCapacity: capacity,
+      });
+
+      if (result.success) {
+        onOpenChange(false);
+        toast.success('Session updated.');
+      } else {
+        setError(result.error ?? 'Failed to update session.');
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" showCloseButton>
+        <DialogHeader>
+          <DialogTitle>Edit session</DialogTitle>
+          <DialogDescription>
+            Update the instructor or capacity. Credits cannot be changed once students are booked — cancel and create a new session instead.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="sess-date" className="text-[#6b3d32] font-medium">Date & Time</Label>
+            <div className="h-9 flex items-center rounded-md border border-input bg-[#faf9f7] px-3 text-sm text-[#6b3d32]">
+              {format(row.startsAt, 'dd MMM yyyy, HH:mm')}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sess-instr" className="text-[#6b3d32] font-medium">Instructor</Label>
+            <select
+              id="sess-instr"
+              value={selectedInstructor || ''}
+              onChange={(e) => setSelectedInstructor(e.target.value || null)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">None</option>
+              {instructors.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="sess-cap" className="text-[#6b3d32] font-medium">Max capacity</Label>
+            <div className="text-xs text-[#8b6b5c] mb-1">Currently booked: {row.bookedCount} / {row.maxCapacity}</div>
+            <input
+              id="sess-cap"
+              type="number"
+              min={row.bookedCount}
+              value={maxCapacity}
+              onChange={(e) => setMaxCapacity(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
+              {isPending
+                ? <span className="flex items-center gap-2"><Loader2Icon className="size-4 animate-spin" />Saving…</span>
+                : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -79,17 +216,18 @@ function StatusBadge({ status }: { status: SessionRow['status'] }) {
 
 // ─── Actions cell ─────────────────────────────────────────────────────────────
 
-type DialogMode = 'cancel' | 'delete' | null;
+type DialogMode = 'cancel' | 'delete' | 'edit' | null;
 
 function SessionActionsCell({ row }: { row: SessionRow }) {
   const [dialog, setDialog]   = useState<DialogMode>(null);
   const [error, setError]     = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const canEdit = row.status === 'scheduled';
   const canCancel = row.status === 'scheduled' || row.status === 'in_progress';
   const canDelete = row.status === 'cancelled' || (row.status === 'scheduled' && row.bookedCount === 0);
 
-  if (!canCancel && !canDelete) return null;
+  if (!canEdit && !canCancel && !canDelete) return null;
 
   function openDialog(mode: DialogMode) {
     setError(null);
@@ -133,6 +271,11 @@ function SessionActionsCell({ row }: { row: SessionRow }) {
           <MoreHorizontalIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {canEdit && (
+            <DropdownMenuItem onClick={() => openDialog('edit')}>
+              Edit Session
+            </DropdownMenuItem>
+          )}
           {canCancel && (
             <DropdownMenuItem variant="destructive" onClick={() => openDialog('cancel')}>
               Cancel Session
@@ -183,6 +326,11 @@ function SessionActionsCell({ row }: { row: SessionRow }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit dialog */}
+      {dialog === 'edit' && (
+        <SessionEditDialog row={row} open onOpenChange={(v) => { if (!v && !isPending) setDialog(null); }} />
+      )}
     </>
   );
 }
