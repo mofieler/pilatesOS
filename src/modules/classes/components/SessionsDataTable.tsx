@@ -49,6 +49,7 @@ import {
   cancelClassSessionAction,
   deleteClassSessionAction,
   updateClassSessionAction,
+  getInstructorsAction,
 } from '@/modules/classes/actions/class.actions';
 
 // ─── Row type ─────────────────────────────────────────────────────────────────
