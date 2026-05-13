@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, addDays } from 'date-fns';
-import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle, FileText } from 'lucide-react';
+import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle, FileText, BadgeCheckIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { LEGACY_CREDIT_TYPE_LABELS, LEGACY_CREDIT_TYPE_STYLES } from '@/lib/config/class-types';
 import { BillsSection } from '@/modules/billing/components/BillsSection';
+import { MembershipShopSection } from '@/modules/billing/components/MembershipShopSection';
 import { useSearchParams } from 'next/navigation';
 
 // Types - match database schema exactly
@@ -222,8 +223,9 @@ export default function CreditsPage() {
 
   // Tab functionality
   const currentTab = searchParams.get('tab') || 'purchase';
-  const isBillsTab = currentTab === 'bills';
-  const isPurchaseTab = currentTab === 'purchase';
+  const isBillsTab       = currentTab === 'bills';
+  const isPurchaseTab    = currentTab === 'purchase';
+  const isMembershipTab  = currentTab === 'membership';
 
   // Fetch credit packages on mount
   useEffect(() => {
@@ -353,13 +355,14 @@ export default function CreditsPage() {
       <div>
         <p className="text-sm font-medium text-[#6b3d32]">Credit Management</p>
         <h1 className="mt-1 text-3xl font-bold text-[#4e2b22]">
-          {isBillsTab ? 'Bills & History' : 'Buy Class Credits'}
+          {isBillsTab ? 'Bills & History' : isMembershipTab ? 'Memberships' : 'Buy Class Credits'}
         </h1>
         <p className="mt-2 text-sm text-[#6b3d32]">
-          {isBillsTab 
+          {isBillsTab
             ? 'View your billing history and manage open invoices'
-            : 'Select a credit package and payment method to get started'
-          }
+            : isMembershipTab
+            ? 'Subscribe to a membership plan for weekly credits'
+            : 'Select a credit package and payment method to get started'}
         </p>
       </div>
 
@@ -378,6 +381,18 @@ export default function CreditsPage() {
           Buy Credits
         </button>
         <button
+          onClick={() => router.push('/credits?tab=membership')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+            isMembershipTab
+              ? 'bg-[#faf9f7] text-[#4e2b22] shadow-sm ring-1 ring-[#ede8e5]'
+              : 'text-[#8b6b5c] hover:text-[#6b3d32]'
+          )}
+        >
+          <BadgeCheckIcon className="size-3.5" />
+          Membership
+        </button>
+        <button
           onClick={() => router.push('/credits?tab=bills')}
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
@@ -391,15 +406,18 @@ export default function CreditsPage() {
         </button>
       </div>
 
+      {/* Membership section */}
+      {isMembershipTab && <MembershipShopSection />}
+
       {/* Error State - only show if there's an actual error and packages exist */}
-      {error && packages.length > 0 && (
+      {!isMembershipTab && error && packages.length > 0 && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {/* Credit Packages */}
-      {!loading && (
+      {!isMembershipTab && !loading && (
         <section>
           <div className="flex items-center gap-2.5 mb-4">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
@@ -475,7 +493,7 @@ export default function CreditsPage() {
       )}
 
       {/* Purchase Error */}
-      {purchaseError && (
+      {!isMembershipTab && purchaseError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
           <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
           <div>
@@ -486,7 +504,7 @@ export default function CreditsPage() {
       )}
 
       {/* Payment Method */}
-      {selectedPackage && (
+      {!isMembershipTab && selectedPackage && (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-2.5 mb-4">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
@@ -631,7 +649,7 @@ export default function CreditsPage() {
       )}
 
       {/* Bills Section */}
-      <BillsSection isOpen={isBillsTab} />
+      {!isMembershipTab && <BillsSection isOpen={isBillsTab} />}
     </div>
   );
 }

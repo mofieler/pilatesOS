@@ -21,6 +21,8 @@ import type { UpcomingBooking } from '@/modules/users/components/UpcomingBooking
 import { StreakCard } from '@/modules/users/components/StreakCard';
 import { OpenBillsCard } from '@/modules/billing/components/OpenBillsCard';
 import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
+import { MembershipStatusCard } from '@/modules/billing/components/MembershipStatusCard';
+import { getMyMembershipAction } from '@/modules/billing/actions/membership.actions';
 
 // ─── Data fetchers ────────────────────────────────────────────────────────────
 
@@ -110,11 +112,12 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   const userName = session.user.name ?? session.user.email ?? 'there';
 
-  const [balances, upcomingBookings, mercyAvailable, billing] = await Promise.all([
+  const [balances, upcomingBookings, mercyAvailable, billing, membership] = await Promise.all([
     getCreditBalances(userId),
     getUpcomingBookings(userId),
     getMercyAvailable(userId),
     getUserBillingStatus(userId),
+    getMyMembershipAction(),
   ]);
 
   const greeting = getGreeting();
@@ -137,6 +140,9 @@ export default async function DashboardPage() {
 
       {/* ── Open bills ─────────────────────────────────────────────────────── */}
       <OpenBillsCard openBills={billing.openBills} />
+
+      {/* ── Active membership ───────────────────────────────────────────────── */}
+      <MembershipStatusCard membership={membership ?? null} />
 
       {/* ── Credits ────────────────────────────────────────────────────────── */}
       <section className="rounded-2xl bg-gradient-to-br from-[#faf9f7]/80 to-[#ede8e5]/60 p-6 backdrop-blur-xl border border-[#ede8e5]/80 shadow-[0_4px_20px_rgba(78,43,34,0.04)]">

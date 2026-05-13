@@ -222,6 +222,11 @@ export const userMemberships = pgTable(
     status: varchar('status', { length: 20 }).notNull().default('active'),
     lastCreditGrantAt: timestamp('last_credit_grant_at', { withTimezone: true, mode: 'date' }),
     nextCreditGrantAt: timestamp('next_credit_grant_at', { withTimezone: true, mode: 'date' }).notNull(),
+    // Legal consent tracking — required for self-purchased memberships (§312j BGB, §356 IV BGB)
+    selfPurchased: boolean('self_purchased').notNull().default(false),
+    acceptedTermsAt: timestamp('accepted_terms_at', { withTimezone: true, mode: 'date' }),
+    acceptedWithdrawalWaiverAt: timestamp('accepted_withdrawal_waiver_at', { withTimezone: true, mode: 'date' }),
+    purchaseIpAddress: varchar('purchase_ip_address', { length: 45 }),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .notNull()
