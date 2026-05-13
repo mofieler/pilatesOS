@@ -57,12 +57,13 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   const { title, greeting, body, actionUrl, actionText, expiryText, footerText } = props;
 
   return `<!DOCTYPE html>
-<html lang="en" style="color-scheme: light dark;">
+<html lang="en" style="color-scheme: light only;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>${title}</title>
   <!--[if mso]>
   <noscript>
@@ -74,9 +75,16 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   </noscript>
   <![endif]-->
   <style>
-    /* Allow both light and dark modes */
-    :root { color-scheme: light dark !important; }
-    html { color-scheme: light dark !important; }
+    /* FORCE light mode only — prevents email clients from auto-darkening */
+    :root { color-scheme: light only !important; }
+    html { color-scheme: light only !important; }
+    body { color-scheme: light only !important; }
+
+    /* Outlook.com / Microsoft email dark mode prevention */
+    [data-ogsc], [data-ogsb], [data-ogac], [data-ogab] {
+      color: inherit !important;
+      background-color: inherit !important;
+    }
 
     /* Reset styles */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -106,92 +114,52 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       td { width: 100% !important; box-sizing: border-box !important; }
     }
 
-    /* CRITICAL: Dark mode override for email clients
-       (Samsung Mail, Outlook for Android, Gmail on dark mode).
-       Forces readable light colors on dark backgrounds with !important.
-       Uses attribute selectors to override inline styles. */
+    /* PREVENT auto-dark-mode in email clients that ignore color-scheme.
+       Force backgrounds and text to stay light-mode regardless of device theme.
+       Combined with <font> tags and bgcolor attributes, this is bulletproof. */
     @media (prefers-color-scheme: dark) {
-      /* Root and body - universal dark mode */
-      html, body,
-      .email-wrap,
-      table[class="email-wrap"] {
-        background-color: #1a1a1a !important;
-        color: #f5f5f5 !important;
-        width: 100% !important;
-        max-width: 100% !important;
+      /* Force light mode backgrounds */
+      html, body, .email-wrap, .card-outer, .card-body, .card-footer {
+        background-color: ${COLORS.surface} !important;
+        color: ${COLORS.text} !important;
       }
-
-      /* Container and card styling */
-      .container { width: 100% !important; max-width: 100% !important; }
-      .card-outer {
-        background-color: #2a2a2a !important;
-        width: 100% !important;
-        max-width: 100% !important;
+      .email-bg, body[bgcolor], table[bgcolor] {
+        background-color: ${COLORS.background} !important;
       }
-      .card-body {
-        background-color: #2a2a2a !important;
-        color: #f5f5f5 !important;
-        width: 100% !important;
+      /* Force header to stay dark brown with white text */
+      .header, td.header {
+        background-color: ${COLORS.primary} !important;
       }
-      .card-footer {
-        background-color: #1a1a1a !important;
-        color: #d9d9d9 !important;
-        width: 100% !important;
-      }
-
-      /* UNIVERSAL: Override ALL colors to light */
-      * { color: #f5f5f5 !important; }
-
-      /* Specific text elements */
-      p, td, span, li, div, label, tr { color: #f5f5f5 !important; }
-
-      /* Override inline color styles - MOST IMPORTANT */
-      [style*="color: #4e2b22"],
-      [style*="color: #6b3d32"],
-      [style*="color: #8b6b5c"],
-      [style*="color: #a6856f"] {
-        color: #f5f5f5 !important;
-      }
-
-      /* Headers - MUST be bright white for readability */
-      h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-      h1.email-title { color: #ffffff !important; font-weight: 700 !important; }
-      h1.title { color: #ffffff !important; font-weight: 700 !important; }
-      .email-title { color: #ffffff !important; font-weight: 700 !important; }
-      .header-title { color: #ffffff !important; font-weight: 700 !important; }
-      .title { color: #ffffff !important; font-weight: 700 !important; }
-      .header-subtitle { color: #d4af9a !important; }
-
-      /* Links and buttons - ensure excellent contrast */
-      a { color: #90b8ff !important; text-decoration: underline !important; }
-      a.cta-button {
+      .header-title, h1.header-title {
         color: #ffffff !important;
-        background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important;
-        text-decoration: none !important;
       }
-      a[style*="color:"] {
-        color: #90b8ff !important;
+      .header-subtitle {
+        color: #e8d5b7 !important;
       }
-
-      /* Buttons */
-      .button {
+      /* Force body text to stay readable dark on light */
+      p, td, span, li, div, .card-body p, .card-body td {
+        color: ${COLORS.text} !important;
+      }
+      h1, h2, h3, h4, h5, h6, .email-title, .title {
+        color: ${COLORS.primary} !important;
+      }
+      /* Button stays dark with white text */
+      .cta-button, a.cta-button {
+        background-color: ${COLORS.primary} !important;
         color: #ffffff !important;
-        background-color: #4e2b22 !important;
       }
-      button {
-        color: #ffffff !important;
-        background-color: #4e2b22 !important;
-      }
+    }
 
-      /* Text color utilities */
-      .textLight { color: #d9d9d9 !important; }
-      .textLighter { color: #d9d9d9 !important; }
-      .text-secondary { color: #90b8ff !important; }
-
-      /* Borders and dividers */
-      .border { border-color: #444 !important; }
-      hr { border-color: #444 !important; }
-      [style*="border"] { border-color: #444 !important; }
+    /* Samsung-specific dark mode prevention */
+    [data-ogsc] body, [data-ogsb] body {
+      background-color: ${COLORS.background} !important;
+    }
+    [data-ogsc] .card-body, [data-ogsb] .card-body {
+      background-color: ${COLORS.surface} !important;
+      color: ${COLORS.text} !important;
+    }
+    [data-ogsc] .header, [data-ogsb] .header {
+      background-color: ${COLORS.primary} !important;
     }
   </style>
 </head>
@@ -210,15 +178,19 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
         <!-- Card container -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="container card-outer" style="max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(78, 43, 34, 0.08);" bgcolor="${COLORS.surface}">
           
-          <!-- Header with gradient -->
+          <!-- Header with solid color (no gradient for dark mode compatibility) -->
           <tr>
-            <td class="header" style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryLight} 100%); padding: 32px 40px; text-align: center;">
+            <td class="header" bgcolor="${COLORS.primary}" style="background-color: ${COLORS.primary}; padding: 32px 40px; text-align: center;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="text-align: center;">
-                    <!-- Logo placeholder - can be replaced with actual logo image -->
-                    <h1 class="header-title" style="margin: 0; font-size: 26px; font-weight: 700; color: #faf9f7; letter-spacing: -0.5px; text-transform: none;">${APP_NAME}</h1>
-                    <p class="header-subtitle" style="margin: 8px 0 0; font-size: 13px; color: ${COLORS.accent}; font-weight: 400; letter-spacing: 0.3px;">Boutique Pilates Studio Booking System</p>
+                  <td style="text-align: center;" align="center">
+                    <!-- Using <font> tag — email clients cannot override this -->
+                    <h1 class="header-title" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: #ffffff;">
+                      <font color="#ffffff" style="color: #ffffff;">${APP_NAME}</font>
+                    </h1>
+                    <p class="header-subtitle" style="margin: 8px 0 0; font-size: 13px; font-weight: 400; letter-spacing: 0.3px; color: #e8d5b7;">
+                      <font color="#e8d5b7" style="color: #e8d5b7;">Boutique Pilates Studio Booking System</font>
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -227,31 +199,45 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
           
           <!-- Body content -->
           <tr>
-            <td class="content card-body" style="padding: 40px; background-color: ${COLORS.surface};">
+            <td class="content card-body" bgcolor="${COLORS.surface}" style="padding: 40px; background-color: ${COLORS.surface};">
 
               <!-- Greeting -->
-              <p style="margin: 0 0 8px; font-size: 16px; font-weight: 500; color: ${COLORS.primary};">${greeting}</p>
+              <p style="margin: 0 0 8px; font-size: 16px; font-weight: 500; color: ${COLORS.primary};">
+                <font color="${COLORS.primary}" style="color: ${COLORS.primary};">${greeting}</font>
+              </p>
 
               <!-- Title -->
-              <h1 class="email-title title" style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: ${COLORS.primary}; line-height: 1.3;">${title}</h1>
+              <h1 class="email-title title" style="margin: 0 0 20px; font-size: 24px; font-weight: 700; line-height: 1.3; color: ${COLORS.primary};">
+                <font color="${COLORS.primary}" style="color: ${COLORS.primary};">${title}</font>
+              </h1>
 
               <!-- Body text -->
-              <p style="margin: 0 0 28px; font-size: 15px; line-height: 1.7; color: ${COLORS.textMuted};">${body}</p>
-              
-              <!-- CTA Button -->
+              <p style="margin: 0 0 28px; font-size: 15px; line-height: 1.7; color: ${COLORS.text};">
+                <font color="${COLORS.text}" style="color: ${COLORS.text};">${body}</font>
+              </p>
+
+              <!-- CTA Button - using table-based bulletproof button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 28px;">
                 <tr>
-                  <td>
-                    <a href="${actionUrl}" class="button cta-button" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryLight} 100%); color: #faf9f7 !important; text-decoration: none; border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; box-shadow: 0 2px 8px rgba(78, 43, 34, 0.25); transition: transform 0.2s;">
-                      ${actionText}
-                    </a>
+                  <td align="center">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td bgcolor="${COLORS.primary}" style="background-color: ${COLORS.primary}; border-radius: 12px;">
+                          <a href="${actionUrl}" class="button cta-button" style="display: inline-block; padding: 16px 32px; background-color: ${COLORS.primary}; border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; color: #ffffff;">
+                            <font color="#ffffff" style="color: #ffffff;">${actionText}</font>
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
               
               <!-- Expiry notice -->
               <p style="margin: 0 0 24px; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight};">
-                <span style="display: inline-block; margin-right: 6px;">⏱️</span>${expiryText}
+                <font color="${COLORS.textLight}" style="color: ${COLORS.textLight};">
+                  <span style="display: inline-block; margin-right: 6px;">⏱️</span>${expiryText}
+                </font>
               </p>
 
               <!-- Divider -->
@@ -262,29 +248,33 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
               </table>
 
               <!-- Manual link fallback -->
-              <p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">Link not working?</p>
+              <p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">
+                <font color="${COLORS.textLighter}" style="color: ${COLORS.textLighter};">Link not working?</font>
+              </p>
               <p style="margin: 0; font-size: 12px; line-height: 1.6; color: ${COLORS.textLighter}; word-break: break-all;">
-                Copy this link into your browser:<br>
-                <a href="${actionUrl}" style="color: ${COLORS.primaryLight}; text-decoration: underline;">${actionUrl}</a>
+                <font color="${COLORS.textLighter}" style="color: ${COLORS.textLighter};">
+                  Copy this link into your browser:<br>
+                  <a href="${actionUrl}" style="color: ${COLORS.primaryLight}; text-decoration: underline;"><font color="${COLORS.primaryLight}">${actionUrl}</font></a>
+                </font>
               </p>
 
               ${footerText ? `
               <!-- Additional footer text -->
               <p style="margin: 20px 0 0; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight}; font-style: italic;">
-                ${footerText}
+                <font color="${COLORS.textLight}" style="color: ${COLORS.textLight};">${footerText}</font>
               </p>
               ` : ''}
             </td>
           </tr>
-          
+
           <!-- Footer -->
           <tr>
-            <td class="card-footer" style="background-color: ${COLORS.background}; padding: 24px 40px; text-align: center; border-top: 1px solid ${COLORS.border};">
+            <td class="card-footer" bgcolor="${COLORS.background}" style="background-color: ${COLORS.background}; padding: 24px 40px; text-align: center; border-top: 1px solid ${COLORS.border};">
               <p style="margin: 0 0 8px; font-size: 12px; color: ${COLORS.textLighter};">
-                &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+                <font color="${COLORS.textLighter}" style="color: ${COLORS.textLighter};">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</font>
               </p>
               <p style="margin: 0; font-size: 11px; color: ${COLORS.textLighter};">
-                This email was sent automatically. Please do not reply.
+                <font color="${COLORS.textLighter}" style="color: ${COLORS.textLighter};">This email was sent automatically. Please do not reply.</font>
               </p>
             </td>
           </tr>
