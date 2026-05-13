@@ -19,7 +19,7 @@ interface CreditPackage {
   name: string;
   description: string | null;
   creditsAmount: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
   priceCents: number;
   currency: string;
   validityDays: number;

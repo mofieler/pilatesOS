@@ -62,6 +62,8 @@ export type StudentRow = {
   createdAt: Date;
   matBalance: number;
   reformerBalance: number;
+  groupBalance: number;
+  soundHealingBalance: number;
   totalBookings: number;
   upcomingBookings: number;
 };
@@ -73,6 +75,8 @@ export type StudentDetail = {
   createdAt: Date;
   matBalance: number;
   reformerBalance: number;
+  groupBalance: number;
+  soundHealingBalance: number;
   recentBookings: {
     id: string;
     className: string;
@@ -205,7 +209,8 @@ export async function getActivityFeedAction(fromDate: Date): Promise<ActivityIte
       type = 'booking_cancelled_user';
     }
 
-    const creditLabel = r.creditType === 'mat' ? 'Mat' : 'Reformer';
+    const CREDIT_LABEL: Record<string, string> = { mat: 'Mat', reformer: 'Reformer', group: 'Group', sound_healing: 'Sound Healing' };
+    const creditLabel = CREDIT_LABEL[r.creditType] ?? r.creditType;
 
     return {
       id: `booking-${r.id}`,
@@ -233,7 +238,8 @@ export async function getActivityFeedAction(fromDate: Date): Promise<ActivityIte
     else if (r.type === 'refund') type = 'credit_refund';
     else type = 'credit_adjustment';
 
-    const creditLabel = r.creditType === 'mat' ? 'Mat' : 'Reformer';
+    const CREDIT_LABEL: Record<string, string> = { mat: 'Mat', reformer: 'Reformer', group: 'Group', sound_healing: 'Sound Healing' };
+    const creditLabel = CREDIT_LABEL[r.creditType] ?? r.creditType;
     const sign = r.amount >= 0 ? '+' : '';
 
     return {
@@ -310,12 +316,14 @@ export async function getStudentListAction(): Promise<StudentRow[]> {
     .groupBy(bookings.userId);
 
   // Build lookup maps
-  const balanceMap = new Map<string, { mat: number; reformer: number }>();
+  const balanceMap = new Map<string, { mat: number; reformer: number; group: number; sound_healing: number }>();
   for (const b of balances) {
-    if (!balanceMap.has(b.userId)) balanceMap.set(b.userId, { mat: 0, reformer: 0 });
+    if (!balanceMap.has(b.userId)) balanceMap.set(b.userId, { mat: 0, reformer: 0, group: 0, sound_healing: 0 });
     const entry = balanceMap.get(b.userId)!;
     if (b.creditType === 'mat') entry.mat = b.balance;
     else if (b.creditType === 'reformer') entry.reformer = b.balance;
+    else if (b.creditType === 'group') entry.group = b.balance;
+    else if (b.creditType === 'sound_healing') entry.sound_healing = b.balance;
   }
 
   const bookingCountMap = new Map(bookingCounts.map(r => [r.userId, Number(r.n)]));
@@ -326,10 +334,12 @@ export async function getStudentListAction(): Promise<StudentRow[]> {
     name: s.name ?? '—',
     email: s.email ?? '—',
     createdAt: s.createdAt,
-    matBalance: balanceMap.get(s.id)?.mat ?? 0,
-    reformerBalance: balanceMap.get(s.id)?.reformer ?? 0,
-    totalBookings: bookingCountMap.get(s.id) ?? 0,
-    upcomingBookings: upcomingCountMap.get(s.id) ?? 0,
+    matBalance:          balanceMap.get(s.id)?.mat ?? 0,
+    reformerBalance:     balanceMap.get(s.id)?.reformer ?? 0,
+    groupBalance:        balanceMap.get(s.id)?.group ?? 0,
+    soundHealingBalance: balanceMap.get(s.id)?.sound_healing ?? 0,
+    totalBookings:       bookingCountMap.get(s.id) ?? 0,
+    upcomingBookings:    upcomingCountMap.get(s.id) ?? 0,
   }));
 }
 
@@ -382,8 +392,10 @@ export async function getStudentDetailAction(userId: string): Promise<StudentDet
       .limit(20),
   ]);
 
-  const matBalance = balances.find(b => b.creditType === 'mat')?.balance ?? 0;
-  const reformerBalance = balances.find(b => b.creditType === 'reformer')?.balance ?? 0;
+  const matBalance          = balances.find(b => b.creditType === 'mat')?.balance ?? 0;
+  const reformerBalance     = balances.find(b => b.creditType === 'reformer')?.balance ?? 0;
+  const groupBalance        = balances.find(b => b.creditType === 'group')?.balance ?? 0;
+  const soundHealingBalance = balances.find(b => b.creditType === 'sound_healing')?.balance ?? 0;
 
   return {
     id: studentRow.id,
@@ -392,6 +404,8 @@ export async function getStudentDetailAction(userId: string): Promise<StudentDet
     createdAt: studentRow.createdAt,
     matBalance,
     reformerBalance,
+    groupBalance,
+    soundHealingBalance,
     recentBookings: recentBookings.map(b => ({
       id: b.id,
       className: b.className ?? 'Unnamed Class',

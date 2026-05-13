@@ -17,9 +17,9 @@ type BookingWithDetails = {
   sessionId: string;
   status: 'confirmed' | 'cancelled' | 'attended' | 'no_show' | 'waitlisted';
   creditsSpent: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
   name: string;
-  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'online' | 'sound_healing';
+  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing';
   durationMinutes: number;
   location: string | null;
   startsAt: Date;
@@ -67,7 +67,7 @@ async function getUserBookings(userId: string): Promise<{
     sessionId: r.sessionId,
     status: r.bookingStatus,
     creditsSpent: r.creditsSpent,
-    creditType: r.creditType as 'reformer' | 'mat',
+    creditType: r.creditType as BookingWithDetails['creditType'],
     name: r.name ?? 'Unnamed Class',
     classType: (r.classType ?? 'mat_group') as BookingWithDetails['classType'],
     durationMinutes: r.durationMinutes ?? 60,
@@ -106,21 +106,33 @@ function BookingCard({
     booking.status === 'confirmed' &&
     booking.startsAt.getTime() - Date.now() > 24 * 60 * 60 * 1000;
 
-  const classTypeLabel = {
+  const CLASS_TYPE_LABEL: Record<BookingWithDetails['classType'], string> = {
     reformer_group:   'Reformer Group',
     reformer_private: 'Reformer Private',
     reformer_duo:     'Reformer Duo',
     mat_group:        'Mat Group',
     mat_private:      'Mat Private',
     mat_duo:          'Mat Duo',
+    chair:            'Chair Pilates',
     online:           'Online Class',
     sound_healing:    'Sound Healing',
-  }[booking.classType];
+  };
+  const classTypeLabel = CLASS_TYPE_LABEL[booking.classType];
 
-  const creditLabel = {
-    mat:      'Mat Credit',
-    reformer: 'Reformer Credit',
-  }[booking.creditType];
+  const CREDIT_LABEL: Record<BookingWithDetails['creditType'], string> = {
+    mat:           'Mat Credit',
+    reformer:      'Reformer Credit',
+    group:         'Group Credit',
+    sound_healing: 'Sound Healing Credit',
+  };
+  const creditLabel = CREDIT_LABEL[booking.creditType];
+
+  const CREDIT_DOT: Record<BookingWithDetails['creditType'], string> = {
+    mat:           'bg-[#6b8e6b]',
+    reformer:      'bg-[#8b5a3c]',
+    group:         'bg-[#c4a88a]',
+    sound_healing: 'bg-purple-500',
+  };
 
   return (
     <div
@@ -162,13 +174,7 @@ function BookingCard({
 
         {/* Credit badge */}
         <div className="flex items-center gap-1.5 rounded-full bg-[#ede8e5]/60 px-3 py-1.5 text-xs">
-          <span
-            className={`size-2 rounded-full ${
-              booking.creditType === 'mat'
-                ? 'bg-[#6b8e6b]'
-                : 'bg-[#8b5a3c]'
-            }`}
-          />
+          <span className={`size-2 rounded-full ${CREDIT_DOT[booking.creditType]}`} />
           <span className="font-medium text-primary">
             {booking.creditsSpent} {creditLabel}
           </span>

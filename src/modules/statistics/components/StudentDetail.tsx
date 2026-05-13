@@ -28,8 +28,15 @@ function txColor(type: string) {
   return 'bg-[#ede8e5] text-[#6b3d32]';
 }
 
+const CREDIT_TYPE_LABEL: Record<string, string> = {
+  mat:           'Mat',
+  reformer:      'Reformer',
+  group:         'Group',
+  sound_healing: 'Sound Healing',
+};
+
 function formatCreditType(type: string) {
-  return type === 'mat' ? 'Mat' : 'Reformer';
+  return CREDIT_TYPE_LABEL[type] ?? type;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -91,25 +98,27 @@ export function StudentDetail({ userId, onClose }: Props) {
 
       {/* Credit balances */}
       {!loading && detail && (
-        <div className="grid grid-cols-2 gap-3 px-5 py-4 border-b border-[#ede8e5]/60">
-          <div className="rounded-xl bg-[#ede8e5]/40 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8b6b5c] mb-1">Mat Credits</p>
-            <p className={`text-2xl font-bold tabular-nums ${detail.matBalance <= 2 ? 'text-amber-600' : 'text-[#4e2b22]'}`}>
-              {detail.matBalance}
-            </p>
-          </div>
-          <div className="rounded-xl bg-[#ede8e5]/40 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8b6b5c] mb-1">Reformer Credits</p>
-            <p className={`text-2xl font-bold tabular-nums ${detail.reformerBalance <= 2 ? 'text-amber-600' : 'text-[#4e2b22]'}`}>
-              {detail.reformerBalance}
-            </p>
-          </div>
+        <div className="grid grid-cols-4 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
+          {[
+            { label: 'Mat',      value: detail.matBalance },
+            { label: 'Reformer', value: detail.reformerBalance },
+            { label: 'Group',    value: detail.groupBalance },
+            { label: 'Sound',    value: detail.soundHealingBalance },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl bg-[#ede8e5]/40 px-3 py-3">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-[#8b6b5c] mb-1">{label}</p>
+              <p className={`text-xl font-bold tabular-nums ${value <= 2 ? 'text-amber-600' : 'text-[#4e2b22]'}`}>
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
       )}
       {loading && (
-        <div className="grid grid-cols-2 gap-3 px-5 py-4 border-b border-[#ede8e5]/60">
-          <div className="h-16 rounded-xl bg-[#ede8e5] animate-pulse" />
-          <div className="h-16 rounded-xl bg-[#ede8e5] animate-pulse" />
+        <div className="grid grid-cols-4 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-16 rounded-xl bg-[#ede8e5] animate-pulse" />
+          ))}
         </div>
       )}
 

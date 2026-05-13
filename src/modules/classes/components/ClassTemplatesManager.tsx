@@ -30,6 +30,10 @@ import {
   type ClassType,
 } from '@/lib/config/class-types';
 
+const PRIVATE_CLASS_TYPES = new Set<ClassType>([
+  'reformer_private', 'reformer_duo', 'mat_private', 'mat_duo',
+]);
+
 // ─── Form types ───────────────────────────────────────────────────────────────
 
 type FormState = {
@@ -98,13 +102,14 @@ function TemplateFormDialog({
     e.preventDefault();
     setError(null);
 
+    const isPrivate       = PRIVATE_CLASS_TYPES.has(form.classType);
     const durationMinutes = parseInt(form.durationMinutes, 10);
     const maxCapacity     = parseInt(form.maxCapacity, 10);
-    const creditCost      = parseInt(form.creditCost, 10);
+    const creditCost      = isPrivate ? 0 : parseInt(form.creditCost, 10);
 
     if (isNaN(durationMinutes) || durationMinutes < 1) { setError('Duration must be positive.'); return; }
     if (isNaN(maxCapacity)     || maxCapacity < 1)     { setError('Capacity must be positive.'); return; }
-    if (isNaN(creditCost)      || creditCost < 1)      { setError('Credit cost must be positive.'); return; }
+    if (!isPrivate && (isNaN(creditCost) || creditCost < 1)) { setError('Credit cost must be positive.'); return; }
 
     const payload = {
       name:            form.name,
@@ -170,10 +175,15 @@ function TemplateFormDialog({
                 value={form.classType}
                 onChange={(e) => {
                   const classType = e.target.value as ClassType;
+                  const isPrivate = PRIVATE_CLASS_TYPES.has(classType);
                   setForm((f) => ({
                     ...f,
                     classType,
                     creditType: getCreditTypeForClassType(classType),
+                    // Reset capacity to 1 for private/duo, keep existing otherwise
+                    maxCapacity: isPrivate ? (classType.endsWith('_duo') ? '2' : '1') : f.maxCapacity,
+                    // Credit cost is irrelevant for private/duo — clear it
+                    creditCost: isPrivate ? '0' : f.creditCost,
                   }));
                 }}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
@@ -193,7 +203,10 @@ function TemplateFormDialog({
           <div className="space-y-1.5">
             <Label className="text-[#6b3d32] font-medium">Credit type</Label>
             <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
-              {getCreditTypeSelectOptions().find((o) => o.value === form.creditType)?.label ?? form.creditType}
+              {PRIVATE_CLASS_TYPES.has(form.classType)
+                ? 'N/A — Session Package'
+                : (getCreditTypeSelectOptions().find((o) => o.value === form.creditType)?.label ?? form.creditType)
+              }
               <span className="ml-2 text-xs text-muted">(set by class type)</span>
             </div>
           </div>
@@ -204,10 +217,20 @@ function TemplateFormDialog({
               <Label htmlFor="tpl-cap" className="text-[#6b3d32] font-medium">Max capacity *</Label>
               <Input id="tpl-cap" type="number" min={1} value={form.maxCapacity} onChange={set('maxCapacity')} required />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tpl-cost" className="text-[#6b3d32] font-medium">Credits per class *</Label>
-              <Input id="tpl-cost" type="number" min={1} value={form.creditCost} onChange={set('creditCost')} required />
-            </div>
+            {PRIVATE_CLASS_TYPES.has(form.classType) ? (
+              <div className="space-y-1.5">
+                <Label className="text-[#6b3d32] font-medium">Billing</Label>
+                <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
+                  Session package
+                  <span className="ml-2 text-xs text-muted">(no credit cost)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="tpl-cost" className="text-[#6b3d32] font-medium">Credits per class *</Label>
+                <Input id="tpl-cost" type="number" min={1} value={form.creditCost} onChange={set('creditCost')} required />
+              </div>
+            )}
           </div>
 
           {/* Instructor + location */}
@@ -335,11 +358,15 @@ export function ClassTemplatesManager({
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.durationMinutes}m</td>
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.maxCapacity}</td>
                 <td className="px-4 py-3">
-                  <span className="flex items-center gap-1.5">
+                  {PRIVATE_CLASS_TYPES.has(t.classType) ? (
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-500">
+                      Session pkg
+                    </span>
+                  ) : (
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getCreditTypeBadgeStyle(t.creditType)}`}>
                       {t.creditCost} {getCreditTypeLabel(t.creditType)}
                     </span>
-                  </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{t.instructorName ?? '—'}</td>
                 <td className="px-4 py-3">

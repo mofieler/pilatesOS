@@ -63,7 +63,7 @@ const createClassTemplateSchema = z.object({
   classType: z.enum(getClassTypeValues()),
   durationMinutes: z.number().int().positive('Duration must be a positive integer'),
   maxCapacity: z.number().int().positive('Capacity must be a positive integer'),
-  creditCost: z.number().int().min(1, 'Credit cost must be at least 1'),
+  creditCost: z.number().int().min(0, 'Credit cost must be 0 or greater'),
   creditType: z.enum(getCreditTypeValues()).optional(),
   instructorId: z.string().uuid('Invalid instructor ID').optional(),
   vibeTags: z.array(z.string()).optional(),

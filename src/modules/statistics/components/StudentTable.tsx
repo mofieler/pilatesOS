@@ -7,7 +7,7 @@ import type { StudentRow } from '@/modules/statistics/actions/statistics.actions
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SortKey = 'name' | 'createdAt' | 'matBalance' | 'reformerBalance' | 'totalBookings' | 'upcomingBookings';
+type SortKey = 'name' | 'createdAt' | 'matBalance' | 'reformerBalance' | 'groupBalance' | 'soundHealingBalance' | 'totalBookings' | 'upcomingBookings';
 type SortDir = 'asc' | 'desc';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -49,7 +49,9 @@ function SortHeader({
   );
 }
 
-function CreditBadge({ value, type }: { value: number; type: 'mat' | 'reformer' }) {
+const CREDIT_ABBREV: Record<string, string> = { mat: 'M', reformer: 'R', group: 'G', sound_healing: 'SH' };
+
+function CreditBadge({ value, type }: { value: number; type: string }) {
   const low = value <= 2;
   return (
     <span
@@ -58,7 +60,7 @@ function CreditBadge({ value, type }: { value: number; type: 'mat' | 'reformer' 
       }`}
     >
       {value}
-      <span className="font-normal text-[10px] opacity-70">{type === 'mat' ? 'M' : 'R'}</span>
+      <span className="font-normal text-[10px] opacity-70">{CREDIT_ABBREV[type] ?? type}</span>
     </span>
   );
 }
@@ -141,10 +143,12 @@ export function StudentTable({ students, selectedUserId, onSelect }: Props) {
       {/* Table */}
       <div className="rounded-2xl border border-[#ede8e5]/80 bg-white overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-2.5 border-b border-[#ede8e5]/60 bg-[#faf9f7]/60">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center px-4 py-2.5 border-b border-[#ede8e5]/60 bg-[#faf9f7]/60">
           <SortHeader label="Student" sortKey="name" current={sortKey} dir={sortDir} onSort={handleSort} />
           <SortHeader label="Mat" sortKey="matBalance" current={sortKey} dir={sortDir} onSort={handleSort} />
-          <SortHeader label="Reformer" sortKey="reformerBalance" current={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortHeader label="Ref." sortKey="reformerBalance" current={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortHeader label="Group" sortKey="groupBalance" current={sortKey} dir={sortDir} onSort={handleSort} />
+          <SortHeader label="Sound" sortKey="soundHealingBalance" current={sortKey} dir={sortDir} onSort={handleSort} />
           <SortHeader label="Bookings" sortKey="totalBookings" current={sortKey} dir={sortDir} onSort={handleSort} />
           <SortHeader label="Upcoming" sortKey="upcomingBookings" current={sortKey} dir={sortDir} onSort={handleSort} />
         </div>
@@ -163,7 +167,7 @@ export function StudentTable({ students, selectedUserId, onSelect }: Props) {
                 key={s.id}
                 type="button"
                 onClick={() => onSelect(s.id)}
-                className={`w-full grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-3 border-b border-[#ede8e5]/50 last:border-0 text-left transition-colors ${
+                className={`w-full grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center px-4 py-3 border-b border-[#ede8e5]/50 last:border-0 text-left transition-colors ${
                   selected
                     ? 'bg-[#4e2b22]/5'
                     : 'hover:bg-[#faf9f7]/80'
@@ -184,9 +188,11 @@ export function StudentTable({ students, selectedUserId, onSelect }: Props) {
                   </div>
                 </div>
 
-                {/* Credits */}
+                {/* Credits — all 4 types */}
                 <CreditBadge value={s.matBalance} type="mat" />
                 <CreditBadge value={s.reformerBalance} type="reformer" />
+                <CreditBadge value={s.groupBalance} type="group" />
+                <CreditBadge value={s.soundHealingBalance} type="sound_healing" />
 
                 {/* Booking counts */}
                 <span className="text-sm font-semibold tabular-nums text-[#4e2b22] text-center w-8">
