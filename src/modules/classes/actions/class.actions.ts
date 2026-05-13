@@ -415,7 +415,7 @@ const updateClassTemplateSchema = z.object({
   classType:       z.enum(getClassTypeValues()).optional(),
   durationMinutes: z.number().int().positive().optional(),
   maxCapacity:     z.number().int().positive().optional(),
-  creditCost:      z.number().int().min(1).optional(),
+  creditCost:      z.number().int().min(0).optional(),
   creditType:      z.enum(getCreditTypeValues()).optional(),
   instructorId:    z.string().uuid().nullable().optional(),
   location:        z.string().max(255).nullable().optional(),

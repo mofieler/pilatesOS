@@ -87,7 +87,7 @@ const MOCK_SESSIONS: ClassSessionCardProps[] = [
     bookedCount: 1,
     maxCapacity: 6,
     creditCost: 2,
-    creditType: 'mat',
+    creditType: 'group',
     status: 'cancelled',
     isBookedByUser: false,
   },
