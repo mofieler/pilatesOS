@@ -75,6 +75,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   <style>
     /* Force light mode — prevents email clients from auto-darkening the branded template */
     :root { color-scheme: light !important; }
+    html { color-scheme: light !important; }
 
     /* Reset styles */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -100,21 +101,55 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       .title { font-size: 20px !important; }
     }
 
-    /* Dark mode override — force all elements back to light-mode colors.
-       This catches email clients that ignore color-scheme:light and still apply
-       their own dark-mode transformation (Samsung Mail, some Android clients). */
+    /* CRITICAL: Dark mode override for email clients that ignore color-scheme:light
+       (Samsung Mail, Outlook for Android, some Gmail clients on dark mode).
+       Forces readable light colors on dark backgrounds. */
     @media (prefers-color-scheme: dark) {
-      body,
+      /* Root and body */
+      html, body,
       .email-wrap,
-      table[class="email-wrap"] { background-color: ${COLORS.background} !important; }
-      .card-outer { background-color: ${COLORS.surface} !important; }
-      .card-body { background-color: ${COLORS.surface} !important; color: ${COLORS.textMuted} !important; }
-      .card-footer { background-color: ${COLORS.background} !important; }
-      p, td, span, li { color: ${COLORS.textMuted} !important; }
-      h1.email-title { color: ${COLORS.primary} !important; }
+      table[class="email-wrap"] {
+        background-color: #1a1a1a !important;
+        color: #f5f5f5 !important;
+      }
+
+      /* Card styling */
+      .card-outer { background-color: #2a2a2a !important; }
+      .card-body {
+        background-color: #2a2a2a !important;
+        color: #f5f5f5 !important;
+      }
+      .card-footer {
+        background-color: #1a1a1a !important;
+        color: #d9d9d9 !important;
+      }
+
+      /* All text elements MUST be light colored */
+      p { color: #f5f5f5 !important; }
+      td { color: #f5f5f5 !important; }
+      span { color: #f5f5f5 !important; }
+      li { color: #f5f5f5 !important; }
+
+      /* Headers */
+      h1, h2, h3, h4, h5, h6 { color: #ffd9b3 !important; }
+      h1.email-title { color: #ffd9b3 !important; }
       .header-title { color: #faf9f7 !important; }
-      .header-subtitle { color: ${COLORS.accent} !important; }
-      a.cta-button { color: #faf9f7 !important; }
+      .header-subtitle { color: #c4a88a !important; }
+
+      /* Links and buttons */
+      a { color: #b8c9ff !important; }
+      a.cta-button {
+        color: #faf9f7 !important;
+        background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important;
+      }
+
+      /* Utility classes */
+      .textLight { color: #d9d9d9 !important; }
+      .textLighter { color: #d9d9d9 !important; }
+      .text-secondary { color: #b8c9ff !important; }
+
+      /* Borders */
+      .border { border-color: #444 !important; }
     }
   </style>
 </head>
