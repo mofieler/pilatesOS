@@ -91,6 +91,7 @@ export async function getUserCreditAdjustmentsAction(userId: string, cursor?: Da
 }
 
 // Manual credit adjustment — adds or removes credits for a user with full audit trail
+// Validates creditType against new enum values: 'mat' and 'reformer'
 export async function adjustUserCreditsAction(input: z.infer<typeof adjustSchema>) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== 'admin') {
