@@ -523,8 +523,8 @@ export async function sendPurchaseConfirmationWithInvoice(
       Please settle the invoice amount at your next studio visit within 14 days.
       Your invoice is attached to this email as a PDF.
     `,
-    actionUrl: `${APP_URL}/credits`,
-    actionText: 'View my credits',
+    actionUrl: `${APP_URL}`,
+    actionText: 'Book a class',
     expiryText: `Payment is due in-studio by ${dueDateStr}. Invoice No. ${invoiceNumber}.`,
   });
 
