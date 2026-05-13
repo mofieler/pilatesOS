@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -82,7 +82,7 @@ function SessionEditDialog({
   const [isPending, startTransition] = useTransition();
 
   // Load instructors on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       startTransition(async () => {
         const result = await getInstructorsAction();
