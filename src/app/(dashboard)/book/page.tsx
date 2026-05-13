@@ -5,7 +5,6 @@ import { classSessions } from '@/db/schema';
 import { auth } from '@/lib/auth/auth';
 import { BookingCalendar } from '@/modules/booking/components/BookingCalendar';
 import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSessionCard';
-import { getBlocksInRange } from '@/modules/calendar/services/calendar-sync.service';
 
 // ─── Data layer ───────────────────────────────────────────────────────────────
 
@@ -13,65 +12,42 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
   const today = startOfToday();
   const cutoff = addDays(today, 14);
 
-  const [rows, blocks] = await Promise.all([
-    db.query.classSessions.findMany({
-      with: {
-        template: true,
-        instructor: { with: { user: true } },
-        // Only load this user's confirmed bookings — drives isBookedByUser flag
-        bookings: {
-          where: (b, { and: dbAnd, eq: dbEq }) =>
-            dbAnd(dbEq(b.userId, userId), dbEq(b.status, 'confirmed')),
-          columns: { id: true },
-        },
+  const rows = await db.query.classSessions.findMany({
+    with: {
+      template: true,
+      instructor: { with: { user: true } },
+      // Only load this user's confirmed bookings — drives isBookedByUser flag
+      bookings: {
+        where: (b, { and: dbAnd, eq: dbEq }) =>
+          dbAnd(dbEq(b.userId, userId), dbEq(b.status, 'confirmed')),
+        columns: { id: true },
       },
-      where: and(
-        gte(classSessions.startsAt, today),
-        lt(classSessions.startsAt, cutoff),
-        eq(classSessions.status, 'scheduled'),
-      ),
-      orderBy: (s, { asc }) => [asc(s.startsAt)],
-    }),
-    getBlocksInRange(today, cutoff),
-  ]);
-
-  function findOverlapForInstructor(
-    instructorId: string | null,
-    startsAt: Date,
-    endsAt: Date,
-  ): string | null {
-    if (!instructorId) return null;
-    const match = blocks.find(
-      (b) =>
-        b.instructorId === instructorId &&
-        b.startsAt < endsAt &&
-        b.endsAt > startsAt,
-    );
-    return match ? match.summary ?? 'Instructor unavailable (Google Calendar)' : null;
-  }
-
-  return rows.map((s) => {
-    const blockReason = findOverlapForInstructor(s.instructorId, s.startsAt, s.endsAt);
-    return {
-      id: s.id,
-      name: s.template?.name ?? 'Unnamed Class',
-      classType: s.template?.classType ?? 'group',
-      startsAt: s.startsAt,
-      durationMinutes: s.template?.durationMinutes ?? 60,
-      instructorName: s.instructor?.user?.name ?? 'TBA',
-      instructorAvatarUrl: null,
-      vibeTags: (s.template?.vibeTags ?? []) as string[],
-      bookedCount: s.bookedCount,
-      maxCapacity: s.maxCapacity,
-      creditCost: s.template?.creditCost ?? 1,
-      creditType: s.template?.creditType ?? 'mat_group',
-      status: s.status,
-      isBookedByUser: s.bookings.length > 0,
-      location: s.template?.location ?? null,
-      isBlocked: blockReason !== null,
-      blockReason,
-    };
+    },
+    where: and(
+      gte(classSessions.startsAt, today),
+      lt(classSessions.startsAt, cutoff),
+      eq(classSessions.status, 'scheduled'),
+    ),
+    orderBy: (s, { asc }) => [asc(s.startsAt)],
   });
+
+  return rows.map((s) => ({
+    id: s.id,
+    name: s.template?.name ?? 'Unnamed Class',
+    classType: s.template?.classType ?? 'mat_group',
+    startsAt: s.startsAt,
+    durationMinutes: s.template?.durationMinutes ?? 60,
+    instructorName: s.instructor?.user?.name ?? 'TBA',
+    instructorAvatarUrl: null,
+    vibeTags: (s.template?.vibeTags ?? []) as string[],
+    bookedCount: s.bookedCount,
+    maxCapacity: s.maxCapacity,
+    creditCost: s.template?.creditCost ?? 1,
+    creditType: s.template?.creditType ?? 'mat',
+    status: s.status,
+    isBookedByUser: s.bookings.length > 0,
+    location: s.template?.location ?? null,
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

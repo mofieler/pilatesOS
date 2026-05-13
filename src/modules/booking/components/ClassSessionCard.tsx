@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 export type ClassSessionCardProps = {
   id: string;
   name: string;
-  classType: 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online' | 'sound_healing';
+  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'online' | 'sound_healing';
   startsAt: Date;
   durationMinutes: number;
   instructorName: string;
@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
+  creditType: 'reformer' | 'mat';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -52,43 +52,35 @@ function deriveState({
 }
 
 const CLASS_TYPE_LABEL: Record<ClassSessionCardProps['classType'], string> = {
-  mat: 'Mat Class',
-  reformer: 'Reformer Class',
-  private: 'Private Session',
-  duo: 'Duo Session',
-  group: 'Group Class',
-  online: 'Online Class',
-  sound_healing: 'Sound Healing',
+  reformer_group:   'Reformer Group',
+  reformer_private: 'Reformer Private',
+  reformer_duo:     'Reformer Duo',
+  mat_group:        'Mat Group',
+  mat_private:      'Mat Private',
+  mat_duo:          'Mat Duo',
+  online:           'Online Class',
+  sound_healing:    'Sound Healing',
 };
 
 const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
-  mat: 'Mat',
-  reformer: 'Ref',
-  private: 'Prv',
-  duo: 'Duo',
-  group: 'Grp',
-  online: 'Web',
-  sound_healing: 'Sound',
+  reformer_group:   'Ref',
+  reformer_private: 'Ref',
+  reformer_duo:     'Ref',
+  mat_group:        'Mat',
+  mat_private:      'Mat',
+  mat_duo:          'Mat',
+  online:           'Web',
+  sound_healing:    'Sound',
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  mat_group: 'bg-[#8b6b5c]',
-  reformer_group: 'bg-[#6b8e6b]',
-  private_session: 'bg-[#c4a88a]',
-  duo_group: 'bg-[#6366f1]',
-  general_group: 'bg-[#0891b2]',
-  online_class: 'bg-[#ea580c]',
-  sound_healing: 'bg-[#9333ea]',
+  reformer: 'bg-[#6b8e6b]',
+  mat:      'bg-[#8b6b5c]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  mat_group: 'Mat Credit',
-  reformer_group: 'Reformer Credit',
-  private_session: 'Private Session',
-  duo_group: 'Duo Credit',
-  general_group: 'Group Credit',
-  online_class: 'Online Credit',
-  sound_healing: 'Sound Healing Credit',
+  reformer: 'Reformer Credit',
+  mat:      'Mat Credit',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { addMinutes } from 'date-fns';
 import { db } from '@/db';
 import { classTemplates, classSessions, instructors, users } from '@/db/schema';
 import type { ClassSession, ClassTemplate, Instructor, User } from '@/db/schema';
-import { asc, eq, and, isNull, gte, lte, lt, ne } from 'drizzle-orm';
+import { asc, eq, and, isNull, gte, gt, lte, lt, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth/auth';
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
@@ -63,7 +63,7 @@ const createClassTemplateSchema = z.object({
   classType: z.enum(getClassTypeValues()),
   durationMinutes: z.number().int().positive('Duration must be a positive integer'),
   maxCapacity: z.number().int().positive('Capacity must be a positive integer'),
-  creditCost: z.number().int().positive('Credit cost must be a positive integer'),
+  creditCost: z.number().int().min(1, 'Credit cost must be at least 1'),
   creditType: z.enum(getCreditTypeValues()).optional(),
   instructorId: z.string().uuid('Invalid instructor ID').optional(),
   vibeTags: z.array(z.string()).optional(),
@@ -239,10 +239,8 @@ export async function cancelClassSessionAction(
 
 const createClassSessionSchema = z.object({
   templateId: z.string().uuid('Invalid template ID'),
-  // YYYY-MM-DD
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date (expected YYYY-MM-DD)'),
-  // HH:MM
-  time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time (expected HH:MM)'),
+  // UTC ISO string produced by new Date(`YYYY-MM-DDTHH:MM:00`).toISOString() in the browser
+  startsAtISO: z.string().datetime(),
   // Optional overrides
   instructorId: z.string().uuid().optional().nullable(),
 });
@@ -264,7 +262,7 @@ export async function createClassSessionAction(
     };
   }
 
-  const { templateId, date, time, instructorId } = parsed.data;
+  const { templateId, startsAtISO, instructorId } = parsed.data;
 
   // Fetch template to get duration and defaults
   const [template] = await db
@@ -277,7 +275,8 @@ export async function createClassSessionAction(
     return { success: false, error: 'Class template not found.', code: 'NOT_FOUND' };
   }
 
-  const startsAt = new Date(`${date}T${time}:00`);
+  // startsAtISO is already UTC — browser converts local time before sending
+  const startsAt = new Date(startsAtISO);
   if (isNaN(startsAt.getTime())) {
     return { success: false, error: 'Invalid date or time.', code: 'INVALID_STATE' };
   }
@@ -413,11 +412,11 @@ const updateClassTemplateSchema = z.object({
   id:              z.string().uuid(),
   name:            z.string().min(1).max(255).optional(),
   description:     z.string().max(1000).optional().nullable(),
-  classType:       z.enum(['private', 'duo', 'group', 'reformer', 'mat', 'online', 'sound_healing']).optional(),
+  classType:       z.enum(getClassTypeValues()).optional(),
   durationMinutes: z.number().int().positive().optional(),
   maxCapacity:     z.number().int().positive().optional(),
-  creditCost:      z.number().int().positive().optional(),
-  creditType:      z.enum(['mat_group', 'reformer_group', 'private_session', 'duo_group', 'general_group', 'online_class', 'sound_healing']).optional(),
+  creditCost:      z.number().int().min(1).optional(),
+  creditType:      z.enum(getCreditTypeValues()).optional(),
   instructorId:    z.string().uuid().nullable().optional(),
   location:        z.string().max(255).nullable().optional(),
   isActive:        z.boolean().optional(),
@@ -587,8 +586,8 @@ export async function getSessionsForRangeAction(
       data: rows.map((r) => ({
         id: r.id,
         templateName: r.template?.name ?? '—',
-        classType: (r.template?.classType ?? 'group') as ClassType,
-        creditType: (r.template?.creditType ?? 'mat_group') as CreditType,
+        classType: (r.template?.classType ?? 'mat_group') as ClassType,
+        creditType: (r.template?.creditType ?? 'mat') as CreditType,
         creditCost: r.template?.creditCost ?? 0,
         durationMinutes: r.template?.durationMinutes ?? 60,
         instructorId: r.instructorId,
@@ -622,9 +621,11 @@ export type AvailabilityResult = {
 
 const checkSlotSchema = z.object({
   instructorId: z.string().uuid().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
+  // UTC ISO string produced by new Date(`YYYY-MM-DDTHH:MM:00`).toISOString() in the browser
+  startsAtISO: z.string().datetime(),
   durationMinutes: z.number().int().positive(),
+  // new Date().getTimezoneOffset() from the browser — used to generate local-time suggestions
+  tzOffsetMinutes: z.number().int(),
 });
 
 export async function checkSlotAvailabilityAction(
@@ -636,8 +637,9 @@ export async function checkSlotAvailabilityAction(
   const parsed = checkSlotSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid input.', code: 'INVALID_STATE' };
 
-  const { instructorId, date, time, durationMinutes } = parsed.data;
-  const startsAt = new Date(`${date}T${time}:00`);
+  const { instructorId, startsAtISO, durationMinutes, tzOffsetMinutes } = parsed.data;
+  // startsAtISO is already UTC — browser converts local time before sending
+  const startsAt = new Date(startsAtISO);
   const endsAt = addMinutes(startsAt, durationMinutes);
 
   try {
@@ -648,7 +650,9 @@ export async function checkSlotAvailabilityAction(
     const conflicts: ConflictItem[] = [];
 
     if (instructorId) {
-      // Check Pilateq sessions that overlap the slot
+      // Check Pilateq sessions that overlap the slot.
+      // Use strict gt on endsAt so back-to-back classes (A ends at 10:00, B starts at 10:00)
+      // are NOT flagged as conflicts.
       const overlappingSessions = await db
         .select({
           startsAt: classSessions.startsAt,
@@ -660,7 +664,7 @@ export async function checkSlotAvailabilityAction(
             eq(classSessions.instructorId, instructorId),
             ne(classSessions.status, 'cancelled'),
             lt(classSessions.startsAt, endsAt),
-            gte(classSessions.endsAt, startsAt),
+            gt(classSessions.endsAt, startsAt),
           ),
         );
 
@@ -673,10 +677,12 @@ export async function checkSlotAvailabilityAction(
         });
       }
 
-      // Check GCal blocks that overlap
+      // Check GCal blocks that overlap.
+      // Include blocks belonging to this instructor AND admin-level blocks (instructorId = null),
+      // since admins connect their own calendars which apply studio-wide.
       const blocks = await getBlocksInRange(startsAt, endsAt);
       for (const b of blocks) {
-        if (b.instructorId === instructorId) {
+        if (b.instructorId === instructorId || b.instructorId === null) {
           conflicts.push({
             type: 'gcal_block',
             summary: b.summary ?? 'Blocked (Google Calendar)',
@@ -687,11 +693,15 @@ export async function checkSlotAvailabilityAction(
       }
     }
 
-    // Build suggestions: scan 06:00–21:00 in 30-min steps on the same date
+    // ── Suggestions ─────────────────────────────────────────────────────────────
+    // Scan studio hours (07:00–22:00 local) in 30-min steps.
+    // All conflict checks are done in UTC; suggestions are returned as local HH:MM
+    // strings so they go directly into the time <input> without re-conversion.
     const suggestions: string[] = [];
     if (instructorId && conflicts.length > 0) {
-      const dayStart = new Date(`${date}T00:00:00`);
-      const dayEnd = new Date(`${date}T23:59:59`);
+      const utcDateStr = startsAt.toISOString().split('T')[0]; // UTC date of the slot
+      const dayStartUTC = new Date(`${utcDateStr}T00:00:00.000Z`);
+      const dayEndUTC = new Date(`${utcDateStr}T23:59:59.999Z`);
 
       const daySessions = await db
         .select({ startsAt: classSessions.startsAt, endsAt: classSessions.endsAt })
@@ -700,31 +710,63 @@ export async function checkSlotAvailabilityAction(
           and(
             eq(classSessions.instructorId, instructorId),
             ne(classSessions.status, 'cancelled'),
-            gte(classSessions.startsAt, dayStart),
-            lte(classSessions.startsAt, dayEnd),
+            gte(classSessions.startsAt, dayStartUTC),
+            lte(classSessions.startsAt, dayEndUTC),
           ),
         );
 
-      const dayBlocks = await getBlocksInRange(dayStart, dayEnd);
+      const dayBlocks = await getBlocksInRange(dayStartUTC, dayEndUTC);
       const busyIntervals = [
         ...daySessions,
-        ...dayBlocks.filter((b) => b.instructorId === instructorId),
+        ...dayBlocks.filter((b) => b.instructorId === instructorId || b.instructorId === null),
       ];
 
-      for (let h = 6; h <= 20; h++) {
+      // localOffsetH: hours to ADD to UTC to get local time (positive for UTC+N zones)
+      // e.g. CEST (UTC+2): tzOffsetMinutes = -120 → localOffsetH = +2
+      const localOffsetH = -(tzOffsetMinutes / 60);
+
+      // Studio window in UTC: 07:00 local → (7 - localOffsetH) UTC
+      const studioOpenUTC = 7 - localOffsetH;   // e.g. 5 for CEST
+      const studioCloseUTC = 22 - localOffsetH; // e.g. 20 for CEST
+
+      const requestedUTCMinutes = startsAt.getUTCHours() * 60 + startsAt.getUTCMinutes();
+
+      const freeBefore: string[] = [];
+      const freeAfter: string[] = [];
+
+      const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
+
+      for (let h = studioOpenUTC; h < studioCloseUTC; h++) {
         for (const m of [0, 30]) {
-          const candidateStart = new Date(`${date}T${String(h).padStart(2, '0')}:${m === 0 ? '00' : '30'}:00`);
+          const slotUTCMin = h * 60 + m;
+          if (slotUTCMin === requestedUTCMinutes) continue; // skip the conflicting slot itself
+
+          const candidateStart = new Date(`${utcDateStr}T${pad(h)}:${m === 0 ? '00' : '30'}:00.000Z`);
           const candidateEnd = addMinutes(candidateStart, durationMinutes);
           const busy = busyIntervals.some(
             (b) => b.startsAt < candidateEnd && b.endsAt > candidateStart,
           );
-          if (!busy) {
-            suggestions.push(`${String(h).padStart(2, '0')}:${m === 0 ? '00' : '30'}`);
-            if (suggestions.length >= 3) break;
+          if (busy) continue;
+
+          // Convert UTC slot hour to local time string for display
+          let localH = h + localOffsetH;
+          if (localH < 0) localH += 24;
+          if (localH >= 24) localH -= 24;
+          const localTimeStr = `${pad(localH)}:${m === 0 ? '00' : '30'}`;
+
+          if (slotUTCMin < requestedUTCMinutes) {
+            freeBefore.push(localTimeStr);
+          } else {
+            freeAfter.push(localTimeStr);
           }
         }
-        if (suggestions.length >= 3) break;
       }
+
+      // Return nearest slots: up to 3 after requested time, then up to 2 before (nearest first)
+      suggestions.push(
+        ...freeAfter.slice(0, 3),
+        ...freeBefore.slice(-2).reverse(),
+      );
     }
 
     return { success: true, data: { conflicts, suggestions } };

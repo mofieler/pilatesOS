@@ -1,126 +1,153 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AGB – Pilateq',
-  description: 'Allgemeine Geschäftsbedingungen für paquita.pilateq.de',
+  title: 'Terms & Conditions – Pilateq',
+  description: 'General Terms and Conditions for paquita.pilateq.de',
   robots: { index: false },
 };
 
 export default function AGBPage() {
   return (
     <article className="prose-sm max-w-none">
-      <h1 className="text-3xl font-bold text-[#4e2b22] mb-2">Allgemeine Geschäftsbedingungen</h1>
-      <p className="text-sm text-[#8b6b5c] mb-10">Stand: {new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+      <h1 className="text-3xl font-bold text-[#4e2b22] mb-2">General Terms and Conditions (T&amp;Cs)</h1>
+      <p className="text-sm text-[#8b6b5c] mb-10">
+        Paquita Pilates Reformer GbR · Last updated:{' '}
+        {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+      </p>
 
-      <Section title="§ 1 Geltungsbereich">
+      <Section title="1. Scope of Application">
         <p>
-          Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge, die über die
-          Buchungsplattform <strong>paquita.pilateq.de</strong> zwischen der
-          <strong> Paquita Pilates Reformer GbR</strong> (im Folgenden „Studio") und dem
-          Nutzer (im Folgenden „Kunde") geschlossen werden.
+          These General Terms and Conditions apply to all contracts concluded via the booking
+          platform <strong>paquita.pilateq.de</strong> between{' '}
+          <strong>Paquita Pilates Reformer GbR</strong> (hereinafter &quot;the Studio&quot;) and
+          the user (hereinafter &quot;the Customer&quot;).
         </p>
         <p>
-          Mit der Registrierung und Nutzung der Plattform erkennt der Kunde diese AGB ausdrücklich an.
+          By registering and using the platform, the Customer expressly accepts these T&amp;Cs.
         </p>
       </Section>
 
-      <Section title="§ 2 Leistungen des Studios">
+      <Section title="2. Studio Services">
         <p>
-          Das Studio bietet Pilates-Gruppenkurse, Einzelstunden und ergänzende Wellness-Leistungen
-          an. Die Buchung erfolgt ausschließlich über die Plattform und ist nur mit einem ausreichenden
-          Guthaben an Credits möglich.
+          The Studio offers Pilates group classes, private sessions, and complementary wellness
+          services. Booking is made exclusively through the platform and requires a sufficient
+          credit balance.
         </p>
         <p>
-          Der Inhalt und die Verfügbarkeit der Kurse können sich ändern. Das Studio behält sich vor,
-          Kurse aus organisatorischen Gründen zu verschieben oder abzusagen. In diesem Fall werden die
-          bezahlten Credits vollständig erstattet.
-        </p>
-      </Section>
-
-      <Section title="§ 3 Vertragsschluss und Credit-Pakete">
-        <p>
-          Mit Klick auf den Button <em>„Zahlungspflichtig bestellen"</em> gibt der Kunde ein
-          verbindliches Angebot zum Kauf des ausgewählten Credit-Pakets ab. Der Vertrag kommt mit
-          der Bestätigungs-E-Mail des Studios zustande, welche zusätzlich die Rechnung im PDF-Format
-          enthält.
-        </p>
-        <p>
-          Credits sind <strong>nicht übertragbar</strong> und gelten ausschließlich für den
-          Kursbetrieb der Paquita Pilates Reformer GbR. Die Gültigkeitsdauer ergibt sich aus dem
-          jeweiligen Paket.
+          Class content and availability may change. The Studio reserves the right to reschedule
+          or cancel classes for operational reasons. In such cases, any credits used for the
+          booking will be fully refunded.
         </p>
       </Section>
 
-      <Section title="§ 4 Preise und Zahlung">
+      <Section title="3. Contract Formation and Credit Packages">
         <p>
-          Es gelten die auf der Buchungsseite zum Zeitpunkt der Bestellung angegebenen Preise. Alle
-          Preise sind Endpreise; es wird keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung)
-          ausgewiesen.
+          By clicking the button <em>&quot;Buy now – binding order&quot;</em>, the Customer
+          submits a binding offer to purchase the selected credit package. The contract is formed
+          upon receipt of the Studio&apos;s confirmation email, which also includes the invoice
+          as a PDF attachment.
         </p>
         <p>
-          Bei <strong>Bezahlung im Studio</strong> ist der Rechnungsbetrag innerhalb von
-          <strong> 14 Tagen </strong>nach Rechnungsstellung persönlich im Studio zu begleichen. Die
-          Credits werden unmittelbar nach Bestellung gutgeschrieben, damit der Kunde sofort buchen
-          kann.
-        </p>
-        <p>
-          Bei Zahlungsverzug behält sich das Studio vor, weitere Buchungen oder Käufe zu sperren, bis
-          die offene Rechnung beglichen wurde.
+          Credits are <strong>non-transferable</strong> and valid exclusively for classes offered
+          by Paquita Pilates Reformer GbR.
         </p>
       </Section>
 
-      <Section title="§ 5 Stornierung von Buchungen">
+      <Section title="4. Validity Period">
         <p>
-          Bis <strong>24 Stunden</strong> vor Kursbeginn kann eine Buchung kostenfrei storniert
-          werden; die Credits werden in voller Höhe gutgeschrieben.
+          We offer various credit packages with different expiration periods. The specific
+          validity period depends on the size and terms of the selected package as displayed
+          during the checkout process. Unused credits expire automatically after the specified
+          period, as studio capacities and training slots are reserved for the user during this
+          time.
         </p>
         <p>
-          Bei späterer Stornierung verfallen die Credits. Eine einmalige Kulanzregelung
-          („First-Time Mercy") wird automatisch beim ersten verspäteten Storno angewendet.
-        </p>
-      </Section>
-
-      <Section title="§ 6 Pflichten des Kunden">
-        <p>
-          Der Kunde verpflichtet sich, wahrheitsgemäße Angaben bei der Registrierung zu machen und
-          sein Konto vor unbefugtem Zugriff zu schützen. Die Teilnahme an Kursen erfolgt auf eigene
-          Verantwortung; vor der ersten Buchung ist der digitale Haftungsausschluss zu unterzeichnen.
+          If you are unable to use your credits due to verified medical reasons, the expiration
+          date can be extended upon presentation of a valid medical certificate before the
+          credits expire.
         </p>
       </Section>
 
-      <Section title="§ 7 Haftung">
+      <Section title="5. Prices and Payment">
         <p>
-          Das Studio haftet uneingeschränkt für Schäden aus Verletzung des Lebens, des Körpers oder
-          der Gesundheit, die auf einer fahrlässigen oder vorsätzlichen Pflichtverletzung beruhen.
-          Im Übrigen ist die Haftung auf Vorsatz und grobe Fahrlässigkeit beschränkt.
+          The prices shown on the booking page at the time of ordering apply. All prices are
+          final prices; no VAT is charged pursuant to § 19 UStG (small business regulation —
+          Kleinunternehmerregelung).
+        </p>
+        <p>
+          When paying <strong>at the studio</strong>, the invoice amount must be settled in
+          person within <strong>14 days</strong> of the invoice date. Credits are credited to
+          the account immediately after ordering so that the Customer can book classes right
+          away.
+        </p>
+        <p>
+          In the event of late payment, the Studio reserves the right to suspend further
+          bookings or purchases until the outstanding invoice has been settled.
         </p>
       </Section>
 
-      <Section title="§ 8 Widerrufsrecht">
+      <Section title="6. Late Cancellation Policy">
         <p>
-          Verbrauchern steht ein gesetzliches Widerrufsrecht zu. Einzelheiten zum Widerrufsrecht
-          sowie zum Erlöschen des Widerrufsrechts bei sofortiger Bereitstellung digitaler Leistungen
-          finden Sie in unserer{' '}
+          Booked classes can be cancelled free of charge up to <strong>24 hours</strong> before
+          the class starts; the credits will be fully refunded.
+        </p>
+        <p>
+          If a cancellation occurs less than 24 hours before the class, or in the case of a
+          no-show, the credit used for the booking will be charged and cannot be refunded or
+          reused. A one-time goodwill cancellation (&quot;First-Time Mercy&quot;) is
+          automatically applied on the first late cancellation.
+        </p>
+      </Section>
+
+      <Section title="7. Customer Obligations">
+        <p>
+          The Customer agrees to provide accurate information during registration and to protect
+          their account from unauthorised access. Participation in classes is at the
+          Customer&apos;s own risk; the digital liability waiver must be signed before the first
+          booking.
+        </p>
+      </Section>
+
+      <Section title="8. Liability Waiver">
+        <p>
+          By accepting these T&amp;Cs, you agree that participation in Pilates classes is at
+          your own risk. The Studio is liable without limitation for damages resulting from
+          injury to life, body, or health caused by a negligent or intentional breach of duty
+          by the Studio.
+        </p>
+        <p>
+          For other damages (e.g., property damage, lost items), the Studio&apos;s liability is
+          limited to cases of gross negligence (<em>grobe Fahrlässigkeit</em>) or intent
+          (<em>Vorsatz</em>). The Studio is not liable for simple negligence
+          (<em>leichte Fahrlässigkeit</em>).
+        </p>
+      </Section>
+
+      <Section title="9. Right of Withdrawal">
+        <p>
+          Consumers have a statutory right of withdrawal. Details about the right of withdrawal
+          and its expiry upon the immediate provision of digital services are set out in our{' '}
           <a href="/widerrufsrecht" className="text-[#6b3d32] underline underline-offset-2">
-            Widerrufsbelehrung
+            Cancellation Policy
           </a>.
         </p>
       </Section>
 
-      <Section title="§ 9 Datenschutz">
+      <Section title="10. Privacy">
         <p>
-          Die Erhebung und Verarbeitung personenbezogener Daten erfolgt nach den Vorgaben der
-          Datenschutz-Grundverordnung (DSGVO). Einzelheiten regelt unsere{' '}
+          The collection and processing of personal data is governed by the provisions of the
+          General Data Protection Regulation (GDPR). Details are set out in our{' '}
           <a href="/datenschutz" className="text-[#6b3d32] underline underline-offset-2">
-            Datenschutzerklärung
+            Privacy Policy
           </a>.
         </p>
       </Section>
 
-      <Section title="§ 10 Schlussbestimmungen">
+      <Section title="11. Final Provisions">
         <p>
-          Es gilt das Recht der Bundesrepublik Deutschland. Sollten einzelne Bestimmungen dieser AGB
-          unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.
+          The law of the Federal Republic of Germany applies. Should individual provisions of
+          these T&amp;Cs be invalid, the validity of the remaining provisions shall not be
+          affected.
         </p>
       </Section>
     </article>

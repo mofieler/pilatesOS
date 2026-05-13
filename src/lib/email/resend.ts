@@ -56,12 +56,12 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   const { title, greeting, body, actionUrl, actionText, expiryText, footerText } = props;
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="color-scheme: light; supported-color-schemes: light;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>${title}</title>
   <!--[if mso]>
   <noscript>
@@ -73,11 +73,14 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   </noscript>
   <![endif]-->
   <style>
+    /* Force light mode — prevents email clients from auto-darkening the branded template */
+    :root { color-scheme: light !important; }
+
     /* Reset styles */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
-    
+
     /* iOS blue links fix */
     a[x-apple-data-detectors] {
       color: inherit !important;
@@ -87,7 +90,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       font-weight: inherit !important;
       line-height: inherit !important;
     }
-    
+
     /* Responsive styles */
     @media screen and (max-width: 600px) {
       .container { width: 100% !important; max-width: 100% !important; }
@@ -96,26 +99,26 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       .button { width: 100% !important; display: block !important; text-align: center !important; }
       .title { font-size: 20px !important; }
     }
-    
-    /* Dark mode support */
+
+    /* Dark mode override — force all elements back to light-mode colors.
+       This catches email clients that ignore color-scheme:light and still apply
+       their own dark-mode transformation (Samsung Mail, some Android clients). */
     @media (prefers-color-scheme: dark) {
-      .email-bg { background-color: #1a1a1a !important; }
-      .card-bg { background-color: #242424 !important; }
-      .text-primary { color: #faf9f7 !important; }
-      .text-secondary { color: #c4a88a !important; }
-      .text-body { color: #d4c8c0 !important; }
-      .text-muted { color: #a09088 !important; }
-      .border-color { border-color: #3a3a3a !important; }
-      .footer-bg { background-color: #1f1f1f !important; }
-      /* Header: keep light text even when iOS Mail inverts the header background */
+      body,
+      .email-wrap,
+      table[class="email-wrap"] { background-color: ${COLORS.background} !important; }
+      .card-outer { background-color: ${COLORS.surface} !important; }
+      .card-body { background-color: ${COLORS.surface} !important; color: ${COLORS.textMuted} !important; }
+      .card-footer { background-color: ${COLORS.background} !important; }
+      p, td, span, li { color: ${COLORS.textMuted} !important; }
+      h1.email-title { color: ${COLORS.primary} !important; }
       .header-title { color: #faf9f7 !important; }
-      .header-subtitle { color: #c4a88a !important; }
-      /* CTA button: keep light text on dark backgrounds */
-      .cta-button { color: #faf9f7 !important; background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important; }
+      .header-subtitle { color: ${COLORS.accent} !important; }
+      a.cta-button { color: #faf9f7 !important; }
     }
   </style>
 </head>
-<body class="email-bg" style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${COLORS.text}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+<body class="email-wrap" style="margin: 0; padding: 0; background-color: ${COLORS.background}; color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${COLORS.text}; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
   
   <!-- Preview text (hidden) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
@@ -128,7 +131,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       <td style="padding: 40px 16px;">
         
         <!-- Card container -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="container" style="max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(78, 43, 34, 0.08);" class="card-bg" bgcolor="${COLORS.surface}">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="container card-outer" style="max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(78, 43, 34, 0.08);" bgcolor="${COLORS.surface}">
           
           <!-- Header with gradient -->
           <tr>
@@ -147,16 +150,16 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
           
           <!-- Body content -->
           <tr>
-            <td class="content" style="padding: 40px; background-color: ${COLORS.surface};" class="card-bg">
-              
+            <td class="content card-body" style="padding: 40px; background-color: ${COLORS.surface};">
+
               <!-- Greeting -->
-              <p class="text-primary" style="margin: 0 0 8px; font-size: 16px; font-weight: 500; color: ${COLORS.primary};">${greeting}</p>
-              
+              <p style="margin: 0 0 8px; font-size: 16px; font-weight: 500; color: ${COLORS.primary};">${greeting}</p>
+
               <!-- Title -->
-              <h1 class="text-primary title" style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: ${COLORS.primary}; line-height: 1.3;">${title}</h1>
-              
+              <h1 class="email-title title" style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: ${COLORS.primary}; line-height: 1.3;">${title}</h1>
+
               <!-- Body text -->
-              <p class="text-body" style="margin: 0 0 28px; font-size: 15px; line-height: 1.7; color: ${COLORS.textMuted};">${body}</p>
+              <p style="margin: 0 0 28px; font-size: 15px; line-height: 1.7; color: ${COLORS.textMuted};">${body}</p>
               
               <!-- CTA Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 28px;">
@@ -170,27 +173,27 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
               </table>
               
               <!-- Expiry notice -->
-              <p class="text-muted" style="margin: 0 0 24px; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight};">
+              <p style="margin: 0 0 24px; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight};">
                 <span style="display: inline-block; margin-right: 6px;">⏱️</span>${expiryText}
               </p>
-              
+
               <!-- Divider -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0;">
                 <tr>
-                  <td class="border-color" style="border-top: 1px solid ${COLORS.border}; font-size: 0; line-height: 0;">&nbsp;</td>
+                  <td style="border-top: 1px solid ${COLORS.border}; font-size: 0; line-height: 0;">&nbsp;</td>
                 </tr>
               </table>
-              
+
               <!-- Manual link fallback -->
-              <p class="text-muted" style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">Link not working?</p>
-              <p class="text-muted" style="margin: 0; font-size: 12px; line-height: 1.6; color: ${COLORS.textLighter}; word-break: break-all;">
+              <p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: ${COLORS.textLighter}; text-transform: uppercase; letter-spacing: 0.5px;">Link not working?</p>
+              <p style="margin: 0; font-size: 12px; line-height: 1.6; color: ${COLORS.textLighter}; word-break: break-all;">
                 Copy this link into your browser:<br>
-                <a href="${actionUrl}" class="text-secondary" style="color: ${COLORS.primaryLight}; text-decoration: underline;">${actionUrl}</a>
+                <a href="${actionUrl}" style="color: ${COLORS.primaryLight}; text-decoration: underline;">${actionUrl}</a>
               </p>
-              
+
               ${footerText ? `
               <!-- Additional footer text -->
-              <p class="text-muted" style="margin: 20px 0 0; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight}; font-style: italic;">
+              <p style="margin: 20px 0 0; font-size: 13px; line-height: 1.6; color: ${COLORS.textLight}; font-style: italic;">
                 ${footerText}
               </p>
               ` : ''}
@@ -199,11 +202,11 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
           
           <!-- Footer -->
           <tr>
-            <td class="footer-bg" style="background-color: ${COLORS.background}; padding: 24px 40px; text-align: center; border-top: 1px solid ${COLORS.border};" class="border-color">
-              <p class="text-muted" style="margin: 0 0 8px; font-size: 12px; color: ${COLORS.textLighter};">
+            <td class="card-footer" style="background-color: ${COLORS.background}; padding: 24px 40px; text-align: center; border-top: 1px solid ${COLORS.border};">
+              <p style="margin: 0 0 8px; font-size: 12px; color: ${COLORS.textLighter};">
                 &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
               </p>
-              <p class="text-muted" style="margin: 0; font-size: 11px; color: ${COLORS.textLighter};">
+              <p style="margin: 0; font-size: 11px; color: ${COLORS.textLighter};">
                 This email was sent automatically. Please do not reply.
               </p>
             </td>
@@ -413,8 +416,10 @@ export async function sendPurchaseConfirmationWithInvoice(
   name: string,
   packageName: string,
   creditsAmount: number,
+  creditType: string,
   priceCents: number,
   currency: string,
+  validityDays: number,
   invoiceNumber: string,
   dueDate: Date,
   pdfBuffer: Buffer | null,
@@ -430,17 +435,25 @@ export async function sendPurchaseConfirmationWithInvoice(
     year: 'numeric',
   });
 
+  const expiryDate = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000);
+  const expiryStr = expiryDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
   const html = buildBaseTemplate({
     subject: 'Credit purchase confirmation',
-    title: 'Your credit package is ready',
+    title: 'Order confirmed – credits are active',
     greeting: `Hi ${name},`,
     body: `
-      Your purchase of <strong>${packageName}</strong> (${creditsAmount} credits) has been confirmed
-      and the credits are already available in your account.<br><br>
+      Thank you for your order. Your credits are active.<br><br>
+      Your <strong>${creditsAmount} ${packageName}</strong> credits are valid until
+      <strong>${expiryStr}</strong>. You can start booking classes right away.<br><br>
       <strong>Invoice No.:</strong> ${invoiceNumber}<br>
       <strong>Amount:</strong> ${formatted}<br>
       <strong>Payment due:</strong> ${dueDateStr}<br><br>
-      Please bring payment to the studio by the due date.
+      Please settle the invoice amount at your next studio visit within 14 days.
       Your invoice is attached to this email as a PDF.
     `,
     actionUrl: `${APP_URL}/credits`,

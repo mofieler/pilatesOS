@@ -8,7 +8,7 @@ import {
   instructors,
   users,
 } from '@/db/schema';
-import { and, eq, gte, isNull, lte } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, lt, lte } from 'drizzle-orm';
 import { getCalendarApi } from './google-calendar.client';
 import type { CalendarConnection, ClassSession } from '@/db/schema';
 
@@ -79,6 +79,26 @@ async function loadConnectionForUser(userId: string): Promise<CalendarConnection
   return row;
 }
 
+// Fallback: if the session's instructor has no connected calendar, use any
+// admin-connected calendar so studio classes always appear somewhere in GCal.
+async function loadFallbackAdminConnection(): Promise<CalendarConnection | null> {
+  const rows = await db
+    .select({ conn: calendarConnections })
+    .from(calendarConnections)
+    .innerJoin(users, eq(users.id, calendarConnections.userId))
+    .where(
+      and(
+        eq(users.role, 'admin'),
+        isNull(users.deletedAt),
+        eq(calendarConnections.syncEnabled, true),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  if (!row?.conn || !row.conn.selectedCalendarId) return null;
+  return row.conn;
+}
+
 async function loadAttendees(sessionId: string) {
   return db
     .select({
@@ -143,10 +163,13 @@ export async function pushSession(sessionId: string): Promise<void> {
   try {
     const session = await loadSessionForSync(sessionId);
     if (!session) return;
-    if (!session.instructorUserId) return; // No instructor → nothing to push
 
-    const conn = await loadConnectionForUser(session.instructorUserId);
-    if (!conn) return; // Instructor not connected → silently skip
+    // Prefer the instructor's own calendar; fall back to any admin calendar so
+    // sessions are always visible even before an instructor connects theirs.
+    const conn = session.instructorUserId
+      ? (await loadConnectionForUser(session.instructorUserId)) ?? await loadFallbackAdminConnection()
+      : await loadFallbackAdminConnection();
+    if (!conn) return; // No calendar connected anywhere → skip
 
     const attendees = await loadAttendees(sessionId);
     const className = session.templateName ?? 'Pilates Klasse';
@@ -243,12 +266,12 @@ export async function updateAttendeesInDescription(sessionId: string): Promise<v
   try {
     const session = await loadSessionForSync(sessionId);
     if (!session || !session.googleCalendarEventId || !session.googleCalendarId) {
-      // Not synced yet — fall back to a full push so the event exists.
       return pushSession(sessionId);
     }
-    if (!session.instructorUserId) return;
 
-    const conn = await loadConnectionForUser(session.instructorUserId);
+    const conn = session.instructorUserId
+      ? (await loadConnectionForUser(session.instructorUserId)) ?? await loadFallbackAdminConnection()
+      : await loadFallbackAdminConnection();
     if (!conn) return;
 
     const attendees = await loadAttendees(sessionId);
@@ -293,9 +316,10 @@ export async function deleteEvent(sessionId: string): Promise<void> {
   try {
     const session = await loadSessionForSync(sessionId);
     if (!session || !session.googleCalendarEventId || !session.googleCalendarId) return;
-    if (!session.instructorUserId) return;
 
-    const conn = await loadConnectionForUser(session.instructorUserId);
+    const conn = session.instructorUserId
+      ? (await loadConnectionForUser(session.instructorUserId)) ?? await loadFallbackAdminConnection()
+      : await loadFallbackAdminConnection();
     if (!conn) return;
 
     const api = await getCalendarApi(conn);
@@ -562,8 +586,8 @@ export async function getBlocksInRange(from: Date, to: Date) {
     .from(externalCalendarBlocks)
     .where(
       and(
-        lte(externalCalendarBlocks.startsAt, to),
-        gte(externalCalendarBlocks.endsAt, from),
+        lt(externalCalendarBlocks.startsAt, to),
+        gt(externalCalendarBlocks.endsAt, from),
       ),
     );
 }

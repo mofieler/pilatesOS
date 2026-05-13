@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { CreditCard, Store, CheckCircle, Clock, TicketIcon, WalletCardsIcon, BanknoteIcon, AlertCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ interface CreditPackage {
   name: string;
   description: string | null;
   creditsAmount: number;
-  creditType: 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
+  creditType: 'reformer' | 'mat';
   priceCents: number;
   currency: string;
   validityDays: number;
@@ -218,6 +218,7 @@ export default function CreditsPage() {
   // Legal consent — required by German Button-Lösung (§ 312j BGB)
   // and § 356 Abs. 5 BGB (for immediately delivered digital services)
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedWithdrawal, setAcceptedWithdrawal] = useState(false);
 
   // Tab functionality
   const currentTab = searchParams.get('tab') || 'purchase';
@@ -245,7 +246,11 @@ export default function CreditsPage() {
       return;
     }
     if (!acceptedTerms) {
-      setPurchaseError('Please confirm AGB before ordering.');
+      setPurchaseError('Please accept the Terms & Conditions and Privacy Policy before ordering.');
+      return;
+    }
+    if (!acceptedWithdrawal) {
+      setPurchaseError('Please confirm the withdrawal waiver before ordering.');
       return;
     }
 
@@ -261,6 +266,7 @@ export default function CreditsPage() {
           userId: session.user.id,
           paymentMethod,
           acceptedTerms,
+          acceptedWithdrawal,
         }),
       });
 
@@ -522,6 +528,12 @@ export default function CreditsPage() {
                   {paymentMethod === 'pay_at_studio' ? 'Pay at Studio' : 'Stripe'}
                 </span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6b3d32]">Valid until</span>
+                <span className="font-medium text-[#4e2b22]">
+                  {selectedPkg && format(addDays(new Date(), selectedPkg.validityDays), 'd MMM yyyy')}
+                </span>
+              </div>
               <div className="border-t border-[#ede8e5] pt-2 mt-2">
                 <div className="flex justify-between">
                   <span className="font-semibold text-[#4e2b22]">Total</span>
@@ -545,8 +557,9 @@ export default function CreditsPage() {
               </div>
             )}
 
-            {/* Legal consent — Button-Lösung (§ 312j BGB) + withdrawal information (§ 356 V BGB) */}
+            {/* Legal consent — Button-Lösung (§ 312j BGB) + withdrawal waiver (§ 356 V BGB) */}
             <div className="space-y-3 mb-4">
+              {/* Checkbox 1: T&Cs + Privacy — required, no pre-selection */}
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -557,27 +570,39 @@ export default function CreditsPage() {
                 <span className="text-xs text-[#6b3d32] leading-relaxed">
                   I have read and accept the{' '}
                   <Link href="/agb" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
-                    Allgemeine Geschäftsbedingungen (AGB)
-                  </Link>{' '}
-                  and the{' '}
+                    General Terms and Conditions (T&amp;Cs)
+                  </Link>
+                  {' '}– including the Liability Waiver and Cancellation Policy – and the{' '}
                   <Link href="/datenschutz" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
-                    Datenschutzerklärung
+                    Privacy Policy
                   </Link>.
                 </span>
               </label>
 
+              {/* Checkbox 2: Withdrawal waiver — required, no pre-selection */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedWithdrawal}
+                  onChange={(e) => setAcceptedWithdrawal(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-[#c4a88a] text-[#4e2b22] focus:ring-[#4e2b22]"
+                />
+                <span className="text-xs text-[#6b3d32] leading-relaxed">
+                  I expressly consent to the immediate performance of the contract and acknowledge
+                  that I lose my statutory 14-day right of withdrawal once the credits are credited
+                  to my account.
+                </span>
+              </label>
+
+              {/* Right of Withdrawal information */}
               <div className="text-xs text-[#6b3d32] leading-relaxed p-3 bg-[#ede8e5]/30 rounded-lg">
-                <p className="mb-2">
-                  <strong>Withdrawal Information:</strong> Credits will be made available <strong>immediately</strong> after ordering.
-                  Please note that according to § 356 Abs. 5 BGB, your right of withdrawal may expire once the credits are credited to your account.
-                </p>
-                <p>
-                  See our{' '}
-                  <Link href="/widerrufsrecht" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
-                    Widerrufsbelehrung
-                  </Link>{' '}
-                  for detailed information about your withdrawal rights.
-                </p>
+                <strong>Right of Withdrawal Information:</strong> By purchasing these credits, you
+                request that the service begins immediately. Please note that you waive your
+                statutory 14-day right of withdrawal as soon as the credits are fully provisioned
+                in your account. For more details, please read our{' '}
+                <Link href="/widerrufsrecht" target="_blank" className="text-[#4e2b22] underline underline-offset-2">
+                  Terms of Cancellation
+                </Link>.
               </div>
             </div>
 
@@ -588,17 +613,18 @@ export default function CreditsPage() {
               disabled={
                 isProcessing ||
                 status !== 'authenticated' ||
-                !acceptedTerms
+                !acceptedTerms ||
+                !acceptedWithdrawal
               }
             >
               {isProcessing
                 ? 'Processing...'
                 : status !== 'authenticated'
                   ? 'Please sign in'
-                  : 'Order with obligation to pay'}
+                  : 'Buy now – binding order'}
             </Button>
             <p className="text-[10px] text-center text-[#a6856f] mt-2 leading-snug">
-              By clicking the button you place a binding order. Payment is due in person at the studio within 14 days.
+              By clicking this button you place a binding order. Payment is due in person at the studio within 14 days.
             </p>
           </div>
         </section>

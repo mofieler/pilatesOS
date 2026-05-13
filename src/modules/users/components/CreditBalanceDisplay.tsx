@@ -3,7 +3,7 @@ import { Users, Dumbbell, Sparkles } from 'lucide-react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreditBalance = {
-  creditType: 'mat_group' | 'reformer_group' | 'private_session';
+  creditType: 'mat' | 'reformer';
   balance: number;
   expiresAt: Date | null;
 };
@@ -11,8 +11,8 @@ export type CreditBalance = {
 // ─── Config per credit tier ───────────────────────────────────────────────────
 
 const TIER = {
-  mat_group: {
-    label: 'Mat Classes',
+  mat: {
+    label: 'Mat Credits',
     icon: Users,
     pill: 'bg-[#6b8e6b]/15 text-[#4a7c4a] border-[#6b8e6b]/20',
     ring: 'ring-[#6b8e6b]/20',
@@ -20,23 +20,14 @@ const TIER = {
     numberColor: 'text-[#4a7c4a]',
     gradient: 'from-[#f5f7f5] to-[#e8f0e8]',
   },
-  reformer_group: {
-    label: 'Reformer Classes',
+  reformer: {
+    label: 'Reformer Credits',
     icon: Dumbbell,
     pill: 'bg-[#8b5a3c]/15 text-[#6b3d32] border-[#c4a88a]/30',
     ring: 'ring-[#c4a88a]/20',
     dot: 'bg-[#8b5a3c]',
     numberColor: 'text-[#6b3d32]',
     gradient: 'from-[#faf8f5] to-[#f5ebe0]',
-  },
-  private_session: {
-    label: 'Private Sessions',
-    icon: Sparkles,
-    pill: 'bg-[#4e2b22]/10 text-[#4e2b22] border-[#4e2b22]/20',
-    ring: 'ring-[#4e2b22]/10',
-    dot: 'bg-[#4e2b22]',
-    numberColor: 'text-[#4e2b22]',
-    gradient: 'from-[#faf9f7] to-[#ede8e5]',
   },
 } as const;
 
@@ -87,7 +78,7 @@ function CreditCard({ balance }: { balance: CreditBalance }) {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['mat_group', 'reformer_group', 'private_session'];
+  const ALL_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer'];
 
   // Ensure all three tiers are always shown, even if balance row doesn't exist yet
   const filled = ALL_TYPES.map(

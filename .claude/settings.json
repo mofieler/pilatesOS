@@ -25,7 +25,9 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\db\\\\schema\" -Filter \"*calendar*\" -ErrorAction SilentlyContinue)",
       "Bash(pnpm db:generate)",
       "Bash(npm run *)",
-      "Bash(Find . -type f -name \"*.tsx\" -o -name \"*.ts\")"
+      "Bash(Find . -type f -name \"*.tsx\" -o -name \"*.ts\")",
+      "PowerShell(Test-Path \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"; \\(Get-Item \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"\\).PSIsContainer)",
+      "PowerShell(\\(Get-Item \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"\\).GetFiles\\(\\) | Select-Object Name)"
     ]
   }
 }

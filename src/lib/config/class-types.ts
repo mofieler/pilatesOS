@@ -1,29 +1,41 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
- * 
- * This file serves as the single source of truth for all class and credit types
- * in the Pilateq application. Any changes to types should be made here only.
- * 
- * Features:
- * - Type-safe definitions
- * - Centralized styling and labels
- * - Easy extension for new types
- * - Validation helpers
+ *
+ * Credit model:
+ *   Only TWO credit currencies exist: 'reformer' and 'mat'.
+ *   The class type encodes BOTH the equipment (reformer / mat) and the
+ *   format (group / private / duo).  The credit AMOUNT is set freely per
+ *   template by the admin.
+ *
+ *   Examples:
+ *     reformer_private  →  reformer credits, admin sets 5 credits
+ *     reformer_group    →  reformer credits, admin sets 3 credits
+ *     mat_private       →  mat credits, admin sets 5 credits
+ *     mat_group         →  mat credits, admin sets 3 credits
  */
 
-// ─── TYPE DEFINITIONS ────────────────────────────────────────────────────────
+// ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
 
-export type ClassType = 'mat' | 'reformer' | 'private' | 'duo' | 'group' | 'online' | 'sound_healing';
-export type CreditType = 'mat_group' | 'reformer_group' | 'private_session' | 'duo_group' | 'general_group' | 'online_class' | 'sound_healing';
+export type ClassType =
+  | 'reformer_group'
+  | 'reformer_private'
+  | 'reformer_duo'
+  | 'mat_group'
+  | 'mat_private'
+  | 'mat_duo'
+  | 'online'
+  | 'sound_healing';
+
+export type CreditType = 'reformer' | 'mat';
 
 export interface ClassTypeConfig {
   value: ClassType;
   label: string;
   description: string;
   badgeStyle: string;
-  defaultDuration: number; // minutes
+  defaultDuration: number;
   defaultCapacity: number;
-  defaultLocation?: string;
+  location?: string;
 }
 
 export interface CreditTypeConfig {
@@ -31,56 +43,63 @@ export interface CreditTypeConfig {
   label: string;
   description: string;
   badgeStyle: string;
-  associatedClassType: ClassType;
 }
 
-// ─── CLASS TYPES CONFIGURATION ─────────────────────────────────────────────────
+// ─── CLASS TYPES ───────────────────────────────────────────────────────────────
 
 export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
-  mat: {
-    value: 'mat',
-    label: 'Mat Class',
-    description: 'Group mat-based Pilates class',
-    badgeStyle: 'bg-emerald-100 text-emerald-800',
-    defaultDuration: 60,
-    defaultCapacity: 12,
-  },
-  reformer: {
-    value: 'reformer',
-    label: 'Reformer Class',
-    description: 'Group reformer machine class',
+  reformer_group: {
+    value: 'reformer_group',
+    label: 'Reformer Group',
+    description: 'Group class on the reformer machine',
     badgeStyle: 'bg-teal-100 text-teal-800',
     defaultDuration: 60,
     defaultCapacity: 8,
   },
-  private: {
-    value: 'private',
-    label: 'Private Session',
-    description: 'One-on-one private session',
-    badgeStyle: 'bg-violet-100 text-violet-800',
+  reformer_private: {
+    value: 'reformer_private',
+    label: 'Reformer Private',
+    description: 'One-on-one private reformer session',
+    badgeStyle: 'bg-teal-50 text-teal-700 border border-teal-200',
     defaultDuration: 60,
     defaultCapacity: 1,
   },
-  duo: {
-    value: 'duo',
-    label: 'Duo Session',
-    description: 'Two-person semi-private session',
-    badgeStyle: 'bg-indigo-100 text-indigo-800',
+  reformer_duo: {
+    value: 'reformer_duo',
+    label: 'Reformer Duo',
+    description: 'Two-person reformer session',
+    badgeStyle: 'bg-teal-50 text-teal-600 border border-teal-100',
     defaultDuration: 60,
     defaultCapacity: 2,
   },
-  group: {
-    value: 'group',
-    label: 'Group Class',
-    description: 'General group fitness class',
-    badgeStyle: 'bg-sky-100 text-sky-800',
+  mat_group: {
+    value: 'mat_group',
+    label: 'Mat Group',
+    description: 'Group mat Pilates class',
+    badgeStyle: 'bg-emerald-100 text-emerald-800',
     defaultDuration: 60,
-    defaultCapacity: 15,
+    defaultCapacity: 12,
+  },
+  mat_private: {
+    value: 'mat_private',
+    label: 'Mat Private',
+    description: 'One-on-one private mat session',
+    badgeStyle: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    defaultDuration: 60,
+    defaultCapacity: 1,
+  },
+  mat_duo: {
+    value: 'mat_duo',
+    label: 'Mat Duo',
+    description: 'Two-person mat session',
+    badgeStyle: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+    defaultDuration: 60,
+    defaultCapacity: 2,
   },
   online: {
     value: 'online',
     label: 'Online Class',
-    description: 'Virtual/online class session',
+    description: 'Virtual / online class session',
     badgeStyle: 'bg-orange-100 text-orange-800',
     defaultDuration: 60,
     defaultCapacity: 20,
@@ -95,209 +114,98 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
   },
 } as const;
 
-// ─── CREDIT TYPES CONFIGURATION ─────────────────────────────────────────────────
+// ─── CREDIT TYPES ──────────────────────────────────────────────────────────────
 
 export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
-  mat_group: {
-    value: 'mat_group',
-    label: 'Mat Class Credits',
-    description: 'Credits for group mat classes',
-    badgeStyle: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-    associatedClassType: 'mat',
-  },
-  reformer_group: {
-    value: 'reformer_group',
-    label: 'Reformer Class Credits',
-    description: 'Credits for group reformer classes',
+  reformer: {
+    value: 'reformer',
+    label: 'Reformer Credits',
+    description: 'Credits used for any reformer-based class',
     badgeStyle: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-    associatedClassType: 'reformer',
   },
-  private_session: {
-    value: 'private_session',
-    label: 'Private Session Credits',
-    description: 'Credits for private sessions',
-    badgeStyle: 'bg-[#4e2b22]/10 text-[#4e2b22]',
-    associatedClassType: 'private',
-  },
-  duo_group: {
-    value: 'duo_group',
-    label: 'Duo Session Credits',
-    description: 'Credits for duo sessions',
-    badgeStyle: 'bg-[#6366f1]/10 text-[#4c1d95]',
-    associatedClassType: 'duo',
-  },
-  general_group: {
-    value: 'general_group',
-    label: 'General Group Credits',
-    description: 'Credits for general group classes',
-    badgeStyle: 'bg-[#0891b2]/10 text-[#0e7490]',
-    associatedClassType: 'group',
-  },
-  online_class: {
-    value: 'online_class',
-    label: 'Online Class Credits',
-    description: 'Credits for online classes',
-    badgeStyle: 'bg-[#ea580c]/10 text-[#c2410c]',
-    associatedClassType: 'online',
-  },
-  sound_healing: {
-    value: 'sound_healing',
-    label: 'Sound Healing Credits',
-    description: 'Credits for sound healing sessions',
-    badgeStyle: 'bg-[#9333ea]/10 text-[#7c3aed]',
-    associatedClassType: 'sound_healing',
+  mat: {
+    value: 'mat',
+    label: 'Mat Credits',
+    description: 'Credits used for mat classes, online and sound healing',
+    badgeStyle: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
   },
 } as const;
 
-// ─── UTILITY FUNCTIONS ──────────────────────────────────────────────────────────
+// ─── DERIVED MAPPING ───────────────────────────────────────────────────────────
 
-/**
- * Get all class type values as an array for select options
- */
-export function getClassTypeValues(): ClassType[] {
-  return Object.keys(CLASS_TYPES) as ClassType[];
+/** Returns the credit type that a class type consumes. */
+export function getCreditTypeForClassType(classType: ClassType): CreditType {
+  return classType.startsWith('reformer') ? 'reformer' : 'mat';
 }
 
-/**
- * Get all credit type values as an array for select options
- */
-export function getCreditTypeValues(): CreditType[] {
-  return Object.keys(CREDIT_TYPES) as CreditType[];
+// ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────────────
+
+export function getClassTypeValues(): [ClassType, ...ClassType[]] {
+  return Object.keys(CLASS_TYPES) as [ClassType, ...ClassType[]];
 }
 
-/**
- * Get class type configuration by value
- */
+export function getCreditTypeValues(): [CreditType, ...CreditType[]] {
+  return Object.keys(CREDIT_TYPES) as [CreditType, ...CreditType[]];
+}
+
 export function getClassTypeConfig(value: string): ClassTypeConfig | undefined {
   return CLASS_TYPES[value as ClassType];
 }
 
-/**
- * Get credit type configuration by value
- */
 export function getCreditTypeConfig(value: string): CreditTypeConfig | undefined {
   return CREDIT_TYPES[value as CreditType];
 }
 
-/**
- * Get class type label for display
- */
 export function getClassTypeLabel(value: string): string {
-  return getClassTypeConfig(value)?.label || value;
+  return getClassTypeConfig(value)?.label ?? value;
 }
 
-/**
- * Get credit type label for display
- */
 export function getCreditTypeLabel(value: string): string {
-  return getCreditTypeConfig(value)?.label || value;
+  return getCreditTypeConfig(value)?.label ?? value;
 }
 
-/**
- * Get class type badge styling
- */
 export function getClassTypeBadgeStyle(value: string): string {
-  return getClassTypeConfig(value)?.badgeStyle || 'bg-slate-100 text-slate-700';
+  return getClassTypeConfig(value)?.badgeStyle ?? 'bg-slate-100 text-slate-700';
 }
 
-/**
- * Get credit type badge styling
- */
 export function getCreditTypeBadgeStyle(value: string): string {
-  return getCreditTypeConfig(value)?.badgeStyle || 'bg-slate-100 text-slate-700';
+  return getCreditTypeConfig(value)?.badgeStyle ?? 'bg-slate-100 text-slate-700';
 }
 
-/**
- * Get appropriate credit type for a given class type
- */
-export function getCreditTypeForClassType(classType: ClassType): CreditType {
-  const creditTypeEntry = Object.entries(CREDIT_TYPES).find(
-    ([_, config]) => config.associatedClassType === classType
-  );
-  return (creditTypeEntry?.[0] as CreditType) || 'mat_group';
-}
-
-/**
- * Validate if a value is a valid class type
- */
 export function isValidClassType(value: string): value is ClassType {
   return value in CLASS_TYPES;
 }
 
-/**
- * Validate if a value is a valid credit type
- */
 export function isValidCreditType(value: string): value is CreditType {
   return value in CREDIT_TYPES;
 }
 
-/**
- * Get select options for class types (for dropdown components)
- */
 export function getClassTypeSelectOptions(): Array<{ value: ClassType; label: string }> {
-  return Object.values(CLASS_TYPES).map(config => ({
-    value: config.value,
-    label: config.label,
-  }));
+  return Object.values(CLASS_TYPES).map((c) => ({ value: c.value, label: c.label }));
 }
 
-/**
- * Get select options for credit types (for dropdown components)
- */
 export function getCreditTypeSelectOptions(): Array<{ value: CreditType; label: string }> {
-  return Object.values(CREDIT_TYPES).map(config => ({
-    value: config.value,
-    label: config.label,
-  }));
+  return Object.values(CREDIT_TYPES).map((c) => ({ value: c.value, label: c.label }));
 }
 
-// ─── TYPE GUARDS ───────────────────────────────────────────────────────────────
-
-/**
- * Type guard for ClassType
- */
 export function isClassType(value: unknown): value is ClassType {
   return typeof value === 'string' && isValidClassType(value);
 }
 
-/**
- * Type guard for CreditType
- */
 export function isCreditType(value: unknown): value is CreditType {
   return typeof value === 'string' && isValidCreditType(value);
 }
 
-// ─── EXPORTS FOR LEGACY COMPATIBILITY ───────────────────────────────────────────
+// ─── LEGACY COMPATIBILITY (used in booking pages / credit package cards) ────────
 
-/**
- * Legacy compatibility exports - these will be removed in future versions
- * @deprecated Use the new modular system instead
- */
-export const LEGACY_CLASS_TYPE_OPTIONS = [
-  { value: 'reformer', label: 'Reformer' },
-  { value: 'mat', label: 'Mat' },
-  { value: 'private', label: 'Private' },
-  { value: 'duo', label: 'Duo' },
-  { value: 'group', label: 'Group' },
-  { value: 'online', label: 'Online' },
-];
-
-export const LEGACY_CREDIT_TYPE_LABELS = { 
-  mat_group: 'Mat Class', 
-  reformer_group: 'Reformer Class', 
-  private_session: 'Private Session',
-  duo_group: 'Duo Class',
-  general_group: 'Group Class',
-  online_class: 'Online Class',
-  sound_healing: 'Sound Healing'
+export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
+  reformer: 'Reformer Credits',
+  mat: 'Mat Credits',
 };
 
-export const LEGACY_CREDIT_TYPE_STYLES = {
-  mat_group: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  reformer_group: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  private_session: 'bg-[#4e2b22]/10 text-[#4e2b22]',
-  duo_group: 'bg-[#6366f1]/10 text-white',
-  general_group: 'bg-[#0891b2]/10 text-white',
-  online_class: 'bg-[#ea580c]/10 text-white',
-  sound_healing: 'bg-[#9333ea]/10 text-white',
+export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
+  reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
+  mat: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
 };
+
+export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

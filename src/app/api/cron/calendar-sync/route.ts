@@ -88,18 +88,11 @@ async function runPushRetrySweep() {
   // calendar connection with a selected calendar — JOIN ensures we don't
   // endlessly retry sessions with no matching connection.
   const cutoff = new Date(Date.now() - 60 * 60 * 1000);
+  // Find all unsync'd future sessions — pushSession handles the instructor-vs-admin
+  // calendar fallback logic and silently no-ops when no connection exists.
   const toRetry = await db
-    .selectDistinct({ id: classSessions.id })
+    .select({ id: classSessions.id })
     .from(classSessions)
-    .innerJoin(instructors, eq(classSessions.instructorId, instructors.id))
-    .innerJoin(
-      calendarConnections,
-      and(
-        eq(calendarConnections.userId, instructors.userId),
-        eq(calendarConnections.syncEnabled, true),
-        isNotNull(calendarConnections.selectedCalendarId),
-      ),
-    )
     .where(
       and(
         ne(classSessions.status, 'cancelled'),

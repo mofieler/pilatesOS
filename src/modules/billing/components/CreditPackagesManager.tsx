@@ -35,14 +35,8 @@ type ClassType = 'mat' | 'reformer';
 
 // ─── Derivation helpers ──────────────────────────────────────────────────────
 
-/**
- * Single source of truth for mapping (category, classType) → creditType.
- * Booking and balance lookups all key on creditType, so this mapping is
- * what gives the toggle its meaning end-to-end.
- */
-function deriveCreditType(category: CreditPackCategory, classType: ClassType): CreditType {
-  if (category === 'session') return 'private_session';
-  return classType === 'mat' ? 'mat_group' : 'reformer_group';
+function deriveCreditType(_category: CreditPackCategory, classType: ClassType): CreditType {
+  return classType === 'mat' ? 'mat' : 'reformer';
 }
 
 function categoryClassTypeLabel(category: CreditPackCategory, classType: ClassType | null): string {
@@ -75,7 +69,7 @@ function fromPackage(p: CreditPackage): FormState {
   // Derive classType for legacy packages that don't have it set
   const inferredClassType: ClassType =
     (p.classType as ClassType | null) ??
-    (p.creditType === 'reformer_group' ? 'reformer' : 'mat');
+    (p.creditType === 'reformer' ? 'reformer' : 'mat');
 
   return {
     name:          p.name,
@@ -422,7 +416,7 @@ export function CreditPackagesManager({ packages }: Props) {
             {packages.map((pkg) => {
               const cat = (pkg.category ?? 'credit') as CreditPackCategory;
               const classType = (pkg.classType as ClassType | null) ??
-                (pkg.creditType === 'reformer_group' ? 'reformer' : 'mat');
+                (pkg.creditType === 'reformer' ? 'reformer' : 'mat');
               const cfg = getCreditPackCategoryConfig(cat);
               return (
                 <tr key={pkg.id} className="hover:bg-slate-50">

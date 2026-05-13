@@ -25,7 +25,7 @@ export async function logSecurityEvent(entry: AuditLogEntry) {
       await db.insert(creditTransactions).values({
         userId: entry.userId,
         type: 'manual_adjustment', // Using existing type for audit
-        creditType: 'mat_group', // Default type for audit entries
+        creditType: 'mat', // Default type for audit entries
         amount: 0,
         balanceAfter: 0,
         description: `AUDIT: ${entry.action} on ${entry.resource}${entry.resourceId ? `:${entry.resourceId}` : ''}`,

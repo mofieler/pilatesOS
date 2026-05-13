@@ -126,9 +126,9 @@ export default async function DashboardLayout({ children }:  { children: React.R
           </p>
           <div className="flex gap-4 text-xs flex-wrap">
             <Link href="/impressum"      className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Impressum</Link>
-            <Link href="/datenschutz"    className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Datenschutz</Link>
-            <Link href="/agb"            className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">AGB</Link>
-            <Link href="/widerrufsrecht" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Widerrufsrecht</Link>
+            <Link href="/datenschutz"    className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Privacy Policy</Link>
+            <Link href="/agb"            className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">T&amp;Cs</Link>
+            <Link href="/widerrufsrecht" className="text-[#8b6b5c] hover:text-[#4e2b22] transition-colors">Cancellation Policy</Link>
           </div>
         </div>
       </footer>

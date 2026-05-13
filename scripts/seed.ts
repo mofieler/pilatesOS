@@ -113,7 +113,7 @@ async function seed() {
         name: 'Mat Starter Pack',
         description: 'Perfect for beginners - 5 group mat classes',
         creditsAmount: 5,
-        creditType: 'mat_group',
+        creditType: 'mat',
         priceCents: 7500, // €75 in cents
         currency: 'eur',
         isActive: true,
@@ -122,7 +122,7 @@ async function seed() {
         name: 'Mat Regular Pack',
         description: 'Most popular - 10 group mat classes',
         creditsAmount: 10,
-        creditType: 'mat_group',
+        creditType: 'mat',
         priceCents: 14000, // €140 in cents
         currency: 'eur',
         isActive: true,
@@ -131,7 +131,7 @@ async function seed() {
         name: 'Reformer Starter Pack',
         description: 'Start your reformer journey - 5 classes',
         creditsAmount: 5,
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         priceCents: 10000, // €100 in cents
         currency: 'eur',
         isActive: true,
@@ -140,16 +140,16 @@ async function seed() {
         name: 'Reformer Regular Pack',
         description: '10 reformer group classes',
         creditsAmount: 10,
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         priceCents: 18000, // €180 in cents
         currency: 'eur',
         isActive: true,
       },
       {
-        name: 'Private Session Pack',
-        description: '3 private sessions (1:1 or 1:2)',
+        name: 'Reformer Private Pack',
+        description: '3 private reformer sessions (1:1 or 1:2)',
         creditsAmount: 3,
-        creditType: 'private_session',
+        creditType: 'reformer',
         priceCents: 24000, // €240 in cents
         currency: 'eur',
         isActive: true,
@@ -162,11 +162,11 @@ async function seed() {
       {
         name: 'Beginner Mat Pilates',
         description: 'Perfect introduction to Pilates fundamentals on the mat',
-        classType: 'mat', // Group mat class
+        classType: 'mat_group',
         durationMinutes: 45,
         maxCapacity: 12,
         creditCost: 1,
-        creditType: 'mat_group',
+        creditType: 'mat',
         instructorId: instructorRecords[0].id,
         vibeTags: ['beginner-friendly', 'foundational', 'slow-paced'],
         location: 'Studio A',
@@ -174,11 +174,11 @@ async function seed() {
       {
         name: 'Reformer Flow',
         description: 'Dynamic reformer workout for all levels',
-        classType: 'reformer', // Group reformer class
+        classType: 'reformer_group',
         durationMinutes: 55,
         maxCapacity: 6,
-        creditCost: 1,
-        creditType: 'reformer_group',
+        creditCost: 3,
+        creditType: 'reformer',
         instructorId: instructorRecords[1].id,
         vibeTags: ['dynamic', 'full-body', 'energetic'],
         location: 'Studio B',
@@ -186,11 +186,11 @@ async function seed() {
       {
         name: 'Advanced Mat Challenge',
         description: 'Intense core-focused mat workout',
-        classType: 'mat', // Group mat class
+        classType: 'mat_group',
         durationMinutes: 60,
         maxCapacity: 10,
         creditCost: 1,
-        creditType: 'mat_group',
+        creditType: 'mat',
         instructorId: instructorRecords[1].id,
         vibeTags: ['intense', 'core-focused', 'advanced'],
         location: 'Studio A',
@@ -198,23 +198,23 @@ async function seed() {
       {
         name: 'Prenatal Mat Pilates',
         description: 'Safe and effective mat workout for expecting mothers',
-        classType: 'mat', // Group mat class
+        classType: 'mat_group',
         durationMinutes: 50,
         maxCapacity: 8,
         creditCost: 1,
-        creditType: 'mat_group',
+        creditType: 'mat',
         instructorId: instructorRecords[0].id,
         vibeTags: ['gentle', 'prenatal', 'supportive'],
         location: 'Studio C',
       },
       {
-        name: 'Private Session (1:1 or 1:2)',
-        description: 'Personalized private Pilates session - book as 1:1 or bring a partner (1:2)',
-        classType: 'private',
+        name: 'Reformer Private (1:1 or 1:2)',
+        description: 'Personalized private reformer session - book as 1:1 or bring a partner (1:2)',
+        classType: 'reformer_private',
         durationMinutes: 60,
-        maxCapacity: 2, // Can be 1:1 or 1:2
-        creditCost: 1,
-        creditType: 'private_session',
+        maxCapacity: 2,
+        creditCost: 5,
+        creditType: 'reformer',
         instructorId: instructorRecords[0].id,
         vibeTags: ['personalized', 'focused', 'flexible'],
         location: 'Private Studio',
@@ -278,22 +278,22 @@ async function seed() {
     await db.insert(creditBalances).values([
       {
         userId: studentUsers[0].id,
-        creditType: 'mat_group',
+        creditType: 'mat',
         balance: 8,
       },
       {
         userId: studentUsers[0].id,
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         balance: 3,
       },
       {
         userId: studentUsers[1].id,
-        creditType: 'mat_group',
+        creditType: 'mat',
         balance: 5,
       },
       {
         userId: studentUsers[2].id,
-        creditType: 'private_session',
+        creditType: 'reformer',
         balance: 2,
       },
     ]);
@@ -308,7 +308,7 @@ async function seed() {
       sessionId: createdSessions[0].id, // Beginner Mat Pilates
       status: 'confirmed',
       creditsSpent: 1,
-      creditType: 'mat_group',
+      creditType: 'mat',
     });
 
     bookingsData.push({
@@ -316,7 +316,7 @@ async function seed() {
       sessionId: createdSessions[2].id, // Advanced Mat Challenge
       status: 'confirmed',
       creditsSpent: 1,
-      creditType: 'mat_group',
+      creditType: 'mat',
     });
 
     // Bob books a reformer class
@@ -324,8 +324,8 @@ async function seed() {
       userId: studentUsers[1].id,
       sessionId: createdSessions[1].id, // Reformer Flow
       status: 'confirmed',
-      creditsSpent: 1,
-      creditType: 'reformer_group',
+      creditsSpent: 3,
+      creditType: 'reformer',
     });
 
     await db.insert(bookings).values(bookingsData);
@@ -339,7 +339,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[0].id, // Mat Starter Pack
         creditsAmount: 5,
-        creditType: 'mat_group',
+        creditType: 'mat',
         priceCents: 7500,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -351,7 +351,7 @@ async function seed() {
         userId: studentUsers[1].id, // Bob
         packageId: createdPackages[1].id, // Mat Regular Pack
         creditsAmount: 10,
-        creditType: 'mat_group',
+        creditType: 'mat',
         priceCents: 14000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -363,7 +363,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[2].id, // Reformer Starter Pack
         creditsAmount: 5,
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         priceCents: 10000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -375,7 +375,7 @@ async function seed() {
         userId: studentUsers[2].id, // Carol
         packageId: createdPackages[4].id, // Private Session Pack
         creditsAmount: 3,
-        creditType: 'private_session',
+        creditType: 'reformer',
         priceCents: 24000,
         currency: 'eur',
         paymentMethod: 'stripe',
@@ -386,7 +386,7 @@ async function seed() {
         userId: studentUsers[1].id, // Bob
         packageId: createdPackages[3].id, // Reformer Regular Pack
         creditsAmount: 10,
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         priceCents: 18000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -403,7 +403,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[2].id, // Reformer Starter Pack
         type: 'purchase',
-        creditType: 'reformer_group',
+        creditType: 'reformer',
         amount: 5,
         balanceAfter: 5,
         description: 'Credits from Reformer Starter Pack',

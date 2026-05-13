@@ -21,23 +21,25 @@ import { DATE_PARAM } from './DateScroller';
 type ClassType = ClassSessionCardProps['classType'];
 
 const BLOCK_BG: Record<ClassType, string> = {
-  reformer: 'bg-[#8b5a3c]/10  border-[#c4a88a]/40  text-[#4e2b22]  hover:bg-[#8b5a3c]/20',
-  mat:      'bg-[#6b8e6b]/10 border-[#6b8e6b]/30 text-[#4a7c4a] hover:bg-[#6b8e6b]/20',
-  private:  'bg-[#4e2b22]/10 border-[#4e2b22]/20 text-[#4e2b22] hover:bg-[#4e2b22]/15',
-  duo:      'bg-[#7c6b8e]/10 border-[#7c6b8e]/30 text-[#4a3d6b] hover:bg-[#7c6b8e]/20',
-  group:    'bg-[#5a8e8b]/10 border-[#5a8e8b]/30 text-[#2e5a58] hover:bg-[#5a8e8b]/20',
-  online:   'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200',
-  sound_healing: 'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea] hover:bg-[#9333ea]/20',
+  reformer_group:   'bg-[#8b5a3c]/10 border-[#c4a88a]/40 text-[#4e2b22] hover:bg-[#8b5a3c]/20',
+  reformer_private: 'bg-[#8b5a3c]/15 border-[#c4a88a]/50 text-[#4e2b22] hover:bg-[#8b5a3c]/25',
+  reformer_duo:     'bg-[#8b5a3c]/10 border-[#c4a88a]/35 text-[#4e2b22] hover:bg-[#8b5a3c]/20',
+  mat_group:        'bg-[#6b8e6b]/10 border-[#6b8e6b]/30 text-[#4a7c4a] hover:bg-[#6b8e6b]/20',
+  mat_private:      'bg-[#6b8e6b]/15 border-[#6b8e6b]/40 text-[#4a7c4a] hover:bg-[#6b8e6b]/25',
+  mat_duo:          'bg-[#6b8e6b]/10 border-[#6b8e6b]/25 text-[#4a7c4a] hover:bg-[#6b8e6b]/20',
+  online:           'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200',
+  sound_healing:    'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea] hover:bg-[#9333ea]/20',
 };
 
 const BLOCK_DOT: Record<ClassType, string> = {
-  reformer: 'bg-[#8b5a3c]',
-  mat:      'bg-[#6b8e6b]',
-  private:  'bg-[#4e2b22]',
-  duo:      'bg-[#7c6b8e]',
-  group:    'bg-[#5a8e8b]',
-  online:   'bg-slate-400',
-  sound_healing: 'bg-[#9333ea]',
+  reformer_group:   'bg-[#8b5a3c]',
+  reformer_private: 'bg-[#8b5a3c]',
+  reformer_duo:     'bg-[#8b5a3c]',
+  mat_group:        'bg-[#6b8e6b]',
+  mat_private:      'bg-[#6b8e6b]',
+  mat_duo:          'bg-[#6b8e6b]',
+  online:           'bg-slate-400',
+  sound_healing:    'bg-[#9333ea]',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,7 +96,7 @@ function SessionBlock({
       {/* Credit cost */}
       <p className="mt-1 text-[10px] opacity-60">
         {session.creditCost}{' '}
-        {session.creditType === 'private_session' ? 'Private' : session.creditType === 'mat_group' ? 'Mat' : 'Reformer'}
+        {session.creditType === 'mat' ? 'Mat' : 'Reformer'}
       </p>
 
       {/* Status badges */}

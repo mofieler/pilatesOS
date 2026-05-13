@@ -46,13 +46,14 @@ type Props = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const CLASS_TYPE_LABEL: Record<string, string> = {
-  private: 'Private',
-  duo: 'Duo',
-  group: 'Group',
-  reformer: 'Reformer',
-  mat: 'Mat',
-  online: 'Online',
-  sound_healing: 'Sound Healing',
+  reformer_group:   'Reformer Group',
+  reformer_private: 'Reformer Private',
+  reformer_duo:     'Reformer Duo',
+  mat_group:        'Mat Group',
+  mat_private:      'Mat Private',
+  mat_duo:          'Mat Duo',
+  online:           'Online',
+  sound_healing:    'Sound Healing',
 };
 
 function todayString() {
@@ -138,11 +139,13 @@ export function CreateSessionDialog({
       if (!duration) return;
       setCheckingConflicts(true);
       try {
+        // Convert local date+time to UTC ISO string — browser applies local tz offset
+        const startsAtISO = new Date(`${date}T${time}:00`).toISOString();
         const result = await checkSlotAvailabilityAction({
           instructorId: resolvedInstructorId ?? undefined,
-          date,
-          time,
+          startsAtISO,
           durationMinutes: duration,
+          tzOffsetMinutes: new Date().getTimezoneOffset(),
         });
         if (result.success) {
           setConflicts(result.data.conflicts);
@@ -169,10 +172,11 @@ export function CreateSessionDialog({
     if (!time) { setError('Please pick a time.'); return; }
 
     startTransition(async () => {
+      // Convert local date+time to UTC ISO string — browser applies local tz offset
+      const startsAtISO = new Date(`${date}T${time}:00`).toISOString();
       const result = await createClassSessionAction({
         templateId,
-        date,
-        time,
+        startsAtISO,
         instructorId: instructorId || null,
       });
 

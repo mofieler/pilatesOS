@@ -3,13 +3,14 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 export const userRoleEnum = pgEnum('user_role', ['student', 'instructor', 'admin']);
 
 export const classTypeEnum = pgEnum('class_type', [
-  'mat',      // Group mat class
-  'reformer', // Group reformer class
-  'private',  // Private session (1:1 or 1:2)
-  'duo',      // Duo session (2 people)
-  'group',    // General group class
-  'online',   // Online/virtual class
-  'sound_healing', // Sound healing session
+  'reformer_group',   // Group class on the reformer
+  'reformer_private', // 1-on-1 private reformer session
+  'reformer_duo',     // 2-person reformer session
+  'mat_group',        // Group mat Pilates class
+  'mat_private',      // 1-on-1 private mat session
+  'mat_duo',          // 2-person mat session
+  'online',           // Virtual / online class
+  'sound_healing',    // Sound healing session
 ]);
 
 export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);
@@ -38,13 +39,8 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 ]);
 
 export const creditTypeEnum = pgEnum('credit_type', [
-  'mat_group', 
-  'reformer_group', 
-  'private_session',
-  'duo_group',
-  'general_group',
-  'online_class',
-  'sound_healing'
+  'reformer', // debited for any reformer_* class type
+  'mat',      // debited for mat_*, online, and sound_healing class types
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [

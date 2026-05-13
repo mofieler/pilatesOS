@@ -24,6 +24,7 @@ import {
   getCreditTypeSelectOptions,
   getClassTypeBadgeStyle,
   getCreditTypeBadgeStyle,
+  getClassTypeLabel,
   getCreditTypeLabel,
   getCreditTypeForClassType,
   type ClassType,
@@ -45,8 +46,8 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', description: '', classType: 'reformer', durationMinutes: '60',
-  maxCapacity: '10', creditCost: '1', creditType: 'reformer_group' as const,
+  name: '', description: '', classType: 'reformer_group', durationMinutes: '60',
+  maxCapacity: '8', creditCost: '3', creditType: 'reformer',
   instructorId: '', location: '', isActive: true,
 };
 
@@ -328,7 +329,7 @@ export function ClassTemplatesManager({
                 </td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getClassTypeBadgeStyle(t.classType)}`}>
-                    {t.classType.charAt(0).toUpperCase() + t.classType.slice(1)}
+                    {getClassTypeLabel(t.classType)}
                   </span>
                 </td>
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.durationMinutes}m</td>

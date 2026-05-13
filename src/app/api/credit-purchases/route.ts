@@ -25,18 +25,24 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { packageId, userId, paymentMethod, acceptedTerms } = body;
+    const { packageId, userId, paymentMethod, acceptedTerms, acceptedWithdrawal } = body;
 
     if (!packageId || !userId || !paymentMethod) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Trust-but-verify: client checkboxes are re-validated server-side so the order
-    // cannot be placed by curl-ing the API. Required for German Button-Lösung
-    // (§ 312j Abs. 3 BGB) and for immediately delivered digital services (§ 356 Abs. 5 BGB).
+    // Trust-but-verify: both consent checkboxes are re-validated server-side.
+    // Required for German Button-Lösung (§ 312j Abs. 3 BGB) and the withdrawal
+    // waiver for immediately delivered digital services (§ 356 Abs. 5 BGB).
     if (acceptedTerms !== true) {
       return NextResponse.json(
-        { error: 'You must accept the AGB before ordering.' },
+        { error: 'You must accept the Terms & Conditions and Privacy Policy before ordering.' },
+        { status: 400 },
+      );
+    }
+    if (acceptedWithdrawal !== true) {
+      return NextResponse.json(
+        { error: 'You must confirm the withdrawal waiver before ordering.' },
         { status: 400 },
       );
     }
@@ -191,8 +197,10 @@ export async function POST(request: Request) {
           userRow.name ?? 'there',
           package_.name,
           package_.creditsAmount,
+          package_.creditType,
           package_.priceCents,
           package_.currency,
+          package_.validityDays,
           invoiceNumber,
           dueDate,
           pdfBuffer,
