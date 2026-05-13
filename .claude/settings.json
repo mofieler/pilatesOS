@@ -29,7 +29,8 @@
       "PowerShell(Test-Path \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"; \\(Get-Item \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"\\).PSIsContainer)",
       "PowerShell(\\(Get-Item \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\\\\src\\\\lib\\\\email\\\\templates\"\\).GetFiles\\(\\) | Select-Object Name)",
       "Bash(npx tsc *)",
-      "Bash(grep -v \"//.*cookie\")"
+      "Bash(grep -v \"//.*cookie\")",
+      "PowerShell(cd \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\"; git add src/app/admin/statistics/ src/modules/statistics/ src/components/shared/PasswordStrengthMeter.tsx src/app/admin/components/AdminNav.tsx src/app/\\(auth\\)/register/page.tsx src/app/\\(auth\\)/reset-password/page.tsx src/modules/users/actions/register.action.ts src/modules/users/actions/reset-password.action.ts)"
     ]
   }
 }
