@@ -5,6 +5,7 @@ import { CalendarDaysIcon, ListIcon } from 'lucide-react';
 import { AdminWeekView, type GCalBlockData } from './AdminWeekView';
 import { SessionsDataTable, type SessionRow } from './SessionsDataTable';
 import { CreateSessionDialog } from './CreateSessionDialog';
+import { SessionDetailModal } from './SessionDetailModal';
 import type { WeekViewSessionData, TemplateOption, InstructorOption } from '@/modules/classes/actions/class.actions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -46,11 +47,15 @@ export function ClassesPageClient({
   const [dialogDate, setDialogDate] = useState<string | undefined>();
   const [dialogTime, setDialogTime] = useState<string | undefined>();
 
+  const [detailSessionId, setDetailSessionId] = useState<string | null>(null);
+
   function openNewClassDialog(date?: string, time?: string) {
     setDialogDate(date);
     setDialogTime(time);
     setDialogOpen(true);
   }
+
+  const detailSession = detailSessionId ? sessions.find((s) => s.id === detailSessionId) : null;
 
   const listRows = sessions.map(toSessionRow);
 
@@ -131,12 +136,27 @@ export function ClassesPageClient({
           sessions={sessions}
           gcalBlocks={gcalBlocks}
           onNewClass={(date) => openNewClassDialog(date)}
-          onViewSession={() => {
-            // TODO: open session detail sheet
-          }}
+          onViewSession={(sessionId) => setDetailSessionId(sessionId)}
         />
       ) : (
         <SessionsDataTable data={listRows} />
+      )}
+
+      {/* Session detail modal */}
+      {detailSession && (
+        <SessionDetailModal
+          sessionId={detailSession.id}
+          sessionTitle={detailSession.templateName}
+          startsAt={detailSession.startsAt}
+          endsAt={new Date(detailSession.startsAt.getTime() + (detailSession.durationMinutes || 0) * 60000)}
+          instructorName={detailSession.instructorName ?? '—'}
+          bookedCount={detailSession.bookedCount}
+          maxCapacity={detailSession.maxCapacity}
+          open={detailSessionId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDetailSessionId(null);
+          }}
+        />
       )}
     </>
   );
