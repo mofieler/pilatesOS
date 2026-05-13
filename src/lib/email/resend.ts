@@ -390,7 +390,7 @@ export async function sendBookingConfirmationEmail(
   classDate: string,
   classTime: string,
 ): Promise<void> {
-  const link = `${APP_URL}/classes`;
+  const link = `${APP_URL}`;
 
   await getResend().emails.send({
     from: FROM,
@@ -419,7 +419,7 @@ export async function sendBookingCancellationEmail(
   classDate: string,
   refundIssued: boolean,
 ): Promise<void> {
-  const link = `${APP_URL}/classes`;
+  const link = `${APP_URL}`;
 
   const refundNote = refundIssued
     ? 'Your credit has been returned to your account and is available for your next booking.'
@@ -452,7 +452,7 @@ export async function sendClassCancelledByAdminEmail(
   classDate: string,
   reason?: string,
 ): Promise<void> {
-  const link = `${APP_URL}/classes`;
+  const link = `${APP_URL}`;
 
   const reasonNote = reason
     ? `Reason: <em>${reason}</em><br><br>`
@@ -553,7 +553,7 @@ export async function sendWelcomeEmail(
   email: string,
   name: string,
 ): Promise<void> {
-  const link = `${APP_URL}/classes`;
+  const link = `${APP_URL}`;
 
   await getResend().emails.send({
     from: FROM,
