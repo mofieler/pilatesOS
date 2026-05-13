@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { resetPasswordAction } from '@/modules/users/actions/reset-password.action';
+import { PasswordStrengthMeter, getPasswordStrength } from '@/components/shared/PasswordStrengthMeter';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -115,7 +116,7 @@ function ResetPasswordForm() {
               {showPassword ? <EyeSlashIcon className="size-5" /> : <EyeIcon className="size-5" />}
             </button>
           </div>
-          <p className="text-xs text-[#8b6b5c] mt-1">At least 8 characters</p>
+          <PasswordStrengthMeter password={password} />
         </div>
 
         <div>
@@ -146,7 +147,12 @@ function ResetPasswordForm() {
 
         {error && <p className="text-sm text-[#c45c4a] bg-[#c45c4a]/10 p-3 rounded-xl">{error}</p>}
 
-        <Button type="submit" variant="boutique" className="w-full" disabled={loading}>
+        <Button
+          type="submit"
+          variant="boutique"
+          className="w-full"
+          disabled={loading || !getPasswordStrength(password).isValid}
+        >
           {loading ? 'Resetting…' : 'Reset password'}
         </Button>
       </form>

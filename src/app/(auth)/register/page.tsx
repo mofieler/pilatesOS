@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { registerAction } from '@/modules/users/actions/register.action';
 import { TurnstileWidget } from '@/components/security/turnstile-widget';
+import { PasswordStrengthMeter, getPasswordStrength } from '@/components/shared/PasswordStrengthMeter';
 
 const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -141,7 +142,7 @@ export default function RegisterPage() {
                   : <EyeIcon className="size-5" />}
               </button>
             </div>
-            <p className="text-xs text-[#8b6b5c] mt-1">At least 8 characters</p>
+            <PasswordStrengthMeter password={formData.password} />
           </div>
 
           <div>
@@ -177,7 +178,12 @@ export default function RegisterPage() {
             <p className="text-sm text-[#c45c4a] bg-[#c45c4a]/10 p-3 rounded-xl">{error}</p>
           )}
 
-          <Button type="submit" variant="boutique" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            variant="boutique"
+            className="w-full"
+            disabled={loading || !getPasswordStrength(formData.password).isValid}
+          >
             {loading ? 'Creating account…' : 'Create account'}
           </Button>
         </form>

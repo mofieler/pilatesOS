@@ -15,7 +15,11 @@ import { sendVerificationEmail } from '@/lib/email/resend';
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(255),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(255),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(255)
+    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
   turnstileToken: z.string().nullable().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
