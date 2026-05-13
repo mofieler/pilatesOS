@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} h-full antialiased`}
+      className={`${outfit.variable} h-full antialiased [scrollbar-gutter:stable]`}
     >
       <body className="min-h-full flex flex-col font-outfit">
         <Providers>

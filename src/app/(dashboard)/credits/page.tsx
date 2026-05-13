@@ -352,7 +352,7 @@ export default function CreditsPage() {
       {/* Header with Tabs */}
       <div>
         <p className="text-sm font-medium text-[#6b3d32]">Credit Management</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#4e2b22]">
+        <h1 className="mt-1 text-3xl font-bold text-[#4e2b22]">
           {isBillsTab ? 'Bills & History' : 'Buy Class Credits'}
         </h1>
         <p className="mt-2 text-sm text-[#6b3d32]">

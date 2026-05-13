@@ -16,6 +16,86 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { ClassSessionCardProps } from './ClassSessionCard';
 import { DATE_PARAM } from './DateScroller';
 
+// ─── Week header nav (used in sticky header of BookingCalendar) ───────────────
+
+function WeekNavInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedDate = parseDateParam(searchParams.get(DATE_PARAM));
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const isCurrentWeek = isThisWeek(weekStart, { weekStartsOn: 1 });
+
+  function navigate(weeks: -1 | 1) {
+    const newDate = addDays(weekStart, weeks * 7);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(DATE_PARAM, format(newDate, 'yyyy-MM-dd'));
+    router.push(`?${params.toString()}`, { scroll: false });
+  }
+
+  function jumpToToday() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(DATE_PARAM, format(startOfToday(), 'yyyy-MM-dd'));
+    router.push(`?${params.toString()}`, { scroll: false });
+  }
+
+  return (
+    <div className="flex items-center gap-1 py-1">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        aria-label="Previous week"
+        className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
+      >
+        <ChevronLeftIcon className="size-3.5" />
+      </button>
+
+      <div className="flex flex-col items-center flex-1 gap-0.5 min-w-0">
+        <span className="text-sm font-semibold text-[#4e2b22] tabular-nums whitespace-nowrap">
+          {format(weekStart, 'd MMM')}
+          {' – '}
+          {format(addDays(weekStart, 6), 'd MMM yyyy')}
+        </span>
+        {!isCurrentWeek && (
+          <button
+            type="button"
+            onClick={jumpToToday}
+            className="text-[11px] font-semibold text-[#6b8e6b] hover:text-[#4a7c4a] transition-colors underline underline-offset-2"
+          >
+            Jump to today
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => navigate(1)}
+        aria-label="Next week"
+        className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
+      >
+        <ChevronRightIcon className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function WeekNavSkeleton() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      <div className="size-8 animate-pulse rounded-xl bg-[#ede8e5]/60" />
+      <div className="flex-1 h-4 animate-pulse rounded-lg bg-[#ede8e5]/60 mx-4" />
+      <div className="size-8 animate-pulse rounded-xl bg-[#ede8e5]/60" />
+    </div>
+  );
+}
+
+export function WeekNav() {
+  return (
+    <Suspense fallback={<WeekNavSkeleton />}>
+      <WeekNavInner />
+    </Suspense>
+  );
+}
+
 // ─── Colour map ───────────────────────────────────────────────────────────────
 
 type ClassType = ClassSessionCardProps['classType'];
@@ -40,6 +120,17 @@ const BLOCK_DOT: Record<ClassType, string> = {
   mat_duo:          'bg-[#6b8e6b]',
   online:           'bg-slate-400',
   sound_healing:    'bg-[#9333ea]',
+};
+
+const CLASS_TYPE_LABEL: Record<ClassType, string> = {
+  reformer_group:   'Reformer Group',
+  reformer_private: 'Reformer Private',
+  reformer_duo:     'Reformer Duo',
+  mat_group:        'Mat Group',
+  mat_private:      'Mat Private',
+  mat_duo:          'Mat Duo',
+  online:           'Online',
+  sound_healing:    'Sound Healing',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,12 +215,12 @@ function WeekViewInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // router used for selectDay navigation
   const selectedDate = parseDateParam(searchParams.get(DATE_PARAM));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const isCurrentWeek = isThisWeek(weekStart, { weekStartsOn: 1 });
 
   // Auto-scroll: center today if visible, otherwise scroll to start
   useEffect(() => {
@@ -144,19 +235,6 @@ function WeekViewInner({
     }
   }, [weekStart]);
 
-  function navigate(weeks: -1 | 1) {
-    const newDate = addDays(weekStart, weeks * 7);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set(DATE_PARAM, format(newDate, 'yyyy-MM-dd'));
-    router.push(`?${params.toString()}`, { scroll: false });
-  }
-
-  function jumpToToday() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set(DATE_PARAM, format(startOfToday(), 'yyyy-MM-dd'));
-    router.push(`?${params.toString()}`, { scroll: false });
-  }
-
   function selectDay(day: Date) {
     const params = new URLSearchParams(searchParams.toString());
     params.set(DATE_PARAM, format(day, 'yyyy-MM-dd'));
@@ -165,44 +243,6 @@ function WeekViewInner({
 
   return (
     <div>
-      {/* Week navigation */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          aria-label="Previous week"
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm active:scale-95"
-        >
-          <ChevronLeftIcon className="size-4" />
-        </button>
-
-        <div className="flex flex-col items-center gap-1 min-w-0">
-          <span className="text-sm font-semibold text-[#4e2b22] tabular-nums whitespace-nowrap">
-            {format(weekStart, 'd MMM')}
-            {' – '}
-            {format(addDays(weekStart, 6), 'd MMM yyyy')}
-          </span>
-          {!isCurrentWeek && (
-            <button
-              type="button"
-              onClick={jumpToToday}
-              className="text-[11px] font-semibold text-[#6b8e6b] hover:text-[#4a7c4a] transition-colors underline underline-offset-2"
-            >
-              Jump to today
-            </button>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => navigate(1)}
-          aria-label="Next week"
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] hover:shadow-sm active:scale-95"
-        >
-          <ChevronRightIcon className="size-4" />
-        </button>
-      </div>
-
       {/* 7-column grid — horizontally scrollable, no visible scrollbar */}
       <div className="relative">
         {/* Left fade hint */}
@@ -292,7 +332,7 @@ function WeekViewInner({
         {(Object.entries(BLOCK_DOT) as [ClassType, string][]).map(([type, dot]) => (
           <span key={type} className="flex items-center gap-1.5 text-[11px] font-medium text-[#8b6b5c]">
             <span className={`size-2 rounded-full ${dot}`} />
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {CLASS_TYPE_LABEL[type]}
           </span>
         ))}
       </div>

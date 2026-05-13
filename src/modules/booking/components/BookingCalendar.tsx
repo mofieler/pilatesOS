@@ -7,7 +7,7 @@ import { CalendarDaysIcon, CalendarX2Icon, LayoutListIcon } from 'lucide-react';
 import { DateScroller, DATE_PARAM } from './DateScroller';
 import { ClassSessionCard, type ClassSessionCardProps } from './ClassSessionCard';
 import { BookingConfirmModal } from './BookingConfirmModal';
-import { WeekView } from './WeekView';
+import { WeekView, WeekNav } from './WeekView';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,12 +160,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
       <div className="sticky top-0 z-10 -mx-6 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 px-4 pb-3 pt-3 shadow-[0_4px_14px_rgba(78,43,34,0.04)] backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1 overflow-hidden">
-            {view === 'list' ? (
-              <DateScroller />
-            ) : (
-              /* placeholder keeps the header height consistent */
-              <div className="h-11" />
-            )}
+            {view === 'list' ? <DateScroller /> : <WeekNav />}
           </div>
           <ViewToggle view={view} onChange={setView} />
         </div>
