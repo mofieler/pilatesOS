@@ -1,17 +1,14 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  *
- * Credit model:
- *   Only TWO credit currencies exist: 'reformer' and 'mat'.
- *   The class type encodes BOTH the equipment (reformer / mat) and the
- *   format (group / private / duo).  The credit AMOUNT is set freely per
- *   template by the admin.
- *
- *   Examples:
- *     reformer_private  →  reformer credits, admin sets 5 credits
- *     reformer_group    →  reformer credits, admin sets 3 credits
- *     mat_private       →  mat credits, admin sets 5 credits
- *     mat_group         →  mat credits, admin sets 3 credits
+ * Credit model — THREE credit currencies:
+ *   'reformer'  Bloom / Return to Life packages, reformer membership.
+ *               Accepted only for: reformer_group classes.
+ *   'mat'       Mat membership.
+ *               Accepted only for: mat_group classes.
+ *   'group'     Essence / Empower packages (flexible).
+ *               Accepted for: reformer_group AND mat_group.
+ *               Booking service tries the primary type first; falls back to 'group'.
  */
 
 // ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
@@ -26,7 +23,7 @@ export type ClassType =
   | 'online'
   | 'sound_healing';
 
-export type CreditType = 'reformer' | 'mat';
+export type CreditType = 'reformer' | 'mat' | 'group';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -120,14 +117,20 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
   reformer: {
     value: 'reformer',
     label: 'Reformer Credits',
-    description: 'Credits used for any reformer-based class',
+    description: 'For reformer group classes only (Bloom, Return to Life packages)',
     badgeStyle: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
   },
   mat: {
     value: 'mat',
     label: 'Mat Credits',
-    description: 'Credits used for mat classes, online and sound healing',
+    description: 'For mat group classes only (mat membership)',
     badgeStyle: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
+  },
+  group: {
+    value: 'group',
+    label: 'Group Credits',
+    description: 'Flexible — accepted for any group class, mat or reformer (Essence, Empower packages)',
+    badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
   },
 } as const;
 
@@ -201,11 +204,13 @@ export function isCreditType(value: unknown): value is CreditType {
 export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
   reformer: 'Reformer Credits',
   mat: 'Mat Credits',
+  group: 'Group Credits',
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
   reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
   mat: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
+  group: 'bg-[#c4a88a]/20 text-[#4e2b22]',
 };
 
 export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useTransition } from 'react';
 import { format } from 'date-fns';
@@ -18,23 +18,25 @@ import { createBookingAction } from '@/modules/booking/actions/createBooking.act
 import type { ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import type { ClassSessionCardProps } from './ClassSessionCard';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface BookingConfirmModalProps {
   session: ClassSessionCardProps | null;
   onClose: () => void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   mat:      'bg-[#8b6b5c]',
+  group:    'bg-[#c4a88a]',
   reformer: 'bg-[#6b8e6b]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   mat:      'Mat Credit',
   reformer: 'Reformer Credit',
+  group:    'Group Credit',
 };
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {
@@ -46,7 +48,7 @@ function errorHint(code: ServiceErrorCode | undefined): string | undefined {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function BookingConfirmModal({ session, onClose }: BookingConfirmModalProps) {
   const [isPending, startTransition] = useTransition();
@@ -94,7 +96,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
                 <span>
                   {format(session.startsAt, 'EEEE, d MMMM')} at{' '}
                   {format(session.startsAt, 'HH:mm')}
-                  {' · '}
+                  {' Â· '}
                   {session.durationMinutes} min
                 </span>
               </div>
@@ -133,7 +135,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
                 {isPending ? (
                   <span className="flex items-center gap-2">
                     <Loader2Icon className="size-4 animate-spin" aria-hidden />
-                    Booking…
+                    Bookingâ€¦
                   </span>
                 ) : (
                   'Confirm Booking'

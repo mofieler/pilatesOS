@@ -1,9 +1,9 @@
-import { differenceInHours } from 'date-fns';
+﻿import { differenceInHours } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
 import { AlertTriangleIcon, HeartHandshakeIcon, ShieldCheckIcon } from 'lucide-react';
 
-// ─── Policy resolver ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Policy resolver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type CancellationPolicyState = 'free' | 'mercy' | 'loss';
 
@@ -31,7 +31,7 @@ export function resolveCancellationPolicy(
   return { state: 'loss', hoursUntilStart, willReceiveRefund: false };
 }
 
-// ─── Banner ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const VARIANTS = {
   free: {
@@ -54,7 +54,7 @@ const VARIANTS = {
     icon: AlertTriangleIcon,
     container: 'border-red-200 bg-red-50',
     iconColor: 'text-red-600',
-    title: 'Late cancellation — credits will not be refunded',
+    title: 'Late cancellation â€” credits will not be refunded',
     titleColor: 'text-red-800',
     descColor: 'text-red-700',
   },
@@ -64,7 +64,7 @@ export type CancellationPolicyBannerProps = {
   startsAt: Date;
   mercyAvailable: boolean;
   creditsAtStake: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group';
 };
 
 export function CancellationPolicyBanner({
@@ -84,7 +84,7 @@ export function CancellationPolicyBanner({
   if (policy.state === 'free') {
     description = `You're outside the 24-hour window (${policy.hoursUntilStart}h remaining). You'll receive a full refund of ${creditLabel}.`;
   } else if (policy.state === 'mercy') {
-    description = `You're within the 24-hour window, but as a one-time courtesy your grace period will be applied — you'll receive a full refund of ${creditLabel}. This grace can only be used once per account.`;
+    description = `You're within the 24-hour window, but as a one-time courtesy your grace period will be applied â€” you'll receive a full refund of ${creditLabel}. This grace can only be used once per account.`;
   } else {
     description = `You're within the 24-hour window and your one-time grace period has already been used. ${creditLabel} will be forfeited.`;
   }

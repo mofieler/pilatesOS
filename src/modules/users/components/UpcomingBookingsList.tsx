@@ -1,8 +1,8 @@
-import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
+﻿import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
 import { CalendarCheckIcon, ClockIcon, MapPinIcon, ShieldCheckIcon } from 'lucide-react';
 import { CancelBookingButton } from './CancelBookingButton';
 
-// ─── List-level props ─────────────────────────────────────────────────────────
+// â”€â”€â”€ List-level props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type UpcomingBookingsListProps = {
   bookings: UpcomingBooking[];
@@ -10,12 +10,12 @@ export type UpcomingBookingsListProps = {
   mercyAvailable: boolean;
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type UpcomingBooking = {
   bookingId: string;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group';
   name: string;
   classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'online' | 'sound_healing';
   startsAt: Date;
@@ -25,7 +25,7 @@ export type UpcomingBooking = {
   instructorAvatarUrl: string | null;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
   reformer_group:   'Reformer Group',
@@ -41,6 +41,7 @@ const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
 const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {
   mat:      'bg-[#6b8e6b]',
   reformer: 'bg-[#8b5a3c]',
+  group:    'bg-[#c4a88a]',
 };
 
 function dateLabel(date: Date): string {
@@ -87,7 +88,7 @@ function InstructorAvatar({
   );
 }
 
-// ─── Single booking row ───────────────────────────────────────────────────────
+// â”€â”€â”€ Single booking row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BookingRow({
   booking,
@@ -134,8 +135,8 @@ function BookingRow({
             <span className="inline-flex items-center gap-1.5 rounded-md bg-[#ede8e5]/40 px-2 py-1">
               <ClockIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="font-medium text-[#6b3d32]">{dateLabel(booking.startsAt)}</span>
-              <span>· {format(booking.startsAt, 'HH:mm')}</span>
-              <span>· {booking.durationMinutes} min</span>
+              <span>Â· {format(booking.startsAt, 'HH:mm')}</span>
+              <span>Â· {booking.durationMinutes} min</span>
             </span>
             {booking.location && (
               <span className="inline-flex items-center gap-1">
@@ -182,7 +183,7 @@ function BookingRow({
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EmptyBookings() {
   return (
@@ -196,7 +197,7 @@ function EmptyBookings() {
   );
 }
 
-// ─── Public component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Public component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function UpcomingBookingsList({ bookings, mercyAvailable }: UpcomingBookingsListProps) {
   if (bookings.length === 0) return <EmptyBookings />;

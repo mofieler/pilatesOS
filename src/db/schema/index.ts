@@ -22,7 +22,7 @@ import type { instructors } from './instructors.schema';
 import type { classTemplates, classSessions } from './classes.schema';
 import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
-import type { creditPackages, creditBalances, creditTransactions, creditPurchases, creditAdjustments } from './credits.schema';
+import type { creditPackages, creditBalances, creditTransactions, creditPurchases, creditAdjustments, membershipPlans, userMemberships } from './credits.schema';
 import type { calendarConnections, externalCalendarBlocks } from './calendar.schema';
 import type {
   userRoleEnum,
@@ -89,6 +89,11 @@ export type NewCreditPurchase = InferInsertModel<typeof creditPurchases>;
 export type CreditAdjustment = InferSelectModel<typeof creditAdjustments>;
 export type NewCreditAdjustment = InferInsertModel<typeof creditAdjustments>;
 
+export type MembershipPlan = InferSelectModel<typeof membershipPlans>;
+export type NewMembershipPlan = InferInsertModel<typeof membershipPlans>;
+
+export type UserMembership = InferSelectModel<typeof userMemberships>;
+export type NewUserMembership = InferInsertModel<typeof userMemberships>;
 
 // Calendar
 export type CalendarConnection = InferSelectModel<typeof calendarConnections>;

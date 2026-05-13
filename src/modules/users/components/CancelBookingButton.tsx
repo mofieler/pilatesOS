@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useTransition } from 'react';
 import { format } from 'date-fns';
@@ -21,18 +21,18 @@ import {
   resolveCancellationPolicy,
 } from '@/modules/booking/components/CancellationPolicyBanner';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type CancelBookingButtonProps = {
   bookingId: string;
   className: string;
   startsAt: Date;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group';
   mercyAvailable: boolean;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function CancelBookingButton({
   bookingId,
@@ -134,7 +134,7 @@ export function CancelBookingButton({
             {isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2Icon className="size-4 animate-spin" aria-hidden />
-                Cancelling…
+                Cancellingâ€¦
               </span>
             ) : isLossState ? (
               'Cancel & forfeit credits'

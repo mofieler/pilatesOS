@@ -39,8 +39,9 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 ]);
 
 export const creditTypeEnum = pgEnum('credit_type', [
-  'reformer', // debited for any reformer_* class type
-  'mat',      // debited for mat_*, online, and sound_healing class types
+  'reformer', // debited for reformer_group classes; from Bloom / Return to Life packages + reformer membership
+  'mat',      // debited for mat_group classes; from mat membership
+  'group',    // flexible — debited for either reformer_group or mat_group; from Essence / Empower packages
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [

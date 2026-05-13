@@ -173,6 +173,72 @@ export const creditPurchases = pgTable(
   }),
 );
 
+// Membership plans — admin-defined recurring credit grants (weekly cadence).
+// Admin sets weekly_credits + duration_weeks. The cron job reads user_memberships
+// and tops up each member's balance every 7 days until ends_at.
+export const membershipPlans = pgTable(
+  'membership_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    creditType: creditTypeEnum('credit_type').notNull(),
+    weeklyCredits: integer('weekly_credits').notNull(),
+    durationWeeks: integer('duration_weeks').notNull(),
+    priceCents: integer('price_cents').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull().default('eur'),
+    isActive: boolean('is_active').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    isActiveIdx: index('membership_plans_is_active_idx').on(table.isActive),
+    creditTypeIdx: index('membership_plans_credit_type_idx').on(table.creditType),
+  }),
+);
+
+// Active user memberships — one row per active subscription.
+// The weekly grant cron reads next_credit_grant_at to know when to top up.
+export const userMemberships = pgTable(
+  'user_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // [FIX-3] RESTRICT — membership is a financial record.
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => membershipPlans.id, { onDelete: 'restrict' }),
+    creditType: creditTypeEnum('credit_type').notNull(),
+    weeklyCredits: integer('weekly_credits').notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'date' }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true, mode: 'date' }).notNull(),
+    // 'active' | 'paused' | 'cancelled' | 'expired'
+    status: varchar('status', { length: 20 }).notNull().default('active'),
+    lastCreditGrantAt: timestamp('last_credit_grant_at', { withTimezone: true, mode: 'date' }),
+    nextCreditGrantAt: timestamp('next_credit_grant_at', { withTimezone: true, mode: 'date' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    userIdIdx: index('user_memberships_user_id_idx').on(table.userId),
+    planIdIdx: index('user_memberships_plan_id_idx').on(table.planId),
+    // Cron sweep: WHERE status = 'active' AND next_credit_grant_at <= NOW()
+    grantSweepIdx: index('user_memberships_grant_sweep_idx').on(
+      table.status,
+      table.nextCreditGrantAt,
+    ),
+  }),
+);
+
 // Manual credit adjustments — §147 AO audit trail for all admin-initiated changes.
 // Records are immutable once written (never update, only insert).
 export const creditAdjustments = pgTable(

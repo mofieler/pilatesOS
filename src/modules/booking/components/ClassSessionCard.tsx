@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ClassSessionCardProps = {
   id: string;
@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'reformer' | 'mat';
+  creditType: 'reformer' | 'mat' | 'group';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -35,7 +35,7 @@ export type ClassSessionCardProps = {
 
 type CardState = 'available' | 'nearly-full' | 'full' | 'cancelled' | 'booked-by-user';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function deriveState({
   status,
@@ -76,14 +76,16 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   reformer: 'bg-[#6b8e6b]',
   mat:      'bg-[#8b6b5c]',
+  group:    'bg-[#c4a88a]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   reformer: 'Reformer Credit',
   mat:      'Mat Credit',
+  group:    'Group Credit',
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function InstructorAvatar({
   name,
@@ -178,7 +180,7 @@ function StatusBadge({ state, isBookedByUser }: { state: CardState; isBookedByUs
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ClassSessionCard(props: ClassSessionCardProps) {
   const {
@@ -243,7 +245,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
       )}
       title={isBlocked ? blockReason ?? 'Instructor unavailable' : undefined}
     >
-      {/* ── Top row: class type + state badge ── */}
+      {/* â”€â”€ Top row: class type + state badge â”€â”€ */}
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex size-6 items-center justify-center rounded-md bg-[#ede8e5]/60 text-[9px] font-bold uppercase tracking-wide text-[#6b3d32]" aria-hidden>
@@ -260,10 +262,10 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         <StatusBadge state={state} isBookedByUser={isBookedByUser} />
       </div>
 
-      {/* ── Class name ── */}
+      {/* â”€â”€ Class name â”€â”€ */}
       <h3 className="mb-3 text-lg font-semibold leading-snug text-primary">{name}</h3>
 
-      {/* ── Instructor ── */}
+      {/* â”€â”€ Instructor â”€â”€ */}
       <div className="mb-4 flex items-center gap-3">
         <InstructorAvatar name={instructorName} avatarUrl={instructorAvatarUrl} />
         <div className="flex flex-col">
@@ -272,12 +274,12 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         </div>
       </div>
 
-      {/* ── Meta: time · duration · location ── */}
+      {/* â”€â”€ Meta: time Â· duration Â· location â”€â”€ */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary">
         <span className="inline-flex items-center gap-1.5 rounded-lg bg-cream/50 px-2.5 py-1">
           <ClockIcon className="size-4 shrink-0 text-muted" aria-hidden />
           <span className="font-medium text-primary">{format(startsAt, 'HH:mm')}</span>
-          <span className="text-muted">· {durationMinutes} min</span>
+          <span className="text-muted">Â· {durationMinutes} min</span>
         </span>
         {location && (
           <span className="inline-flex items-center gap-1.5 text-muted">
@@ -287,7 +289,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         )}
       </div>
 
-      {/* ── Vibe tags ── */}
+      {/* â”€â”€ Vibe tags â”€â”€ */}
       {vibeTags.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {vibeTags.map((tag) => (
@@ -301,7 +303,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         </div>
       )}
 
-      {/* ── Spot availability ── */}
+      {/* â”€â”€ Spot availability â”€â”€ */}
       <div className="mb-5">
         <div className="mb-2 flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 text-xs text-muted">
@@ -315,7 +317,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         <SpotBar fillPercent={fillPercent} barColor={barColor} />
       </div>
 
-      {/* ── Footer: credit cost + CTA ── */}
+      {/* â”€â”€ Footer: credit cost + CTA â”€â”€ */}
       <div className="mt-auto flex items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-1.5 backdrop-blur-sm">
           <span className={cn("size-2.5 rounded-full", CREDIT_DOT[creditType])} />

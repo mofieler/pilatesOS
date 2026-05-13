@@ -468,8 +468,8 @@ export async function deleteClassSessionAction(
 
   if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
 
-  if (session.status !== 'cancelled' && session.bookedCount > 0) {
-    return { success: false, error: 'Only cancelled sessions or sessions with no bookings can be deleted.', code: 'INVALID_STATE' };
+  if (session.status !== 'cancelled') {
+    return { success: false, error: 'Only cancelled sessions can be deleted.', code: 'INVALID_STATE' };
   }
 
   // Snapshot the GCal IDs BEFORE deleting — we need them to remove the event in Google.
@@ -478,7 +478,13 @@ export async function deleteClassSessionAction(
   const instructorId = session.instructorId;
 
   try {
-    await db.delete(classSessions).where(eq(classSessions.id, parsed.data.id));
+    // The bookings FK is RESTRICT — delete all cancelled bookings for this session first,
+    // then delete the session. Credit transactions already captured the full audit trail.
+    await db.transaction(async (tx) => {
+      await tx.delete(bookings)
+        .where(and(eq(bookings.sessionId, parsed.data.id), eq(bookings.status, 'cancelled')));
+      await tx.delete(classSessions).where(eq(classSessions.id, parsed.data.id));
+    });
     revalidatePath('/admin/classes');
 
     // Fire-and-forget GCal cleanup — delete the mirror event if one existed.

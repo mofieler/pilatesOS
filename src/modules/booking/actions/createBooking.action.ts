@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { db } from '@/db';
-import { bookings, classSessions, classTemplates, users } from '@/db/schema';
+import { bookings, classSessions, classTemplates, creditBalances, users } from '@/db/schema';
 import type { Booking } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -83,6 +83,10 @@ export async function createBookingAction(
         throw new BookingError('This class is no longer available for booking.', 'INVALID_STATE');
       }
 
+      if (classSession.startsAt <= new Date()) {
+        throw new BookingError('This class has already started or passed.', 'INVALID_STATE');
+      }
+
       if (classSession.bookedCount >= classSession.maxCapacity) {
         throw new BookingError('This class is full.', 'CLASS_FULL');
       }
@@ -145,12 +149,48 @@ export async function createBookingAction(
       }
 
       const [template] = await tx
-        .select({ creditCost: classTemplates.creditCost, creditType: classTemplates.creditType })
+        .select({
+          creditCost: classTemplates.creditCost,
+          creditType: classTemplates.creditType,
+          classType: classTemplates.classType,
+        })
         .from(classTemplates)
         .where(eq(classTemplates.id, classSession.templateId))
         .limit(1);
 
       if (!template) throw new BookingError('Class template not found.', 'NOT_FOUND');
+
+      // Group classes (reformer_group, mat_group) also accept 'group' credits as fallback.
+      // Priority: primary type first (e.g. 'reformer'), then 'group' (Essence/Empower packages).
+      const GROUP_FALLBACK_TYPES = new Set(['reformer_group', 'mat_group']);
+      const primaryCreditType = template.creditType;
+      const useFallback =
+        GROUP_FALLBACK_TYPES.has(template.classType) && primaryCreditType !== 'group';
+
+      // Determine which credit type to actually debit.
+      // Check primary balance first; if insufficient and fallback applies, use 'group'.
+      let resolvedCreditType = primaryCreditType;
+      if (useFallback) {
+        const [primaryBalance] = await tx
+          .select({ balance: creditBalances.balance, expiresAt: creditBalances.expiresAt })
+          .from(creditBalances)
+          .where(
+            and(
+              eq(creditBalances.userId, userId),
+              eq(creditBalances.creditType, primaryCreditType),
+            ),
+          )
+          .limit(1);
+
+        const primaryAvailable =
+          primaryBalance &&
+          primaryBalance.balance >= template.creditCost &&
+          (!primaryBalance.expiresAt || primaryBalance.expiresAt > new Date());
+
+        if (!primaryAvailable) {
+          resolvedCreditType = 'group';
+        }
+      }
 
       // Insert booking first so the FK from creditTransactions → bookings resolves
       const [newBooking] = await tx
@@ -160,14 +200,14 @@ export async function createBookingAction(
           sessionId,
           status: 'confirmed',
           creditsSpent: template.creditCost,
-          creditType: template.creditType,
+          creditType: resolvedCreditType,
         })
         .returning();
 
       // Debit credits inside the same transaction — throws InsufficientCreditsError on failure
       await creditService.debitInternal(tx, {
         userId,
-        creditType: template.creditType,
+        creditType: resolvedCreditType,
         amount: template.creditCost,
         bookingId: newBooking.id,
         description: `Booking: session ${sessionId}`,
