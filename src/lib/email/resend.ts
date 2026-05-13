@@ -20,6 +20,7 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Pilateq';
 const STUDIO_NAME = process.env.STUDIO_NAME ?? 'Paquita Pilates Studio';
 
 // Brand Colors - matching the app's brown palette
+// Note: Text colors use dark brown for light mode; dark mode CSS will override to white
 const COLORS = {
   primary: '#4e2b22',
   primaryLight: '#6b3d32',
@@ -28,9 +29,9 @@ const COLORS = {
   surface: '#ffffff',
   border: '#ede8e5',
   text: '#4e2b22',
-  textMuted: '#6b3d32',
-  textLight: '#8b6b5c',
-  textLighter: '#a6856f',
+  textMuted: '#4e2b22', // Use primary for better override in dark mode
+  textLight: '#6b3d32',
+  textLighter: '#8b6b5c',
 };
 
 interface EmailTemplateProps {
@@ -56,12 +57,12 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   const { title, greeting, body, actionUrl, actionText, expiryText, footerText } = props;
 
   return `<!DOCTYPE html>
-<html lang="en" style="color-scheme: light; supported-color-schemes: light;">
+<html lang="en" style="color-scheme: light dark;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light">
-  <meta name="supported-color-schemes" content="light">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${title}</title>
   <!--[if mso]>
   <noscript>
@@ -73,9 +74,9 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
   </noscript>
   <![endif]-->
   <style>
-    /* Force light mode — prevents email clients from auto-darkening the branded template */
-    :root { color-scheme: light !important; }
-    html { color-scheme: light !important; }
+    /* Allow both light and dark modes */
+    :root { color-scheme: light dark !important; }
+    html { color-scheme: light dark !important; }
 
     /* Reset styles */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -105,9 +106,10 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       td { width: 100% !important; box-sizing: border-box !important; }
     }
 
-    /* CRITICAL: Dark mode override for email clients that ignore color-scheme:light
-       (Samsung Mail, Outlook for Android, some Gmail clients on dark mode).
-       Forces readable light colors on dark backgrounds with !important everywhere. */
+    /* CRITICAL: Dark mode override for email clients
+       (Samsung Mail, Outlook for Android, Gmail on dark mode).
+       Forces readable light colors on dark backgrounds with !important.
+       Uses attribute selectors to override inline styles. */
     @media (prefers-color-scheme: dark) {
       /* Root and body - universal dark mode */
       html, body,
@@ -137,23 +139,28 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
         width: 100% !important;
       }
 
-      /* All text elements MUST be light colored */
+      /* UNIVERSAL: Override ALL colors to light */
       * { color: #f5f5f5 !important; }
-      p { color: #f5f5f5 !important; }
-      td { color: #f5f5f5 !important; }
-      span { color: #f5f5f5 !important; }
-      li { color: #f5f5f5 !important; }
-      div { color: #f5f5f5 !important; }
 
-      /* Headers - MUST be bright white */
-      h1 { color: #ffffff !important; font-weight: 700 !important; }
-      h2 { color: #ffffff !important; }
-      h3, h4, h5, h6 { color: #ffffff !important; }
+      /* Specific text elements */
+      p, td, span, li, div, label, tr { color: #f5f5f5 !important; }
+
+      /* Override inline color styles - MOST IMPORTANT */
+      [style*="color: #4e2b22"],
+      [style*="color: #6b3d32"],
+      [style*="color: #8b6b5c"],
+      [style*="color: #a6856f"] {
+        color: #f5f5f5 !important;
+      }
+
+      /* Headers - MUST be bright white for readability */
+      h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
       h1.email-title { color: #ffffff !important; font-weight: 700 !important; }
+      h1.title { color: #ffffff !important; font-weight: 700 !important; }
       .email-title { color: #ffffff !important; font-weight: 700 !important; }
       .header-title { color: #ffffff !important; font-weight: 700 !important; }
-      .header-subtitle { color: #d4af9a !important; }
       .title { color: #ffffff !important; font-weight: 700 !important; }
+      .header-subtitle { color: #d4af9a !important; }
 
       /* Links and buttons - ensure excellent contrast */
       a { color: #90b8ff !important; text-decoration: underline !important; }
@@ -162,8 +169,19 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
         background: linear-gradient(135deg, #4e2b22 0%, #6b3d32 100%) !important;
         text-decoration: none !important;
       }
-      .button { color: #ffffff !important; background-color: #4e2b22 !important; }
-      button { color: #ffffff !important; background-color: #4e2b22 !important; }
+      a[style*="color:"] {
+        color: #90b8ff !important;
+      }
+
+      /* Buttons */
+      .button {
+        color: #ffffff !important;
+        background-color: #4e2b22 !important;
+      }
+      button {
+        color: #ffffff !important;
+        background-color: #4e2b22 !important;
+      }
 
       /* Text color utilities */
       .textLight { color: #d9d9d9 !important; }
@@ -173,6 +191,7 @@ function buildBaseTemplate(props: EmailTemplateProps): string {
       /* Borders and dividers */
       .border { border-color: #444 !important; }
       hr { border-color: #444 !important; }
+      [style*="border"] { border-color: #444 !important; }
     }
   </style>
 </head>
