@@ -22,11 +22,10 @@ export const bookings = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
-    // [FIX-3] RESTRICT — bookings must not vanish when a session is deleted.
-    // Use the session cancellation flow (which refunds credits first) instead.
+    // SET NULL — when a cancelled session is hard-deleted, booking records survive
+    // with sessionId = NULL. The credit_transactions table is the authoritative audit trail.
     sessionId: uuid('session_id')
-      .notNull()
-      .references(() => classSessions.id, { onDelete: 'restrict' }),
+      .references(() => classSessions.id, { onDelete: 'set null' }),
     status: bookingStatusEnum('status').notNull().default('confirmed'),
     cancellationType: cancellationTypeEnum('cancellation_type'),
     mercyApplied: boolean('mercy_applied').notNull().default(false),

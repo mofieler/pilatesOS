@@ -1047,14 +1047,14 @@ export async function removeStudentFromSessionAction(
       const [sessionData] = await tx
         .select()
         .from(classSessions)
-        .where(eq(classSessions.id, bookingData.sessionId))
+        .where(eq(classSessions.id, bookingData.sessionId!))
         .limit(1);
 
       if (sessionData) {
         await tx
           .update(classSessions)
           .set({ bookedCount: Math.max(0, sessionData.bookedCount - 1), updatedAt: new Date() })
-          .where(eq(classSessions.id, bookingData.sessionId));
+          .where(eq(classSessions.id, bookingData.sessionId!));
       }
     });
 

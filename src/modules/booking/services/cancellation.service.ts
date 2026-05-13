@@ -100,7 +100,7 @@ export const cancellationService = {
     const [session] = await db
       .select()
       .from(classSessions)
-      .where(eq(classSessions.id, booking.sessionId))
+      .where(eq(classSessions.id, booking.sessionId!))
       .limit(1);
 
     if (!session) {
@@ -231,7 +231,7 @@ export const cancellationService = {
           const { updateAttendeesInDescription } = await import(
             '@/modules/calendar/services/calendar-sync.service'
           );
-          await updateAttendeesInDescription(booking.sessionId);
+          if (booking.sessionId) await updateAttendeesInDescription(booking.sessionId);
         } catch (err) {
           console.warn('[calendar] Cancel GCal sync failed:', err);
         }
