@@ -1,9 +1,9 @@
-import { Users, Dumbbell, Sparkles } from 'lucide-react';
+import { Users, Dumbbell, Sparkles, Music } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreditBalance = {
-  creditType: 'mat' | 'reformer';
+  creditType: 'mat' | 'reformer' | 'group' | 'sound_healing';
   balance: number;
   expiresAt: Date | null;
 };
@@ -28,6 +28,24 @@ const TIER = {
     dot: 'bg-[#8b5a3c]',
     numberColor: 'text-[#6b3d32]',
     gradient: 'from-[#faf8f5] to-[#f5ebe0]',
+  },
+  group: {
+    label: 'Group Credits',
+    icon: Sparkles,
+    pill: 'bg-[#c4a88a]/20 text-[#4e2b22] border-[#c4a88a]/30',
+    ring: 'ring-[#c4a88a]/20',
+    dot: 'bg-[#c4a88a]',
+    numberColor: 'text-[#4e2b22]',
+    gradient: 'from-[#faf8f5] to-[#f5ede0]',
+  },
+  sound_healing: {
+    label: 'Sound Healing',
+    icon: Music,
+    pill: 'bg-purple-100 text-purple-800 border-purple-200',
+    ring: 'ring-purple-200',
+    dot: 'bg-purple-500',
+    numberColor: 'text-purple-700',
+    gradient: 'from-purple-50 to-purple-100/60',
   },
 } as const;
 
@@ -78,15 +96,15 @@ function CreditCard({ balance }: { balance: CreditBalance }) {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer'];
+  const ALL_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group', 'sound_healing'];
 
-  // Ensure all three tiers are always shown, even if balance row doesn't exist yet
+  // Ensure all tiers are always shown, even if balance row doesn't exist yet
   const filled = ALL_TYPES.map(
     (type) => balances.find((b) => b.creditType === type) ?? { creditType: type, balance: 0, expiresAt: null },
   );
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {filled.map((b) => (
         <CreditCard key={b.creditType} balance={b} />
       ))}

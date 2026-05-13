@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 export type ClassSessionCardProps = {
   id: string;
   name: string;
-  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'online' | 'sound_healing';
+  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing';
   startsAt: Date;
   durationMinutes: number;
   instructorName: string;
@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'reformer' | 'mat' | 'group';
+  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -58,6 +58,7 @@ const CLASS_TYPE_LABEL: Record<ClassSessionCardProps['classType'], string> = {
   mat_group:        'Mat Group',
   mat_private:      'Mat Private',
   mat_duo:          'Mat Duo',
+  chair:            'Chair Pilates',
   online:           'Online Class',
   sound_healing:    'Sound Healing',
 };
@@ -69,20 +70,23 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
   mat_group:        'Mat',
   mat_private:      'Mat',
   mat_duo:          'Mat',
+  chair:            'Chr',
   online:           'Web',
-  sound_healing:    'Sound',
+  sound_healing:    'Snd',
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'bg-[#6b8e6b]',
-  mat:      'bg-[#8b6b5c]',
-  group:    'bg-[#c4a88a]',
+  reformer:      'bg-[#6b8e6b]',
+  mat:           'bg-[#8b6b5c]',
+  group:         'bg-[#c4a88a]',
+  sound_healing: 'bg-purple-500',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'Reformer Credit',
-  mat:      'Mat Credit',
-  group:    'Group Credit',
+  reformer:      'Reformer Credit',
+  mat:           'Mat Credit',
+  group:         'Group Credit',
+  sound_healing: 'Sound Healing Credit',
 };
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

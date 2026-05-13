@@ -107,6 +107,7 @@ const BLOCK_BG: Record<ClassType, string> = {
   mat_group:        'bg-[#6b8e6b]/10 border-[#6b8e6b]/30 text-[#4a7c4a] hover:bg-[#6b8e6b]/20',
   mat_private:      'bg-[#6b8e6b]/15 border-[#6b8e6b]/40 text-[#4a7c4a] hover:bg-[#6b8e6b]/25',
   mat_duo:          'bg-[#6b8e6b]/10 border-[#6b8e6b]/25 text-[#4a7c4a] hover:bg-[#6b8e6b]/20',
+  chair:            'bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200',
   online:           'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200',
   sound_healing:    'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea] hover:bg-[#9333ea]/20',
 };
@@ -118,6 +119,7 @@ const BLOCK_DOT: Record<ClassType, string> = {
   mat_group:        'bg-[#6b8e6b]',
   mat_private:      'bg-[#6b8e6b]',
   mat_duo:          'bg-[#6b8e6b]',
+  chair:            'bg-amber-500',
   online:           'bg-slate-400',
   sound_healing:    'bg-[#9333ea]',
 };
@@ -129,6 +131,7 @@ const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   mat_group:        'Mat Group',
   mat_private:      'Mat Private',
   mat_duo:          'Mat Duo',
+  chair:            'Chair Pilates',
   online:           'Online',
   sound_healing:    'Sound Healing',
 };

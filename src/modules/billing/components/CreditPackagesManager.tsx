@@ -31,16 +31,18 @@ type Props = {
   packages: CreditPackage[];
 };
 
-type ClassType = 'mat' | 'reformer';
+type ClassType = 'mat' | 'reformer' | 'group' | 'sound_healing';
 
 // ─── Derivation helpers ──────────────────────────────────────────────────────
 
 function deriveCreditType(_category: CreditPackCategory, classType: ClassType): CreditType {
-  return classType === 'mat' ? 'mat' : 'reformer';
+  return classType as CreditType;
 }
 
 function categoryClassTypeLabel(category: CreditPackCategory, classType: ClassType | null): string {
   if (!classType) return getCreditPackCategoryConfig(category)?.label ?? category;
+  if (classType === 'group') return 'Group Credits';
+  if (classType === 'sound_healing') return 'Sound Healing';
   const equipment = classType === 'mat' ? 'Mat' : 'Reformer';
   return category === 'session' ? `Private ${equipment}` : `${equipment} Group`;
 }
@@ -69,7 +71,7 @@ function fromPackage(p: CreditPackage): FormState {
   // Derive classType for legacy packages that don't have it set
   const inferredClassType: ClassType =
     (p.classType as ClassType | null) ??
-    (p.creditType === 'reformer' ? 'reformer' : 'mat');
+    (p.creditType === 'reformer' ? 'reformer' : p.creditType === 'group' ? 'group' : p.creditType === 'sound_healing' ? 'sound_healing' : 'mat');
 
   return {
     name:          p.name,
@@ -264,6 +266,8 @@ function PackageFormDialog({
               >
                 <option value="mat">Mat</option>
                 <option value="reformer">Reformer</option>
+                {!isSession && <option value="group">Group (flexible)</option>}
+                {!isSession && <option value="sound_healing">Sound Healing</option>}
               </select>
             </div>
           </div>
@@ -416,7 +420,7 @@ export function CreditPackagesManager({ packages }: Props) {
             {packages.map((pkg) => {
               const cat = (pkg.category ?? 'credit') as CreditPackCategory;
               const classType = (pkg.classType as ClassType | null) ??
-                (pkg.creditType === 'reformer' ? 'reformer' : 'mat');
+                (pkg.creditType === 'reformer' ? 'reformer' : pkg.creditType === 'group' ? 'group' : pkg.creditType === 'sound_healing' ? 'sound_healing' : 'mat');
               const cfg = getCreditPackCategoryConfig(cat);
               return (
                 <tr key={pkg.id} className="hover:bg-slate-50">

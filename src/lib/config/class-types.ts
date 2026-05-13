@@ -1,14 +1,16 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  *
- * Credit model — THREE credit currencies:
- *   'reformer'  Bloom / Return to Life packages, reformer membership.
- *               Accepted only for: reformer_group classes.
- *   'mat'       Mat membership.
- *               Accepted only for: mat_group classes.
- *   'group'     Essence / Empower packages (flexible).
- *               Accepted for: reformer_group AND mat_group.
- *               Booking service tries the primary type first; falls back to 'group'.
+ * Credit model — FOUR credit currencies:
+ *   'reformer'      Bloom / Return to Life packages + reformer membership.
+ *                   Accepted for: reformer_group only.
+ *   'mat'           Mat membership.
+ *                   Accepted for: mat_group only.
+ *   'group'         Essence / Empower packages (flexible).
+ *                   Accepted for: reformer_group, mat_group, chair, online.
+ *                   Booking service tries primary type first; falls back to 'group'.
+ *   'sound_healing' Dedicated sound healing packages.
+ *                   Accepted for: sound_healing only.
  */
 
 // ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
@@ -20,10 +22,11 @@ export type ClassType =
   | 'mat_group'
   | 'mat_private'
   | 'mat_duo'
+  | 'chair'
   | 'online'
   | 'sound_healing';
 
-export type CreditType = 'reformer' | 'mat' | 'group';
+export type CreditType = 'reformer' | 'mat' | 'group' | 'sound_healing';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -93,10 +96,18 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
     defaultDuration: 60,
     defaultCapacity: 2,
   },
+  chair: {
+    value: 'chair',
+    label: 'Chair Pilates',
+    description: 'Pilates using a chair — accepts group credits',
+    badgeStyle: 'bg-amber-100 text-amber-800',
+    defaultDuration: 60,
+    defaultCapacity: 8,
+  },
   online: {
     value: 'online',
     label: 'Online Class',
-    description: 'Virtual / online class session',
+    description: 'Virtual / online class — accepts group credits',
     badgeStyle: 'bg-orange-100 text-orange-800',
     defaultDuration: 60,
     defaultCapacity: 20,
@@ -104,10 +115,10 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
   sound_healing: {
     value: 'sound_healing',
     label: 'Sound Healing',
-    description: 'Therapeutic sound healing session',
+    description: 'Therapeutic sound healing session — dedicated credit type',
     badgeStyle: 'bg-purple-100 text-purple-800',
     defaultDuration: 60,
-    defaultCapacity: 1,
+    defaultCapacity: 12,
   },
 } as const;
 
@@ -129,16 +140,25 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
   group: {
     value: 'group',
     label: 'Group Credits',
-    description: 'Flexible — accepted for any group class, mat or reformer (Essence, Empower packages)',
+    description: 'Flexible — accepted for reformer_group, mat_group, chair, online (Essence, Empower)',
     badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
+  },
+  sound_healing: {
+    value: 'sound_healing',
+    label: 'Sound Healing Credits',
+    description: 'Exclusively for sound healing sessions — dedicated packages',
+    badgeStyle: 'bg-purple-100 text-purple-800',
   },
 } as const;
 
 // ─── DERIVED MAPPING ───────────────────────────────────────────────────────────
 
-/** Returns the credit type that a class type consumes. */
+/** Returns the PRIMARY credit type a class template should default to. */
 export function getCreditTypeForClassType(classType: ClassType): CreditType {
-  return classType.startsWith('reformer') ? 'reformer' : 'mat';
+  if (classType === 'sound_healing') return 'sound_healing';
+  if (classType === 'chair' || classType === 'online') return 'group';
+  if (classType.startsWith('reformer')) return 'reformer';
+  return 'mat';
 }
 
 // ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────────────
@@ -202,15 +222,17 @@ export function isCreditType(value: unknown): value is CreditType {
 // ─── LEGACY COMPATIBILITY (used in booking pages / credit package cards) ────────
 
 export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
-  reformer: 'Reformer Credits',
-  mat: 'Mat Credits',
-  group: 'Group Credits',
+  reformer:      'Reformer Credits',
+  mat:           'Mat Credits',
+  group:         'Group Credits',
+  sound_healing: 'Sound Healing Credits',
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
-  reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  mat: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  group: 'bg-[#c4a88a]/20 text-[#4e2b22]',
+  reformer:      'bg-[#8b5a3c]/10 text-[#6b3d32]',
+  mat:           'bg-[#6b8e6b]/10 text-[#4a7c4a]',
+  group:         'bg-[#c4a88a]/20 text-[#4e2b22]',
+  sound_healing: 'bg-purple-100 text-purple-800',
 };
 
 export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

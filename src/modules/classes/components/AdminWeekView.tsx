@@ -25,6 +25,7 @@ const BLOCK_BG: Record<ClassType, string> = {
   mat_group:        'bg-[#6b8e6b]/10 border-[#6b8e6b]/30 text-[#4a7c4a]',
   mat_private:      'bg-[#6b8e6b]/15 border-[#6b8e6b]/40 text-[#4a7c4a]',
   mat_duo:          'bg-[#6b8e6b]/10 border-[#6b8e6b]/25 text-[#4a7c4a]',
+  chair:            'bg-amber-100 border-amber-300 text-amber-800',
   online:           'bg-slate-100 border-slate-200 text-slate-600',
   sound_healing:    'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea]',
 };
@@ -36,6 +37,7 @@ const BLOCK_DOT: Record<ClassType, string> = {
   mat_group:        'bg-[#6b8e6b]',
   mat_private:      'bg-[#6b8e6b]',
   mat_duo:          'bg-[#6b8e6b]',
+  chair:            'bg-amber-500',
   online:           'bg-slate-400',
   sound_healing:    'bg-[#9333ea]',
 };

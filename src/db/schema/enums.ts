@@ -9,8 +9,9 @@ export const classTypeEnum = pgEnum('class_type', [
   'mat_group',        // Group mat Pilates class
   'mat_private',      // 1-on-1 private mat session
   'mat_duo',          // 2-person mat session
-  'online',           // Virtual / online class
-  'sound_healing',    // Sound healing session
+  'chair',            // Chair Pilates — uses group credits
+  'online',           // Virtual / online class — uses group credits
+  'sound_healing',    // Sound healing session — uses sound_healing credits
 ]);
 
 export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);
@@ -39,9 +40,10 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 ]);
 
 export const creditTypeEnum = pgEnum('credit_type', [
-  'reformer', // debited for reformer_group classes; from Bloom / Return to Life packages + reformer membership
-  'mat',      // debited for mat_group classes; from mat membership
-  'group',    // flexible — debited for either reformer_group or mat_group; from Essence / Empower packages
+  'reformer',      // reformer_group only — Bloom / Return to Life packages + reformer membership
+  'mat',           // mat_group only — mat membership
+  'group',         // flexible — reformer_group, mat_group, chair, online — Essence / Empower packages
+  'sound_healing', // sound_healing classes only — dedicated sound healing packages
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [

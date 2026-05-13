@@ -23,10 +23,9 @@ async function requireAdmin() {
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-// classType is the equipment dimension (mat vs reformer).
-// - For category='credit': required — selects mat_group vs reformer_group group classes.
-// - For category='session': required — labels the private-session pack as mat or reformer.
-const classTypeSchema = z.enum(['mat', 'reformer']);
+// classType for credit packages: mat, reformer, group, or sound_healing.
+// For session packages: mat or reformer only.
+const classTypeSchema = z.enum(['mat', 'reformer', 'group', 'sound_healing']);
 
 const createSchema = z.object({
   name:          z.string().min(1, 'Name is required').max(255),

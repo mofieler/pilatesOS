@@ -11,7 +11,7 @@ import { auditHelpers } from '@/lib/security/audit-system';
 
 const adjustSchema = z.object({
   userId:     z.string().uuid(),
-  creditType: z.enum(['mat', 'reformer']),
+  creditType: z.enum(['mat', 'reformer', 'group', 'sound_healing']),
   amountDelta: z.number().int().refine((n) => n !== 0, 'Amount must not be zero'),
   reason:      z.string().min(3).max(500),
   notes:       z.string().max(1000).optional(),
@@ -91,7 +91,6 @@ export async function getUserCreditAdjustmentsAction(userId: string, cursor?: Da
 }
 
 // Manual credit adjustment — adds or removes credits for a user with full audit trail
-// Validates creditType against new enum values: 'mat' and 'reformer'
 export async function adjustUserCreditsAction(input: z.infer<typeof adjustSchema>) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== 'admin') {
