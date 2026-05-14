@@ -91,11 +91,20 @@ function fromPackage(p: CreditPackage): FormState {
 
 // ─── Credit type cards ────────────────────────────────────────────────────────
 
-const COMPATIBLE_CLASS_TYPES: Record<ClassType, string[]> = {
-  reformer:      ['reformer_group', 'reformer_private', 'reformer_duo'],
-  mat:           ['mat_group', 'mat_private', 'mat_duo'],
+// Which class types are booked using each credit type, split by package category.
+// Credit packages → group classes only; session packages → private/duo classes only.
+const CREDIT_CLASS_TYPES: Record<ClassType, string[]> = {
+  reformer:      ['reformer_group'],
+  mat:           ['mat_group'],
   group:         ['reformer_group', 'mat_group', 'chair', 'online'],
   sound_healing: ['sound_healing'],
+};
+
+const SESSION_CLASS_TYPES: Record<ClassType, string[]> = {
+  reformer:      ['reformer_private', 'reformer_duo'],
+  mat:           ['mat_private', 'mat_duo'],
+  group:         [],
+  sound_healing: [],
 };
 
 function CreditTypeCards({
@@ -110,6 +119,8 @@ function CreditTypeCards({
     ? ['reformer', 'mat']
     : ['reformer', 'mat', 'group', 'sound_healing'];
 
+  const compatibleTypes = isSession ? SESSION_CLASS_TYPES : CREDIT_CLASS_TYPES;
+
   return (
     <div className="space-y-1.5">
       <Label className="text-[#6b3d32] font-medium">Credit type *</Label>
@@ -118,6 +129,7 @@ function CreditTypeCards({
           const cfg = CREDIT_TYPES[type as keyof typeof CREDIT_TYPES];
           if (!cfg) return null;
           const active = selected === type;
+          const accepts = compatibleTypes[type];
           return (
             <button
               key={type}
@@ -139,13 +151,18 @@ function CreditTypeCards({
               <span className="text-[11px] leading-snug text-[#6b5047] mt-0.5">
                 {cfg.description}
               </span>
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {COMPATIBLE_CLASS_TYPES[type].map((ct) => (
-                  <span key={ct} className="text-[10px] rounded bg-white/70 border border-[#ede8e5] px-1.5 py-0.5 text-[#8b6b5c] font-mono">
-                    {ct}
-                  </span>
-                ))}
-              </div>
+              {accepts.length > 0 && (
+                <div className="mt-1.5">
+                  <p className="text-[10px] font-medium text-[#a6856f] uppercase tracking-wide mb-1">Accepted for</p>
+                  <div className="flex flex-wrap gap-1">
+                    {accepts.map((ct) => (
+                      <span key={ct} className="text-[10px] rounded bg-white/70 border border-[#ede8e5] px-1.5 py-0.5 text-[#8b6b5c] font-mono">
+                        {ct}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </button>
           );
         })}
