@@ -11,7 +11,8 @@ export const classTypeEnum = pgEnum('class_type', [
   'mat_duo',          // 2-person mat session
   'chair',            // Chair Pilates — uses group credits
   'online',           // Virtual / online class — uses group credits
-  'sound_healing',    // Sound healing session — uses sound_healing credits
+  'sound_healing',    // Sound healing session — uses group credits (no dedicated package)
+  'yoga',             // Yoga class — uses group credits
 ]);
 
 export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);

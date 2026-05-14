@@ -1,16 +1,15 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  *
- * Credit model — FOUR credit currencies:
+ * Credit model — THREE active credit currencies (sound_healing kept for legacy data):
  *   'reformer'      Bloom / Return to Life packages + reformer membership.
  *                   Accepted for: reformer_group only.
  *   'mat'           Mat membership.
  *                   Accepted for: mat_group only.
  *   'group'         Essence / Empower packages (flexible).
- *                   Accepted for: reformer_group, mat_group, chair, online.
+ *                   Accepted for: reformer_group, mat_group, chair, online, yoga, sound_healing.
  *                   Booking service tries primary type first; falls back to 'group'.
- *   'sound_healing' Dedicated sound healing packages.
- *                   Accepted for: sound_healing only.
+ *   'sound_healing' Legacy — no new packages. Sound healing classes now use 'group' credits.
  */
 
 // ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
@@ -24,7 +23,8 @@ export type ClassType =
   | 'mat_duo'
   | 'chair'
   | 'online'
-  | 'sound_healing';
+  | 'sound_healing'
+  | 'yoga';
 
 export type CreditType = 'reformer' | 'mat' | 'group' | 'sound_healing';
 
@@ -115,8 +115,16 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
   sound_healing: {
     value: 'sound_healing',
     label: 'Sound Healing',
-    description: 'Therapeutic sound healing session — dedicated credit type',
+    description: 'Therapeutic sound healing session — uses group credits',
     badgeStyle: 'bg-purple-100 text-purple-800',
+    defaultDuration: 60,
+    defaultCapacity: 12,
+  },
+  yoga: {
+    value: 'yoga',
+    label: 'Yoga',
+    description: 'Yoga class — uses group credits',
+    badgeStyle: 'bg-indigo-100 text-indigo-800',
     defaultDuration: 60,
     defaultCapacity: 12,
   },
@@ -140,13 +148,13 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
   group: {
     value: 'group',
     label: 'Group Credits',
-    description: 'Flexible — accepted for reformer_group, mat_group, chair, online (Essence, Empower)',
+    description: 'Flexible — accepted for reformer_group, mat_group, chair, online, yoga, sound_healing (Essence, Empower)',
     badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
   },
   sound_healing: {
     value: 'sound_healing',
     label: 'Sound Healing Credits',
-    description: 'Exclusively for sound healing sessions — dedicated packages',
+    description: 'Legacy credit type — sound healing classes now use group credits',
     badgeStyle: 'bg-purple-100 text-purple-800',
   },
 } as const;
@@ -155,8 +163,7 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
 
 /** Returns the PRIMARY credit type a class template should default to. */
 export function getCreditTypeForClassType(classType: ClassType): CreditType {
-  if (classType === 'sound_healing') return 'sound_healing';
-  if (classType === 'chair' || classType === 'online') return 'group';
+  if (classType === 'chair' || classType === 'online' || classType === 'yoga' || classType === 'sound_healing') return 'group';
   if (classType.startsWith('reformer')) return 'reformer';
   return 'mat';
 }

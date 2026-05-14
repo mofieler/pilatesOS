@@ -17,7 +17,7 @@ export type UpcomingBooking = {
   creditsSpent: number;
   creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
   name: string;
-  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing';
+  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing' | 'yoga';
   startsAt: Date;
   durationMinutes: number;
   location: string | null;
@@ -37,6 +37,7 @@ const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
   chair:            'Chair Pilates',
   online:           'Online Class',
   sound_healing:    'Sound Healing',
+  yoga:             'Yoga',
 };
 
 const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {

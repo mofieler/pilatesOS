@@ -39,11 +39,12 @@ const PRIVATE_CLASS_TYPES = new Set<ClassType>([
   'reformer_private', 'reformer_duo', 'mat_private', 'mat_duo',
 ]);
 
-const GROUP_ELIGIBLE = new Set<ClassType>(['reformer_group', 'mat_group', 'chair', 'online']);
+const GROUP_ELIGIBLE = new Set<ClassType>(['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing']);
 
 function compatibleCreditTypes(classType: ClassType): CreditType[] {
   if (PRIVATE_CLASS_TYPES.has(classType)) return [];
   const primary = getCreditTypeForClassType(classType);
+  // group-eligible classes accept both their primary type AND group credits as fallback
   return GROUP_ELIGIBLE.has(classType) ? [primary, 'group'] : [primary];
 }
 

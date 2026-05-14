@@ -28,6 +28,7 @@ const BLOCK_BG: Record<ClassType, string> = {
   chair:            'bg-amber-100 border-amber-300 text-amber-800',
   online:           'bg-slate-100 border-slate-200 text-slate-600',
   sound_healing:    'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea]',
+  yoga:             'bg-indigo-50 border-indigo-200 text-indigo-700',
 };
 
 const BLOCK_DOT: Record<ClassType, string> = {
@@ -40,6 +41,7 @@ const BLOCK_DOT: Record<ClassType, string> = {
   chair:            'bg-amber-500',
   online:           'bg-slate-400',
   sound_healing:    'bg-[#9333ea]',
+  yoga:             'bg-indigo-500',
 };
 
 export const ADMIN_WEEK_DATE_PARAM = 'week';

@@ -96,8 +96,8 @@ function fromPackage(p: CreditPackage): FormState {
 const CREDIT_CLASS_TYPES: Record<ClassType, string[]> = {
   reformer:      ['reformer_group'],
   mat:           ['mat_group'],
-  group:         ['reformer_group', 'mat_group', 'chair', 'online'],
-  sound_healing: ['sound_healing'],
+  group:         ['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing'],
+  sound_healing: [],
 };
 
 const SESSION_CLASS_TYPES: Record<ClassType, string[]> = {
@@ -117,7 +117,7 @@ function CreditTypeCards({
 }) {
   const visibleTypes: ClassType[] = isSession
     ? ['reformer', 'mat']
-    : ['reformer', 'mat', 'group', 'sound_healing'];
+    : ['reformer', 'mat', 'group'];
 
   const compatibleTypes = isSession ? SESSION_CLASS_TYPES : CREDIT_CLASS_TYPES;
 
