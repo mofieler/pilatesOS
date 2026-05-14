@@ -31,12 +31,14 @@ const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   mat:      'bg-[#8b6b5c]',
   group:    'bg-[#c4a88a]',
   reformer: 'bg-[#6b8e6b]',
+  session:  'bg-[#4e2b22]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   mat:      'Mat Credit',
   reformer: 'Reformer Credit',
   group:    'Group Credit',
+  session:  'Session Credit',
 };
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {

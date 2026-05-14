@@ -15,7 +15,7 @@ export type UpcomingBookingsListProps = {
 export type UpcomingBooking = {
   bookingId: string;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group';
+  creditType: 'reformer' | 'mat' | 'group' | 'session';
   name: string;
   classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing' | 'yoga';
   startsAt: Date;
@@ -44,6 +44,7 @@ const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {
   mat:      'bg-[#6b8e6b]',
   reformer: 'bg-[#8b5a3c]',
   group:    'bg-[#c4a88a]',
+  session:  'bg-[#4e2b22]',
 };
 
 function dateLabel(date: Date): string {

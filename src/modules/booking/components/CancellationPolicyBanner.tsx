@@ -64,7 +64,7 @@ export type CancellationPolicyBannerProps = {
   startsAt: Date;
   mercyAvailable: boolean;
   creditsAtStake: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
 };
 
 export function CancellationPolicyBanner({

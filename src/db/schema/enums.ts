@@ -41,9 +41,10 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 ]);
 
 export const creditTypeEnum = pgEnum('credit_type', [
-  'reformer', // reformer group + private + duo — Bloom / Return to Life / session packages
-  'mat',      // mat group (primary) — group credits cover mat_group as fallback; no mat session packages
+  'reformer', // reformer group classes — Bloom / Return to Life packages
+  'mat',      // mat group classes — mat membership; group credits also cover mat_group as fallback
   'group',    // any group class — reformer_group, mat_group, chair, online, yoga, sound_healing — Essence / Empower
+  'session',  // private 1:1 and duo reformer sessions — session packages only
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [

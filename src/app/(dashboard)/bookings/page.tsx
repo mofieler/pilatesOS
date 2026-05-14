@@ -17,7 +17,7 @@ type BookingWithDetails = {
   sessionId: string;
   status: 'confirmed' | 'cancelled' | 'attended' | 'no_show' | 'waitlisted';
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
   name: string;
   classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing';
   durationMinutes: number;
@@ -123,6 +123,7 @@ function BookingCard({
     mat:           'Mat Credit',
     reformer:      'Reformer Credit',
     group:         'Group Credit',
+    session:       'Session Credit',
     sound_healing: 'Sound Healing Credit',
   };
   const creditLabel = CREDIT_LABEL[booking.creditType];
@@ -131,6 +132,7 @@ function BookingCard({
     mat:           'bg-[#6b8e6b]',
     reformer:      'bg-[#8b5a3c]',
     group:         'bg-[#c4a88a]',
+    session:       'bg-[#4e2b22]',
     sound_healing: 'bg-purple-500',
   };
 

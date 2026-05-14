@@ -226,7 +226,7 @@ function SessionActionsCell({ row }: { row: SessionRow }) {
 
   const canEdit = row.status === 'scheduled';
   const canCancel = row.status === 'scheduled' || row.status === 'in_progress';
-  const canDelete = row.status === 'cancelled' || (row.status === 'scheduled' && row.bookedCount === 0);
+  const canDelete = row.status === 'cancelled' || row.status === 'scheduled';
 
   if (!canEdit && !canCancel && !canDelete) return null;
 
@@ -315,14 +315,18 @@ function SessionActionsCell({ row }: { row: SessionRow }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this session?</AlertDialogTitle>
             <AlertDialogDescription>
-              The session record will be permanently removed. This is only available for cancelled sessions or empty unbooked sessions.
+              {row.bookedCount > 0
+                ? `This session has ${row.bookedCount} booked student${row.bookedCount !== 1 ? 's' : ''}. They will be automatically cancelled and receive a full credit refund (including session credits). This cannot be undone.`
+                : 'The session record will be permanently removed. This cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Keep session</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isPending}>
-              {isPending ? 'Deleting…' : 'Delete session'}
+              {isPending
+                ? (row.bookedCount > 0 ? 'Cancelling & deleting…' : 'Deleting…')
+                : (row.bookedCount > 0 ? `Refund ${row.bookedCount} student${row.bookedCount !== 1 ? 's' : ''} & delete` : 'Delete session')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

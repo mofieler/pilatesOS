@@ -4,7 +4,7 @@ import { Dumbbell, Layers, Users, AlertCircleIcon, ArrowRightIcon, UserIcon } fr
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreditBalance = {
-  creditType: 'mat' | 'reformer' | 'group';
+  creditType: 'mat' | 'reformer' | 'group' | 'session';
   balance: number;
   expiresAt: Date | null;
 };
@@ -17,6 +17,9 @@ export type SessionPackage = {
 };
 
 // ─── Pool config ──────────────────────────────────────────────────────────────
+
+type PoolCreditType = 'reformer' | 'mat' | 'group';
+type PoolBalance = { creditType: PoolCreditType; balance: number; expiresAt: Date | null };
 
 const POOL = {
   reformer: {
@@ -62,7 +65,7 @@ const POOL = {
 
 // ─── Single pool card ─────────────────────────────────────────────────────────
 
-function PoolCard({ balance }: { balance: CreditBalance }) {
+function PoolCard({ balance }: { balance: PoolBalance }) {
   const cfg = POOL[balance.creditType];
   const Icon = cfg.icon;
   const isLow  = balance.balance > 0 && balance.balance <= 3;
@@ -73,7 +76,7 @@ function PoolCard({ balance }: { balance: CreditBalance }) {
     : null;
 
   return (
-    <div className={`flex flex-col gap-3 rounded-2xl border border-[#ede8e5]/60 bg-gradient-to-br ${cfg.gradient} p-5 ring-1 ${cfg.ring} shadow-[0_4px_14px_rgba(78,43,34,0.04)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(78,43,34,0.08)] hover:-translate-y-0.5`}>
+    <div className={`flex flex-col gap-3 rounded-2xl border border-[#ede8e5]/60 bg-linear-to-br ${cfg.gradient} p-5 ring-1 ${cfg.ring} shadow-[0_4px_14px_rgba(78,43,34,0.04)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(78,43,34,0.08)] hover:-translate-y-0.5`}>
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -138,19 +141,19 @@ function PoolCard({ balance }: { balance: CreditBalance }) {
 
 function SessionPackagesSection({
   packages,
-  reformerBalance,
-  reformerExpiry,
+  sessionBalance,
+  sessionExpiry,
 }: {
   packages: SessionPackage[];
-  reformerBalance: number;
-  reformerExpiry: Date | null;
+  sessionBalance: number;
+  sessionExpiry: Date | null;
 }) {
-  const hasCredits  = reformerBalance > 0;
+  const hasCredits  = sessionBalance > 0;
   const hasPurchases = packages.length > 0;
   const isEmpty     = !hasCredits && !hasPurchases;
 
-  const expiryLabel = reformerExpiry != null
-    ? reformerExpiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const expiryLabel = sessionExpiry != null
+    ? sessionExpiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : null;
 
   return (
@@ -183,10 +186,10 @@ function SessionPackagesSection({
           <div className="flex items-start justify-between">
             <div>
               <p className="text-3xl font-bold tabular-nums leading-none tracking-tight text-[#4e2b22]">
-                {reformerBalance}
+                {sessionBalance}
               </p>
               <p className="mt-1 text-xs text-[#8b6b5c]">
-                {reformerBalance === 1 ? 'session credit available' : 'session credits available'}
+                {sessionBalance === 1 ? 'session credit available' : 'session credits available'}
               </p>
             </div>
             {expiryLabel && (
@@ -197,7 +200,7 @@ function SessionPackagesSection({
           </div>
 
           {/* Low / empty warning */}
-          {reformerBalance === 0 && (
+          {sessionBalance === 0 && (
             <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700">
               <AlertCircleIcon className="size-3 shrink-0" />
               No session credits —{' '}
@@ -238,21 +241,21 @@ export function CreditBalanceDisplay({
 }) {
   // reformer and group always shown (packages exist for both).
   // mat only shown if user has non-zero mat balance (admin adjustment only).
-  const ALWAYS_SHOW: CreditBalance['creditType'][] = ['reformer', 'group'];
+  const ALWAYS_SHOW: PoolCreditType[] = ['reformer', 'group'];
 
   const matBalance = balances.find((b) => b.creditType === 'mat');
   const showMat    = matBalance != null && matBalance.balance > 0;
 
-  const cards: CreditBalance[] = [
+  const cards: PoolBalance[] = [
     ...ALWAYS_SHOW.map(
-      (type) => balances.find((b) => b.creditType === type) ?? { creditType: type, balance: 0, expiresAt: null },
+      (type): PoolBalance => balances.find((b) => b.creditType === type) as PoolBalance ?? { creditType: type, balance: 0, expiresAt: null },
     ),
-    ...(showMat ? [matBalance!] : []),
+    ...(showMat ? [matBalance! as PoolBalance] : []),
   ];
 
   const cols = cards.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3';
 
-  const reformerBal = balances.find((b) => b.creditType === 'reformer');
+  const sessionBal = balances.find((b) => b.creditType === 'session');
 
   return (
     <div>
@@ -263,8 +266,8 @@ export function CreditBalanceDisplay({
       </div>
       <SessionPackagesSection
         packages={sessionPackages}
-        reformerBalance={reformerBal?.balance ?? 0}
-        reformerExpiry={reformerBal?.expiresAt ?? null}
+        sessionBalance={sessionBal?.balance ?? 0}
+        sessionExpiry={sessionBal?.expiresAt ?? null}
       />
     </div>
   );

@@ -37,7 +37,8 @@ type ClassType = 'mat' | 'reformer' | 'group';
 
 // ─── Derivation helpers ──────────────────────────────────────────────────────
 
-function deriveCreditType(_category: CreditPackCategory, classType: ClassType): CreditType {
+function deriveCreditType(category: CreditPackCategory, classType: ClassType): CreditType {
+  if (category === 'session') return 'session';
   return classType as CreditType;
 }
 
@@ -72,7 +73,7 @@ function fromPackage(p: CreditPackage): FormState {
   // Derive classType for legacy packages that don't have it set
   const inferredClassType: ClassType =
     (p.classType as ClassType | null) ??
-    (p.creditType === 'reformer' ? 'reformer' : p.creditType === 'group' ? 'group' : 'mat');
+    (p.creditType === 'reformer' || p.creditType === 'session' ? 'reformer' : p.creditType === 'group' ? 'group' : 'mat');
 
   return {
     name:          p.name,
@@ -498,7 +499,7 @@ export function CreditPackagesManager({ packages }: Props) {
             {packages.map((pkg) => {
               const cat = (pkg.category ?? 'credit') as CreditPackCategory;
               const classType = (pkg.classType as ClassType | null) ??
-                (pkg.creditType === 'reformer' ? 'reformer' : pkg.creditType === 'group' ? 'group' : 'mat');
+                (pkg.creditType === 'reformer' || pkg.creditType === 'session' ? 'reformer' : pkg.creditType === 'group' ? 'group' : 'mat');
               const cfg = getCreditPackCategoryConfig(cat);
               return (
                 <tr key={pkg.id} className="hover:bg-slate-50">

@@ -27,7 +27,7 @@ interface CreditPurchase {
   userEmail: string;
   packageName: string;
   creditsAmount: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
   priceCents: number;
   currency: string;
   paymentMethod: 'stripe' | 'pay_at_studio';
@@ -129,7 +129,7 @@ function StatCard({
     <div
       className={cn(
         'rounded-2xl border border-[#ede8e5]/80 p-5',
-        'bg-gradient-to-br',
+        'bg-linear-to-br',
         colorClasses[color]
       )}
     >
@@ -159,7 +159,7 @@ function PurchaseRow({
     <div
       className={cn(
         'rounded-xl border p-4 transition-all',
-        'bg-gradient-to-br from-[#faf9f7]/90 to-[#f5f3f1]/60',
+        'bg-linear-to-br from-[#faf9f7]/90 to-[#f5f3f1]/60',
         'border-[#ede8e5]/80',
         isExpanded && 'shadow-[0_4px_14px_rgba(78,43,34,0.06)]'
       )}

@@ -28,7 +28,7 @@ export type CancelBookingButtonProps = {
   className: string;
   startsAt: Date;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
   mercyAvailable: boolean;
 };
 

@@ -70,7 +70,7 @@ async function getCreditBalances(userId: string): Promise<CreditBalance[]> {
     .from(creditBalances)
     .where(eq(creditBalances.userId, userId));
 
-  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group'];
+  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group', 'session'];
   return rows.filter((r): r is CreditBalance =>
     (DISPLAY_TYPES as readonly string[]).includes(r.creditType),
   );

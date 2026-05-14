@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'reformer' | 'mat' | 'group';
+  creditType: 'reformer' | 'mat' | 'group' | 'session';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -81,12 +81,14 @@ const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   reformer: 'bg-[#6b8e6b]',
   mat:      'bg-[#8b6b5c]',
   group:    'bg-[#c4a88a]',
+  session:  'bg-[#4e2b22]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
   reformer: 'Reformer Credit',
   mat:      'Mat Credit',
   group:    'Group Credit',
+  session:  'Session Credit',
 };
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

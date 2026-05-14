@@ -25,7 +25,7 @@ export type ClassType =
   | 'sound_healing'
   | 'yoga';
 
-export type CreditType = 'reformer' | 'mat' | 'group';
+export type CreditType = 'reformer' | 'mat' | 'group' | 'session';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -150,6 +150,12 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
     description: 'Flexible — accepted for reformer_group, mat_group, chair, online, yoga, sound_healing (Essence, Empower)',
     badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
   },
+  session: {
+    value: 'session',
+    label: 'Session Credits',
+    description: 'For private 1:1 and duo reformer sessions only',
+    badgeStyle: 'bg-[#4e2b22]/10 text-[#4e2b22]',
+  },
 } as const;
 
 // ─── DERIVED MAPPING ───────────────────────────────────────────────────────────
@@ -157,6 +163,7 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
 /** Returns the PRIMARY credit type a class template should default to. */
 export function getCreditTypeForClassType(classType: ClassType): CreditType {
   if (classType === 'chair' || classType === 'online' || classType === 'yoga' || classType === 'sound_healing') return 'group';
+  if (classType === 'reformer_private' || classType === 'reformer_duo') return 'session';
   if (classType.startsWith('reformer')) return 'reformer';
   return 'mat';
 }
@@ -225,12 +232,14 @@ export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
   reformer: 'Reformer Credits',
   mat:      'Mat Credits',
   group:    'Group Credits',
+  session:  'Session Credits',
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
   reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
   mat:      'bg-[#6b8e6b]/10 text-[#4a7c4a]',
   group:    'bg-[#c4a88a]/20 text-[#4e2b22]',
+  session:  'bg-[#4e2b22]/10 text-[#4e2b22]',
 };
 
 export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

@@ -468,8 +468,17 @@ export async function deleteClassSessionAction(
 
   if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
 
-  if (session.status !== 'cancelled') {
-    return { success: false, error: 'Only cancelled sessions can be deleted.', code: 'INVALID_STATE' };
+  // If the session has active bookings, cancel all of them first (full credit refunds).
+  // This allows admins to delete in one step without a separate cancel step.
+  if (session.status !== 'cancelled' && session.bookedCount > 0) {
+    const cancelResult = await cancellationService.cancelSessionByInstructor(
+      session.id,
+      authSession.user.id,
+      'Session deleted by administrator',
+    );
+    if (!cancelResult.success) {
+      return { success: false, error: cancelResult.error ?? 'Failed to cancel session before deleting.', code: 'DB_ERROR' };
+    }
   }
 
   // Snapshot the GCal IDs BEFORE deleting — we need them to remove the event in Google.
@@ -1005,18 +1014,7 @@ export async function removeStudentFromSessionAction(
         })
         .where(eq(bookings.id, bookingId));
 
-      // Record refund transaction
-      await tx.insert(creditTransactions).values({
-        userId: bookingData.userId,
-        type: 'refund',
-        creditType: bookingData.creditType,
-        amount: bookingData.creditsSpent,
-        balanceAfter: 0,
-        description: `Refund: removed from class by admin`,
-        processedBy: session.user.id,
-      });
-
-      // Update balance
+      // Update balance first to get the new value for the transaction record
       const [balance] = await tx
         .select()
         .from(creditBalances)
@@ -1042,6 +1040,17 @@ export async function removeStudentFromSessionAction(
           balance: newBalance,
         });
       }
+
+      // Record refund transaction with correct balanceAfter
+      await tx.insert(creditTransactions).values({
+        userId: bookingData.userId,
+        type: 'refund',
+        creditType: bookingData.creditType,
+        amount: bookingData.creditsSpent,
+        balanceAfter: newBalance,
+        description: `Refund: removed from class by admin`,
+        processedBy: session.user.id,
+      });
 
       // Decrement session booked count
       const [sessionData] = await tx

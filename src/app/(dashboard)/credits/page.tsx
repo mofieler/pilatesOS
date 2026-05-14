@@ -23,7 +23,7 @@ interface CreditPackage {
   name: string;
   description: string | null;
   creditsAmount: number;
-  creditType: 'reformer' | 'mat' | 'group';
+  creditType: 'reformer' | 'mat' | 'group' | 'session';
   category: 'credit' | 'session';
   classType: string | null;
   priceCents: number;
