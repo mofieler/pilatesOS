@@ -167,7 +167,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
         Week mode: empty left side, toggle pinned right (week nav lives inside WeekView).
         -mx-6 breaks out of dashboard p-6; px-4 restores inner padding.
       */}
-      <div className="sticky top-0 z-10 -mx-6 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 px-4 pb-3 pt-3 shadow-[0_4px_14px_rgba(78,43,34,0.04)] backdrop-blur-xl">
+      <div className="sticky top-[57px] z-10 -mx-6 border-b border-[#ede8e5]/80 bg-[#faf9f7]/90 px-4 pb-3 pt-3 shadow-[0_4px_14px_rgba(78,43,34,0.04)] backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1 overflow-hidden">
             {view === 'list' ? <DateScroller /> : <WeekNav />}

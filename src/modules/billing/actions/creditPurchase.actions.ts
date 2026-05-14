@@ -46,6 +46,8 @@ export async function getAllCreditPurchasesAction() {
         paidAt: creditPurchases.paidAt,
         createdAt: creditPurchases.createdAt,
         adminNotes: creditPurchases.adminNotes,
+        invoiceNumber: creditPurchases.invoiceNumber,
+        invoiceIssuedAt: creditPurchases.invoiceIssuedAt,
       })
       .from(creditPurchases)
       .leftJoin(users, eq(creditPurchases.userId, users.id))
