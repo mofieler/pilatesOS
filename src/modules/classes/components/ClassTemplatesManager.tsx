@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { PlusIcon, Loader2Icon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { useState, useEffect, useTransition } from 'react';
+import Link from 'next/link';
+import { PlusIcon, Loader2Icon, PencilIcon, Trash2Icon, CheckCircleIcon, AlertTriangleIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -21,18 +22,164 @@ import {
 import type { AdminTemplateRow, InstructorOption } from '@/modules/classes/actions/class.actions';
 import {
   getClassTypeSelectOptions,
-  getCreditTypeSelectOptions,
   getClassTypeBadgeStyle,
   getCreditTypeBadgeStyle,
   getClassTypeLabel,
   getCreditTypeLabel,
   getCreditTypeForClassType,
+  CREDIT_TYPES,
   type ClassType,
+  type CreditType,
 } from '@/lib/config/class-types';
+import { getCreditPackagesAction } from '@/modules/billing/actions/creditPackage.actions';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PRIVATE_CLASS_TYPES = new Set<ClassType>([
   'reformer_private', 'reformer_duo', 'mat_private', 'mat_duo',
 ]);
+
+const GROUP_ELIGIBLE = new Set<ClassType>(['reformer_group', 'mat_group', 'chair', 'online']);
+
+function compatibleCreditTypes(classType: ClassType): CreditType[] {
+  if (PRIVATE_CLASS_TYPES.has(classType)) return [];
+  const primary = getCreditTypeForClassType(classType);
+  return GROUP_ELIGIBLE.has(classType) ? [primary, 'group'] : [primary];
+}
+
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(cents / 100);
+}
+
+// ─── Slim package type (only what we need) ────────────────────────────────────
+
+type PackageOption = {
+  id: string;
+  name: string;
+  creditsAmount: number;
+  creditType: string;
+  priceCents: number;
+  currency: string;
+};
+
+// ─── Package selector sub-component ──────────────────────────────────────────
+
+function PackageSelectorField({
+  classType,
+  selectedCreditType,
+  packages,
+  loaded,
+  onChange,
+}: {
+  classType: ClassType;
+  selectedCreditType: string;
+  packages: PackageOption[];
+  loaded: boolean;
+  onChange: (creditType: CreditType) => void;
+}) {
+  const isPrivate = PRIVATE_CLASS_TYPES.has(classType);
+
+  if (isPrivate) {
+    return (
+      <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
+        N/A — Session Package
+        <span className="ml-2 text-xs text-[#a6856f]">(no credit cost)</span>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return <div className="h-16 animate-pulse rounded-xl bg-slate-100" />;
+  }
+
+  const compatibleTypes = compatibleCreditTypes(classType);
+  const compatiblePackages = packages.filter((p) =>
+    compatibleTypes.includes(p.creditType as CreditType),
+  );
+
+  if (compatiblePackages.length === 0) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-amber-500" />
+        <div>
+          <p className="text-sm font-medium text-amber-800">No credit packages configured</p>
+          <p className="mt-0.5 text-xs text-amber-700">
+            Create packages first, then link them to templates.{' '}
+            <Link href="/admin/credits" className="font-semibold underline underline-offset-2">
+              Go to Credit Packages →
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Group compatible packages by credit type
+  const byType = compatibleTypes.reduce<Record<string, PackageOption[]>>((acc, ct) => {
+    acc[ct] = compatiblePackages.filter((p) => p.creditType === ct);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-2">
+      {compatibleTypes.map((ct) => {
+        const cfg = CREDIT_TYPES[ct];
+        const pkgs = byType[ct] ?? [];
+        const isSelected = selectedCreditType === ct;
+
+        return (
+          <button
+            key={ct}
+            type="button"
+            onClick={() => onChange(ct)}
+            className={[
+              'w-full text-left rounded-xl border p-3 transition-all duration-150',
+              isSelected
+                ? 'border-[#4e2b22] bg-[#4e2b22]/5 shadow-sm ring-1 ring-[#4e2b22]/10'
+                : 'border-[#ede8e5] bg-[#faf9f7] hover:border-[#c4a88a]/60 hover:bg-white/70',
+            ].join(' ')}
+          >
+            {/* Header row */}
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isSelected && <CheckCircleIcon className="size-4 text-[#4e2b22]" />}
+                <span className={`text-sm font-semibold ${isSelected ? 'text-[#4e2b22]' : 'text-[#6b3d32]'}`}>
+                  {cfg.label}
+                </span>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cfg.badgeStyle}`}>
+                {pkgs.length} package{pkgs.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Package pills */}
+            {pkgs.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {pkgs.map((pkg) => (
+                  <span
+                    key={pkg.id}
+                    className="inline-flex items-center gap-1 rounded-md border border-[#ede8e5] bg-white/80 px-2 py-0.5 text-[11px] text-[#6b3d32]"
+                  >
+                    {pkg.name}
+                    <span className="text-[#c4a88a]">·</span>
+                    {pkg.creditsAmount} cr
+                    <span className="text-[#c4a88a]">·</span>
+                    {formatPrice(pkg.priceCents, pkg.currency)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#a6856f]">No packages of this type yet</p>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ─── Form types ───────────────────────────────────────────────────────────────
 
@@ -43,7 +190,7 @@ type FormState = {
   durationMinutes: string;
   maxCapacity: string;
   creditCost: string;
-  creditType?: string;
+  creditType: string;
   instructorId: string;
   location: string;
   isActive: boolean;
@@ -84,8 +231,19 @@ function TemplateFormDialog({
   const [form, setForm] = useState<FormState>(
     isEdit ? fromTemplate(editingTemplate!) : EMPTY_FORM,
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]   = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Fetch credit packages for the selector
+  const [packages, setPackages]     = useState<PackageOption[]>([]);
+  const [packagesLoaded, setPackagesLoaded] = useState(false);
+
+  useEffect(() => {
+    getCreditPackagesAction().then((res) => {
+      setPackages(res.success ? res.data.filter((p) => p.isActive) : []);
+      setPackagesLoaded(true);
+    });
+  }, []);
 
   const handleOpen = (v: boolean) => {
     if (!isPending) {
@@ -95,8 +253,9 @@ function TemplateFormDialog({
     }
   };
 
-  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value }));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,7 +267,7 @@ function TemplateFormDialog({
     const creditCost      = isPrivate ? 0 : parseInt(form.creditCost, 10);
 
     if (isNaN(durationMinutes) || durationMinutes < 1) { setError('Duration must be positive.'); return; }
-    if (isNaN(maxCapacity)     || maxCapacity < 1)     { setError('Capacity must be positive.'); return; }
+    if (isNaN(maxCapacity) || maxCapacity < 1) { setError('Capacity must be positive.'); return; }
     if (!isPrivate && (isNaN(creditCost) || creditCost < 1)) { setError('Credit cost must be positive.'); return; }
 
     const payload = {
@@ -149,13 +308,17 @@ function TemplateFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="tpl-name" className="text-[#6b3d32] font-medium">Name *</Label>
             <Input id="tpl-name" value={form.name} onChange={set('name')} required placeholder="e.g. Reformer Flow" />
           </div>
 
+          {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-desc" className="text-[#6b3d32] font-medium">Description <span className="text-[#8b6b5c]">(optional)</span></Label>
+            <Label htmlFor="tpl-desc" className="text-[#6b3d32] font-medium">
+              Description <span className="text-[#8b6b5c]">(optional)</span>
+            </Label>
             <textarea
               id="tpl-desc"
               value={form.description}
@@ -176,13 +339,12 @@ function TemplateFormDialog({
                 onChange={(e) => {
                   const classType = e.target.value as ClassType;
                   const isPrivate = PRIVATE_CLASS_TYPES.has(classType);
+                  const newCreditType = getCreditTypeForClassType(classType);
                   setForm((f) => ({
                     ...f,
                     classType,
-                    creditType: getCreditTypeForClassType(classType),
-                    // Reset capacity to 1 for private/duo, keep existing otherwise
+                    creditType: newCreditType,
                     maxCapacity: isPrivate ? (classType.endsWith('_duo') ? '2' : '1') : f.maxCapacity,
-                    // Credit cost is irrelevant for private/duo — clear it
                     creditCost: isPrivate ? '0' : f.creditCost,
                   }));
                 }}
@@ -199,16 +361,25 @@ function TemplateFormDialog({
             </div>
           </div>
 
-          {/* Credit type — derived from class type, read-only */}
+          {/* Credit package selector */}
           <div className="space-y-1.5">
-            <Label className="text-[#6b3d32] font-medium">Credit type</Label>
-            <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
-              {PRIVATE_CLASS_TYPES.has(form.classType)
-                ? 'N/A — Session Package'
-                : (getCreditTypeSelectOptions().find((o) => o.value === form.creditType)?.label ?? form.creditType)
-              }
-              <span className="ml-2 text-xs text-muted">(set by class type)</span>
+            <div className="flex items-center justify-between">
+              <Label className="text-[#6b3d32] font-medium">
+                {PRIVATE_CLASS_TYPES.has(form.classType) ? 'Billing' : 'Credit Package Type'}
+              </Label>
+              {!PRIVATE_CLASS_TYPES.has(form.classType) && (
+                <span className="text-[10px] text-[#a6856f]">
+                  Students need a matching package to book
+                </span>
+              )}
             </div>
+            <PackageSelectorField
+              classType={form.classType}
+              selectedCreditType={form.creditType}
+              packages={packages}
+              loaded={packagesLoaded}
+              onChange={(ct) => setForm((f) => ({ ...f, creditType: ct }))}
+            />
           </div>
 
           {/* Capacity + credit cost */}
@@ -222,7 +393,7 @@ function TemplateFormDialog({
                 <Label className="text-[#6b3d32] font-medium">Billing</Label>
                 <div className="flex h-9 w-full items-center rounded-md border border-input bg-[#faf9f7] px-3 py-1 text-sm text-[#6b3d32]">
                   Session package
-                  <span className="ml-2 text-xs text-muted">(no credit cost)</span>
+                  <span className="ml-2 text-xs text-[#a6856f]">(no credit cost)</span>
                 </div>
               </div>
             ) : (
@@ -236,7 +407,9 @@ function TemplateFormDialog({
           {/* Instructor + location */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="tpl-instr" className="text-[#6b3d32] font-medium">Default instructor <span className="text-[#8b6b5c]">(optional)</span></Label>
+              <Label htmlFor="tpl-instr" className="text-[#6b3d32] font-medium">
+                Default instructor <span className="text-[#8b6b5c]">(optional)</span>
+              </Label>
               <select
                 id="tpl-instr"
                 value={form.instructorId}
@@ -250,11 +423,14 @@ function TemplateFormDialog({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tpl-loc" className="text-[#6b3d32] font-medium">Location <span className="text-[#8b6b5c]">(optional)</span></Label>
+              <Label htmlFor="tpl-loc" className="text-[#6b3d32] font-medium">
+                Location <span className="text-[#8b6b5c]">(optional)</span>
+              </Label>
               <Input id="tpl-loc" value={form.location} onChange={set('location')} placeholder="Studio 1" />
             </div>
           </div>
 
+          {/* Active */}
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input
               type="checkbox"
@@ -265,10 +441,14 @@ function TemplateFormDialog({
             <span className="text-sm text-[#4e2b22]">Active (available for scheduling)</span>
           </label>
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>}
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>
+          )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleOpen(false)} disabled={isPending}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => handleOpen(false)} disabled={isPending}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
               {isPending
                 ? <span className="flex items-center gap-2"><Loader2Icon className="size-4 animate-spin" />Saving…</span>
@@ -289,12 +469,12 @@ export function ClassTemplatesManager({
   templates: AdminTemplateRow[];
   instructors: InstructorOption[];
 }) {
-  const [createOpen, setCreateOpen]       = useState(false);
-  const [editTarget, setEditTarget]       = useState<AdminTemplateRow | null>(null);
-  const [deleteTarget, setDeleteTarget]   = useState<AdminTemplateRow | null>(null);
-  const [deleteError, setDeleteError]     = useState<string | null>(null);
-  const [toggling, startToggle]           = useTransition();
-  const [deleting, startDelete]           = useTransition();
+  const [createOpen, setCreateOpen]     = useState(false);
+  const [editTarget, setEditTarget]     = useState<AdminTemplateRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminTemplateRow | null>(null);
+  const [deleteError, setDeleteError]   = useState<string | null>(null);
+  const [toggling, startToggle]         = useTransition();
+  const [deleting, startDelete]         = useTransition();
 
   function toggleActive(t: AdminTemplateRow) {
     startToggle(async () => {
@@ -336,13 +516,19 @@ export function ClassTemplatesManager({
           <thead>
             <tr className="border-b border-slate-100 text-left">
               {['Template', 'Type', 'Duration', 'Capacity', 'Credits', 'Instructor', 'Status', ''].map((h) => (
-                <th key={h} className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#6b3d32]">{h}</th>
+                <th key={h} className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#6b3d32]">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {templates.length === 0 && (
-              <tr><td colSpan={8} className="py-12 text-center text-sm text-[#8b6b5c]">No templates yet.</td></tr>
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-sm text-[#8b6b5c]">
+                  No templates yet.
+                </td>
+              </tr>
             )}
             {templates.map((t) => (
               <tr key={t.id} className={`hover:bg-slate-50 ${!t.isActive ? 'opacity-60' : ''}`}>
@@ -359,7 +545,7 @@ export function ClassTemplatesManager({
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.maxCapacity}</td>
                 <td className="px-4 py-3">
                   {PRIVATE_CLASS_TYPES.has(t.classType) ? (
-                    <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
                       Session pkg
                     </span>
                   ) : (
@@ -406,10 +592,23 @@ export function ClassTemplatesManager({
         </table>
       </div>
 
-      <TemplateFormDialog open={createOpen} onOpenChange={setCreateOpen} editingTemplate={null} instructors={instructors} />
-      <TemplateFormDialog open={editTarget !== null} onOpenChange={(v) => { if (!v) setEditTarget(null); }} editingTemplate={editTarget} instructors={instructors} />
+      <TemplateFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        editingTemplate={null}
+        instructors={instructors}
+      />
+      <TemplateFormDialog
+        open={editTarget !== null}
+        onOpenChange={(v) => { if (!v) setEditTarget(null); }}
+        editingTemplate={editTarget}
+        instructors={instructors}
+      />
 
-      <AlertDialog open={deleteTarget !== null} onOpenChange={(v) => { if (!v && !deleting) { setDeleteTarget(null); setDeleteError(null); } }}>
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(v) => { if (!v && !deleting) { setDeleteTarget(null); setDeleteError(null); } }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{deleteTarget?.name}&rdquo;?</AlertDialogTitle>
@@ -417,7 +616,9 @@ export function ClassTemplatesManager({
               This permanently removes the template. If sessions already use this template, the delete will be blocked — deactivate it instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {deleteError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{deleteError}</p>}
+          {deleteError && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{deleteError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={deleting}>

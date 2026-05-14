@@ -24,6 +24,8 @@ import {
   getCreditPackCategoryConfig,
   type CreditPackCategory,
 } from '@/lib/config/financial-config';
+import { CREDIT_TYPES } from '@/lib/config/class-types';
+import { CheckCircleIcon } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,76 @@ function fromPackage(p: CreditPackage): FormState {
     isActive:      p.isActive,
     stripePriceId: p.stripePriceId ?? '',
   };
+}
+
+// ─── Credit type cards ────────────────────────────────────────────────────────
+
+const COMPATIBLE_CLASS_TYPES: Record<ClassType, string[]> = {
+  reformer:      ['reformer_group', 'reformer_private', 'reformer_duo'],
+  mat:           ['mat_group', 'mat_private', 'mat_duo'],
+  group:         ['reformer_group', 'mat_group', 'chair', 'online'],
+  sound_healing: ['sound_healing'],
+};
+
+function CreditTypeCards({
+  selected, onSelect, isSession, disabled,
+}: {
+  selected: ClassType;
+  onSelect: (v: ClassType) => void;
+  isSession: boolean;
+  disabled: boolean;
+}) {
+  const visibleTypes: ClassType[] = isSession
+    ? ['reformer', 'mat']
+    : ['reformer', 'mat', 'group', 'sound_healing'];
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[#6b3d32] font-medium">Credit type *</Label>
+      <div className="grid grid-cols-2 gap-2">
+        {visibleTypes.map((type) => {
+          const cfg = CREDIT_TYPES[type as keyof typeof CREDIT_TYPES];
+          if (!cfg) return null;
+          const active = selected === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(type)}
+              className={`relative flex flex-col gap-1 rounded-xl border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[#4e2b22]/30 ${
+                active
+                  ? 'border-[#4e2b22] bg-[#4e2b22]/5 shadow-sm'
+                  : 'border-[#ede8e5] bg-[#faf9f7] hover:border-[#c4a88a] hover:bg-[#ede8e5]/40'
+              } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {active && (
+                <CheckCircleIcon className="absolute top-2.5 right-2.5 size-4 text-[#4e2b22]" aria-hidden />
+              )}
+              <span className={`text-xs font-semibold ${cfg.badgeStyle} inline-flex items-center rounded-full px-2 py-0.5 w-fit`}>
+                {cfg.label}
+              </span>
+              <span className="text-[11px] leading-snug text-[#6b5047] mt-0.5">
+                {cfg.description}
+              </span>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {COMPATIBLE_CLASS_TYPES[type].map((ct) => (
+                  <span key={ct} className="text-[10px] rounded bg-white/70 border border-[#ede8e5] px-1.5 py-0.5 text-[#8b6b5c] font-mono">
+                    {ct}
+                  </span>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {isSession && (
+        <p className="text-[11px] text-[#8b6b5c]">
+          Session packages are private, so only equipment-based credit types apply.
+        </p>
+      )}
+    </div>
+  );
 }
 
 // ─── Form dialog ─────────────────────────────────────────────────────────────
@@ -240,37 +312,28 @@ function PackageFormDialog({
             />
           </div>
 
-          {/* Credits + class type */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="pkg-credits" className="text-[#6b3d32] font-medium">
-                {isSession ? 'Sessions *' : 'Credits *'}
-              </Label>
-              <Input
-                id="pkg-credits"
-                type="number"
-                min={1}
-                value={form.creditsAmount}
-                onChange={setText('creditsAmount')}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pkg-classtype" className="text-[#6b3d32] font-medium">Class type *</Label>
-              <select
-                id="pkg-classtype"
-                value={form.classType}
-                onChange={(e) => setField('classType', e.target.value as ClassType)}
-                disabled={isPending}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="mat">Mat</option>
-                <option value="reformer">Reformer</option>
-                {!isSession && <option value="group">Group (flexible)</option>}
-                {!isSession && <option value="sound_healing">Sound Healing</option>}
-              </select>
-            </div>
+          {/* Credits */}
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-credits" className="text-[#6b3d32] font-medium">
+              {isSession ? 'Sessions *' : 'Credits *'}
+            </Label>
+            <Input
+              id="pkg-credits"
+              type="number"
+              min={1}
+              value={form.creditsAmount}
+              onChange={setText('creditsAmount')}
+              required
+            />
           </div>
+
+          {/* Credit type cards */}
+          <CreditTypeCards
+            selected={form.classType}
+            onSelect={(v) => setField('classType', v)}
+            isSession={isSession}
+            disabled={isPending}
+          />
 
           {/* Price + validity */}
           <div className="grid grid-cols-2 gap-3">
