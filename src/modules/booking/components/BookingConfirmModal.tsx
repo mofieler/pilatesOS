@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useTransition } from 'react';
 import { format } from 'date-fns';
@@ -98,7 +98,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
                 <span>
                   {format(session.startsAt, 'EEEE, d MMMM')} at{' '}
                   {format(session.startsAt, 'HH:mm')}
-                  {' Â· '}
+                  {' · '}
                   {session.durationMinutes} min
                 </span>
               </div>
@@ -137,7 +137,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
                 {isPending ? (
                   <span className="flex items-center gap-2">
                     <Loader2Icon className="size-4 animate-spin" aria-hidden />
-                    Bookingâ€¦
+                    Booking...
                   </span>
                 ) : (
                   'Confirm Booking'

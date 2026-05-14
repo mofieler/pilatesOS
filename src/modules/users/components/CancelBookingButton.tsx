@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useTransition } from 'react';
 import { format } from 'date-fns';
@@ -134,7 +134,7 @@ export function CancelBookingButton({
             {isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2Icon className="size-4 animate-spin" aria-hidden />
-                Cancellingâ€¦
+                Cancelling...
               </span>
             ) : isLossState ? (
               'Cancel & forfeit credits'

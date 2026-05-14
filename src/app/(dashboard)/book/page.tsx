@@ -1,7 +1,7 @@
 import { addDays, startOfToday } from 'date-fns';
 import { eq, and, gte, lt } from 'drizzle-orm';
 import { db } from '@/db';
-import { classSessions, creditBalances } from '@/db/schema';
+import { classSessions, creditBalances, users } from '@/db/schema';
 import { auth } from '@/lib/auth/auth';
 import { BookingCalendar } from '@/modules/booking/components/BookingCalendar';
 import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSessionCard';
@@ -31,7 +31,7 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
   const today = startOfToday();
   const cutoff = addDays(today, 14);
 
-  const [rows, balances] = await Promise.all([
+  const [rows, balances, user] = await Promise.all([
     db.query.classSessions.findMany({
       with: {
         template: true,
@@ -39,7 +39,7 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
         bookings: {
           where: (b, { and: dbAnd, eq: dbEq }) =>
             dbAnd(dbEq(b.userId, userId), dbEq(b.status, 'confirmed')),
-          columns: { id: true },
+          columns: { id: true, creditsSpent: true },
         },
       },
       where: and(
@@ -52,7 +52,13 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
     db.select({ creditType: creditBalances.creditType, balance: creditBalances.balance })
       .from(creditBalances)
       .where(eq(creditBalances.userId, userId)),
+    db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { firstMercyUsed: true },
+    })
   ]);
+
+  const mercyAvailable = user ? !user.firstMercyUsed : false;
 
   return rows.map((s) => {
     const classType      = s.template?.classType ?? 'mat_group';
@@ -74,6 +80,9 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
       creditType:       resolveDisplayCreditType(classType, primaryType, creditCost, balances),
       status:           s.status,
       isBookedByUser:   s.bookings.length > 0,
+      bookingId:        s.bookings[0]?.id,
+      creditsSpent:     s.bookings[0]?.creditsSpent,
+      mercyAvailable,
       location:         s.template?.location ?? null,
     };
   });

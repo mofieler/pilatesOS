@@ -1,4 +1,4 @@
-﻿import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
+import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
 import { CalendarCheckIcon, ClockIcon, MapPinIcon, ShieldCheckIcon } from 'lucide-react';
 import { CancelBookingButton } from './CancelBookingButton';
 
@@ -138,8 +138,8 @@ function BookingRow({
             <span className="inline-flex items-center gap-1.5 rounded-md bg-[#ede8e5]/40 px-2 py-1">
               <ClockIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="font-medium text-[#6b3d32]">{dateLabel(booking.startsAt)}</span>
-              <span>Â· {format(booking.startsAt, 'HH:mm')}</span>
-              <span>Â· {booking.durationMinutes} min</span>
+              <span>· {format(booking.startsAt, 'HH:mm')}</span>
+              <span>· {booking.durationMinutes} min</span>
             </span>
             {booking.location && (
               <span className="inline-flex items-center gap-1">

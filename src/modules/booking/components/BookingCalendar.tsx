@@ -7,6 +7,7 @@ import { CalendarDaysIcon, CalendarX2Icon, LayoutListIcon } from 'lucide-react';
 import { DateScroller, DATE_PARAM } from './DateScroller';
 import { ClassSessionCard, type ClassSessionCardProps } from './ClassSessionCard';
 import { BookingConfirmModal } from './BookingConfirmModal';
+import { BookedClassModal } from './BookedClassModal';
 import { WeekView, WeekNav } from './WeekView';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,6 +149,15 @@ function SessionListSkeleton() {
 export function BookingCalendar({ sessions }: BookingCalendarProps) {
   const [view, setView] = useState<ViewMode>('list');
   const [sessionToBook, setSessionToBook] = useState<ClassSessionCardProps | null>(null);
+  const [bookedSession, setBookedSession] = useState<ClassSessionCardProps | null>(null);
+
+  function handleSessionClick(session: ClassSessionCardProps) {
+    if (session.isBookedByUser) {
+      setBookedSession(session);
+    } else {
+      setSessionToBook(session);
+    }
+  }
 
   return (
     <div>
@@ -170,7 +180,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
       {view === 'list' && (
         <div className="pt-5">
           <Suspense fallback={<SessionListSkeleton />}>
-            <SessionList sessions={sessions} onBook={setSessionToBook} />
+            <SessionList sessions={sessions} onBook={handleSessionClick} />
           </Suspense>
         </div>
       )}
@@ -178,14 +188,20 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
       {/* ── Week view body ────────────────────────────────────────────────────── */}
       {view === 'week' && (
         <div className="pt-4">
-          <WeekView sessions={sessions} onBook={setSessionToBook} />
+          <WeekView sessions={sessions} onBook={handleSessionClick} />
         </div>
       )}
 
-      {/* ── Shared confirm modal ──────────────────────────────────────────────── */}
+      {/* ── Shared confirm modal (unbooked sessions) ──────────────────────────── */}
       <BookingConfirmModal
         session={sessionToBook}
         onClose={() => setSessionToBook(null)}
+      />
+
+      {/* ── Booked class modal (already-booked sessions) ────────────────────────── */}
+      <BookedClassModal
+        session={bookedSession}
+        onClose={() => setBookedSession(null)}
       />
     </div>
   );

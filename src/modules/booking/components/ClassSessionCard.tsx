@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -29,6 +29,9 @@ export type ClassSessionCardProps = {
   isBlocked?: boolean;
   /** Tooltip/label shown when isBlocked is true. */
   blockReason?: string | null;
+  bookingId?: string;
+  creditsSpent?: number;
+  mercyAvailable?: boolean;
   onBook?: (sessionId: string) => void;
   onJoinWaitlist?: (sessionId: string) => void;
 };
@@ -215,6 +218,12 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
     onBook?.(id);
   }
 
+  function handleCardClick() {
+    if (isBookedByUser) {
+      onBook?.(id);
+    }
+  }
+
 
   const state = deriveState(props);
   const spotsLeft = Math.max(0, maxCapacity - bookedCount);
@@ -247,9 +256,11 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         "hover:shadow-[0_8px_30px_rgba(78,43,34,0.08),0_16px_60px_rgba(78,43,34,0.04)]",
         "hover:-translate-y-1 hover:border-[#c4a88a]/30",
         isCancelled && "opacity-60 grayscale",
-        isBlocked && !isCancelled && "opacity-70"
+        isBlocked && !isCancelled && "opacity-70",
+        isBookedByUser && "cursor-pointer"
       )}
       title={isBlocked ? blockReason ?? 'Instructor unavailable' : undefined}
+      onClick={isBookedByUser ? handleCardClick : undefined}
     >
       {/* â”€â”€ Top row: class type + state badge â”€â”€ */}
       <div className="mb-4 flex items-start justify-between gap-2">
@@ -280,12 +291,12 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         </div>
       </div>
 
-      {/* â”€â”€ Meta: time Â· duration Â· location â”€â”€ */}
+      {/* ── Meta: time · duration · location ── */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary">
         <span className="inline-flex items-center gap-1.5 rounded-lg bg-cream/50 px-2.5 py-1">
           <ClockIcon className="size-4 shrink-0 text-muted" aria-hidden />
           <span className="font-medium text-primary">{format(startsAt, 'HH:mm')}</span>
-          <span className="text-muted">Â· {durationMinutes} min</span>
+          <span className="text-muted">· {durationMinutes} min</span>
         </span>
         {location && (
           <span className="inline-flex items-center gap-1.5 text-muted">
@@ -323,8 +334,8 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
         <SpotBar fillPercent={fillPercent} barColor={barColor} />
       </div>
 
-      {/* â”€â”€ Footer: credit cost + CTA â”€â”€ */}
-      <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+      {/* ── Footer: credit cost + CTA ── */}
+      <div className="mt-auto flex items-center justify-between gap-3 pt-2 pb-1">
         <div className="flex items-center gap-2 rounded-full bg-[#ede8e5]/60 px-3 py-1.5 backdrop-blur-sm">
           <span className={cn("size-2.5 rounded-full", CREDIT_DOT[creditType])} />
           <span className="text-sm font-medium text-[#4e2b22]">
