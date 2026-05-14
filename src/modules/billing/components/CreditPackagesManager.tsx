@@ -112,8 +112,9 @@ function CreditTypeCards({
   isSession: boolean;
   disabled: boolean;
 }) {
+  // Session packages: reformer only (no mat session packages exist).
   const visibleTypes: ClassType[] = isSession
-    ? ['reformer', 'mat']
+    ? ['reformer']
     : ['reformer', 'mat', 'group'];
 
   const compatibleTypes = isSession ? SESSION_CLASS_TYPES : CREDIT_CLASS_TYPES;
@@ -166,7 +167,7 @@ function CreditTypeCards({
       </div>
       {isSession && (
         <p className="text-[11px] text-[#8b6b5c]">
-          Session packages are private, so only equipment-based credit types apply.
+          Session packages cover private &amp; duo reformer sessions only.
         </p>
       )}
     </div>

@@ -1,6 +1,5 @@
 import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { format } from 'date-fns';
 import { ArrowRightIcon, CreditCardIcon, CalendarDaysIcon } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/lib/auth/auth';
@@ -11,11 +10,14 @@ import {
   classSessions,
   classTemplates,
   creditBalances,
+  creditPackages,
+  creditPurchases,
   instructors,
   users,
 } from '@/db/schema';
 import { CreditBalanceDisplay } from '@/modules/users/components/CreditBalanceDisplay';
-import type { CreditBalance } from '@/modules/users/components/CreditBalanceDisplay';
+import type { CreditBalance, SessionPackage } from '@/modules/users/components/CreditBalanceDisplay';
+import { DashboardGreeting } from '@/modules/users/components/DashboardGreeting';
 import { UpcomingBookingsList } from '@/modules/users/components/UpcomingBookingsList';
 import type { UpcomingBooking } from '@/modules/users/components/UpcomingBookingsList';
 import { StreakCard } from '@/modules/users/components/StreakCard';
@@ -34,6 +36,28 @@ async function getMercyAvailable(userId: string): Promise<boolean> {
     .limit(1);
 
   return row ? !row.firstMercyUsed : false;
+}
+
+async function getSessionPackages(userId: string): Promise<SessionPackage[]> {
+  const rows = await db
+    .select({
+      purchaseId:    creditPurchases.id,
+      packageName:   creditPackages.name,
+      creditsAmount: creditPurchases.creditsAmount,
+      purchasedAt:   creditPurchases.createdAt,
+    })
+    .from(creditPurchases)
+    .innerJoin(creditPackages, eq(creditPurchases.packageId, creditPackages.id))
+    .where(
+      and(
+        eq(creditPurchases.userId, userId),
+        eq(creditPurchases.paymentStatus, 'paid'),
+        eq(creditPackages.category, 'session'),
+      ),
+    )
+    .orderBy(asc(creditPurchases.createdAt));
+
+  return rows;
 }
 
 async function getCreditBalances(userId: string): Promise<CreditBalance[]> {
@@ -112,28 +136,19 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   const userName = session.user.name ?? session.user.email ?? 'there';
 
-  const [balances, upcomingBookings, mercyAvailable, billing, membership] = await Promise.all([
+  const [balances, sessionPackages, upcomingBookings, mercyAvailable, billing, membership] = await Promise.all([
     getCreditBalances(userId),
+    getSessionPackages(userId),
     getUpcomingBookings(userId),
     getMercyAvailable(userId),
     getUserBillingStatus(userId),
     getMyMembershipAction(),
   ]);
 
-  const greeting = getGreeting();
-
   return (
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="relative">
-        <p className="text-sm font-medium text-[#6b3d32]">
-          {format(new Date(), 'EEEE, d MMMM yyyy')}
-        </p>
-        <h1 className="mt-1">
-          {greeting}, <span className="text-[#4e2b22] font-bold">{firstName(userName)}</span> 👋
-        </h1>
-        <p className="mt-2 text-sm text-[#6b3d32]">Ready for your next Pilates session?</p>
-      </div>
+      <DashboardGreeting name={firstName(userName)} />
 
       {/* ── Streak (Phase 3) ─────────────────────────────────────────────────── */}
       {/* <StreakCard /> */}
@@ -145,7 +160,7 @@ export default async function DashboardPage() {
       <MembershipStatusCard membership={membership ?? null} />
 
       {/* ── Credits ────────────────────────────────────────────────────────── */}
-      <section className="rounded-2xl bg-gradient-to-br from-[#faf9f7]/80 to-[#ede8e5]/60 p-6 backdrop-blur-xl border border-[#ede8e5]/80 shadow-[0_4px_20px_rgba(78,43,34,0.04)]">
+      <section className="rounded-2xl bg-linear-to-br from-[#faf9f7]/80 to-[#ede8e5]/60 p-6 backdrop-blur-xl border border-[#ede8e5]/80 shadow-[0_4px_20px_rgba(78,43,34,0.04)]">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/80 text-[#6b3d32]">
@@ -161,7 +176,7 @@ export default async function DashboardPage() {
             <ArrowRightIcon className="size-3.5" aria-hidden />
           </Link>
         </div>
-        <CreditBalanceDisplay balances={balances} />
+        <CreditBalanceDisplay balances={balances} sessionPackages={sessionPackages} />
       </section>
 
       {/* ── Upcoming bookings ───────────────────────────────────────────────── */}
@@ -200,9 +215,3 @@ function firstName(name: string): string {
   return name.split(' ')[0] ?? name;
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}

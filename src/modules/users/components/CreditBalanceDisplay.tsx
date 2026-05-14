@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Dumbbell, Layers, Users, AlertCircleIcon } from 'lucide-react';
+import { Dumbbell, Layers, Users, AlertCircleIcon, ArrowRightIcon, UserIcon } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,14 +9,21 @@ export type CreditBalance = {
   expiresAt: Date | null;
 };
 
+export type SessionPackage = {
+  purchaseId: string;
+  packageName: string;
+  creditsAmount: number;
+  purchasedAt: Date;
+};
+
 // ─── Pool config ──────────────────────────────────────────────────────────────
 
 const POOL = {
   reformer: {
     icon:        Dumbbell,
-    title:       'Refo + Apparatus',
-    classes:     ['Group classes', 'Private sessions', 'Duo sessions'],
-    packages:    'Return to Life · Bloom · Session packs',
+    title:       'Reformer Group',
+    classes:     ['Reformer Group'],
+    packages:    'Return to Life · Bloom',
     gradient:    'from-[#faf8f5] to-[#f0e8df]',
     ring:        'ring-[#c4a88a]/30',
     numberColor: 'text-[#4e2b22]',
@@ -29,7 +36,7 @@ const POOL = {
     icon:        Layers,
     title:       'Mat Classes',
     classes:     ['MAT + Accessories', 'Private sessions', 'Duo sessions'],
-    packages:    'Mat session packages',
+    packages:    'Manual adjustment',
     gradient:    'from-[#f5f7f5] to-[#e8f0e8]',
     ring:        'ring-[#6b8e6b]/20',
     numberColor: 'text-[#3a5a3a]',
@@ -40,8 +47,8 @@ const POOL = {
   },
   group: {
     icon:        Users,
-    title:       'All Group Classes',
-    classes:     ['Chair + MAT', 'Yoga', 'Sound Healing', 'Refo (backup)', 'Mat (backup)'],
+    title:       'Yoga, Chair & More',
+    classes:     ['Yoga', 'Chair Pilates', 'Sound Healing', 'Reformer Group', 'Mat Group'],
     packages:    'Essence · Empower',
     gradient:    'from-[#faf9f5] to-[#f5ede0]',
     ring:        'ring-[#c4a88a]/20',
@@ -58,8 +65,8 @@ const POOL = {
 function PoolCard({ balance }: { balance: CreditBalance }) {
   const cfg = POOL[balance.creditType];
   const Icon = cfg.icon;
-  const isLow   = balance.balance > 0 && balance.balance <= 3;
-  const isEmpty  = balance.balance === 0;
+  const isLow  = balance.balance > 0 && balance.balance <= 3;
+  const isEmpty = balance.balance === 0;
 
   const expiryLabel = balance.expiresAt != null
     ? balance.expiresAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -94,7 +101,7 @@ function PoolCard({ balance }: { balance: CreditBalance }) {
         <div className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium ${cfg.lowBg}`}>
           <AlertCircleIcon className="size-3 shrink-0" />
           {isEmpty ? 'No credits — ' : 'Running low — '}
-          <Link href="/credits" className="underline underline-offset-2 font-semibold">
+          <Link href="/credits" className="underline underline-offset-2 font-semibold text-amber-700">
             buy more
           </Link>
         </div>
@@ -127,20 +134,138 @@ function PoolCard({ balance }: { balance: CreditBalance }) {
   );
 }
 
-// ─── Public component ─────────────────────────────────────────────────────────
+// ─── Private & Duo session section ───────────────────────────────────────────
 
-export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['reformer', 'group', 'mat'];
+function SessionPackagesSection({
+  packages,
+  reformerBalance,
+  reformerExpiry,
+}: {
+  packages: SessionPackage[];
+  reformerBalance: number;
+  reformerExpiry: Date | null;
+}) {
+  const hasCredits  = reformerBalance > 0;
+  const hasPurchases = packages.length > 0;
+  const isEmpty     = !hasCredits && !hasPurchases;
 
-  const filled = ALL_TYPES.map(
-    (type) => balances.find((b) => b.creditType === type) ?? { creditType: type, balance: 0, expiresAt: null },
-  );
+  const expiryLabel = reformerExpiry != null
+    ? reformerExpiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {filled.map((b) => (
-        <PoolCard key={b.creditType} balance={b} />
-      ))}
+    <div className="mt-5 border-t border-[#ede8e5]/60 pt-5">
+      {/* Section heading */}
+      <div className="mb-3 flex items-center gap-2">
+        <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#4e2b22]/10 text-[#4e2b22]">
+          <UserIcon className="size-3.5" aria-hidden />
+        </span>
+        <p className="text-sm font-semibold text-[#4e2b22]">Private &amp; Duo Sessions</p>
+        <span className="text-[11px] text-[#a6856f]">· 1 credit per session · Reformer only</span>
+      </div>
+
+      {isEmpty ? (
+        /* Empty state */
+        <div className="flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-[#c4a88a]/40 bg-[#faf9f7]/60 px-4 py-6 text-center">
+          <p className="text-sm font-medium text-[#6b3d32]">No session pack yet</p>
+          <p className="text-xs text-[#a6856f]">Private and duo sessions require a session pack</p>
+          <Link
+            href="/credits"
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#4e2b22] px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#6b3d32]"
+          >
+            Browse session packs
+            <ArrowRightIcon className="size-3" aria-hidden />
+          </Link>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-[#ede8e5]/80 bg-white/60 px-4 py-4 flex flex-col gap-3">
+          {/* Credit balance */}
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-3xl font-bold tabular-nums leading-none tracking-tight text-[#4e2b22]">
+                {reformerBalance}
+              </p>
+              <p className="mt-1 text-xs text-[#8b6b5c]">
+                {reformerBalance === 1 ? 'session credit available' : 'session credits available'}
+              </p>
+            </div>
+            {expiryLabel && (
+              <p className="text-[10px] text-[#a6856f] text-right">
+                <span className="font-semibold">Expires:</span><br />{expiryLabel}
+              </p>
+            )}
+          </div>
+
+          {/* Low / empty warning */}
+          {reformerBalance === 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700">
+              <AlertCircleIcon className="size-3 shrink-0" />
+              No session credits —{' '}
+              <Link href="/credits" className="underline underline-offset-2 font-semibold text-amber-700">
+                buy a pack
+              </Link>
+            </div>
+          )}
+
+          {/* Purchased packages list */}
+          {hasPurchases && (
+            <div className="border-t border-[#ede8e5]/60 pt-2.5 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#a6856f]">Your packs</p>
+              {packages.map((p) => (
+                <div key={p.purchaseId} className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-[#4e2b22]">{p.packageName}</p>
+                  <p className="text-[10px] text-[#a6856f]">
+                    {p.purchasedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Public component ─────────────────────────────────────────────────────────
+
+export function CreditBalanceDisplay({
+  balances,
+  sessionPackages,
+}: {
+  balances: CreditBalance[];
+  sessionPackages: SessionPackage[];
+}) {
+  // reformer and group always shown (packages exist for both).
+  // mat only shown if user has non-zero mat balance (admin adjustment only).
+  const ALWAYS_SHOW: CreditBalance['creditType'][] = ['reformer', 'group'];
+
+  const matBalance = balances.find((b) => b.creditType === 'mat');
+  const showMat    = matBalance != null && matBalance.balance > 0;
+
+  const cards: CreditBalance[] = [
+    ...ALWAYS_SHOW.map(
+      (type) => balances.find((b) => b.creditType === type) ?? { creditType: type, balance: 0, expiresAt: null },
+    ),
+    ...(showMat ? [matBalance!] : []),
+  ];
+
+  const cols = cards.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3';
+
+  const reformerBal = balances.find((b) => b.creditType === 'reformer');
+
+  return (
+    <div>
+      <div className={`grid grid-cols-1 gap-3 ${cols}`}>
+        {cards.map((b) => (
+          <PoolCard key={b.creditType} balance={b} />
+        ))}
+      </div>
+      <SessionPackagesSection
+        packages={sessionPackages}
+        reformerBalance={reformerBal?.balance ?? 0}
+        reformerExpiry={reformerBal?.expiresAt ?? null}
+      />
     </div>
   );
 }

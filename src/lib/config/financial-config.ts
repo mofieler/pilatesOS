@@ -16,9 +16,9 @@
 export type PaymentMethod = 'stripe' | 'pay_at_studio' | 'bank_transfer' | 'cash';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'overdue' | 'refunded';
 // Two-axis package model:
-// - 'credit'  → group-class credit packs (mat or reformer group classes)
-// - 'session' → private-session packs (mat or reformer equipment, 1:1 sessions)
-// The mat/reformer distinction lives on a separate `classType` column.
+// - 'credit'  → group-class credit packs (reformer or group classes)
+// - 'session' → private/duo session packs (reformer only; no mat session packages)
+// The equipment type lives on a separate `classType` column.
 export type CreditPackCategory = 'credit' | 'session';
 
 export interface PaymentMethodConfig {
@@ -108,7 +108,7 @@ export const CREDIT_PACK_CATEGORIES: Record<CreditPackCategory, {
   session: {
     value: 'session',
     label: 'Session Package',
-    description: 'Private 1:1 sessions on mat or reformer equipment',
+    description: 'Private 1:1 and duo reformer sessions',
     badgeStyle: 'bg-amber-100 text-amber-800',
     defaultValidityDays: 365,
   },
