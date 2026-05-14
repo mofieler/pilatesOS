@@ -33,7 +33,7 @@ import {
 describe('Financial Configuration', () => {
   describe('Payment Methods', () => {
     it('should have all expected payment methods', () => {
-      const expectedMethods: PaymentMethod[] = ['stripe', 'pay_at_studio', 'bank_transfer', 'cash', 'sound_healing_credits'];
+      const expectedMethods: PaymentMethod[] = ['stripe', 'pay_at_studio', 'bank_transfer', 'cash'];
       expect(getPaymentMethodValues()).toEqual(expectedMethods);
     });
 
@@ -58,7 +58,7 @@ describe('Financial Configuration', () => {
 
     it('should return correct labels for valid payment methods', () => {
       expect(getPaymentMethodLabel('stripe')).toBe('Credit Card (Stripe)');
-      expect(getPaymentMethodLabel('sound_healing_credits')).toBe('Sound Healing Credits');
+      expect(getPaymentMethodLabel('pay_at_studio')).toBe('Pay at Studio');
     });
 
     it('should return the value for invalid payment method', () => {
@@ -67,7 +67,7 @@ describe('Financial Configuration', () => {
 
     it('should validate payment methods correctly', () => {
       expect(isValidPaymentMethod('stripe')).toBe(true);
-      expect(isValidPaymentMethod('sound_healing_credits')).toBe(true);
+      expect(isValidPaymentMethod('cash')).toBe(true);
       expect(isValidPaymentMethod('invalid')).toBe(false);
     });
 
@@ -80,13 +80,13 @@ describe('Financial Configuration', () => {
 
     it('should filter active payment methods', () => {
       const activeMethods = getActivePaymentMethods();
-      expect(activeMethods).toHaveLength(5);
+      expect(activeMethods).toHaveLength(4);
       expect(activeMethods.every(method => method.isActive)).toBe(true);
     });
 
     it('should filter payment methods by currency', () => {
       const eurMethods = getPaymentMethodsForCurrency('eur');
-      expect(eurMethods).toHaveLength(5);
+      expect(eurMethods).toHaveLength(4);
 
       const usdMethods = getPaymentMethodsForCurrency('usd');
       expect(usdMethods).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('Financial Configuration', () => {
   describe('Select Options', () => {
     it('should generate correct payment method select options', () => {
       const options = getPaymentMethodSelectOptions();
-      expect(options).toHaveLength(5);
+      expect(options).toHaveLength(4);
       expect(options[0]).toEqual({
         value: 'stripe',
         label: 'Credit Card (Stripe)',
@@ -149,7 +149,7 @@ describe('Financial Configuration', () => {
     it('should calculate processing fees correctly', () => {
       expect(calculateProcessingFee(10000, 'stripe')).toBe(290); // 2.9% of 10000 cents
       expect(calculateProcessingFee(10000, 'pay_at_studio')).toBe(0); // No fee
-      expect(calculateProcessingFee(10000, 'sound_healing_credits')).toBe(0); // No fee
+      expect(calculateProcessingFee(10000, 'cash')).toBe(0); // No fee
     });
 
     it('should handle invalid payment method for fee calculation', () => {

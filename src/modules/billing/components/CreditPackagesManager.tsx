@@ -33,7 +33,7 @@ type Props = {
   packages: CreditPackage[];
 };
 
-type ClassType = 'mat' | 'reformer' | 'group' | 'sound_healing';
+type ClassType = 'mat' | 'reformer' | 'group';
 
 // ─── Derivation helpers ──────────────────────────────────────────────────────
 
@@ -44,7 +44,6 @@ function deriveCreditType(_category: CreditPackCategory, classType: ClassType): 
 function categoryClassTypeLabel(category: CreditPackCategory, classType: ClassType | null): string {
   if (!classType) return getCreditPackCategoryConfig(category)?.label ?? category;
   if (classType === 'group') return 'Group Credits';
-  if (classType === 'sound_healing') return 'Sound Healing';
   const equipment = classType === 'mat' ? 'Mat' : 'Reformer';
   return category === 'session' ? `Private ${equipment}` : `${equipment} Group`;
 }
@@ -73,7 +72,7 @@ function fromPackage(p: CreditPackage): FormState {
   // Derive classType for legacy packages that don't have it set
   const inferredClassType: ClassType =
     (p.classType as ClassType | null) ??
-    (p.creditType === 'reformer' ? 'reformer' : p.creditType === 'group' ? 'group' : p.creditType === 'sound_healing' ? 'sound_healing' : 'mat');
+    (p.creditType === 'reformer' ? 'reformer' : p.creditType === 'group' ? 'group' : 'mat');
 
   return {
     name:          p.name,
@@ -94,17 +93,15 @@ function fromPackage(p: CreditPackage): FormState {
 // Which class types are booked using each credit type, split by package category.
 // Credit packages → group classes only; session packages → private/duo classes only.
 const CREDIT_CLASS_TYPES: Record<ClassType, string[]> = {
-  reformer:      ['reformer_group'],
-  mat:           ['mat_group'],
-  group:         ['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing'],
-  sound_healing: [],
+  reformer: ['reformer_group'],
+  mat:      ['mat_group'],
+  group:    ['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing'],
 };
 
 const SESSION_CLASS_TYPES: Record<ClassType, string[]> = {
-  reformer:      ['reformer_private', 'reformer_duo'],
-  mat:           ['mat_private', 'mat_duo'],
-  group:         [],
-  sound_healing: [],
+  reformer: ['reformer_private', 'reformer_duo'],
+  mat:      ['mat_private', 'mat_duo'],
+  group:    [],
 };
 
 function CreditTypeCards({
@@ -500,7 +497,7 @@ export function CreditPackagesManager({ packages }: Props) {
             {packages.map((pkg) => {
               const cat = (pkg.category ?? 'credit') as CreditPackCategory;
               const classType = (pkg.classType as ClassType | null) ??
-                (pkg.creditType === 'reformer' ? 'reformer' : pkg.creditType === 'group' ? 'group' : pkg.creditType === 'sound_healing' ? 'sound_healing' : 'mat');
+                (pkg.creditType === 'reformer' ? 'reformer' : pkg.creditType === 'group' ? 'group' : 'mat');
               const cfg = getCreditPackCategoryConfig(cat);
               return (
                 <tr key={pkg.id} className="hover:bg-slate-50">

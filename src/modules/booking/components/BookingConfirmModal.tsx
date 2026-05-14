@@ -28,17 +28,15 @@ export interface BookingConfirmModalProps {
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  mat:           'bg-[#8b6b5c]',
-  group:         'bg-[#c4a88a]',
-  reformer:      'bg-[#6b8e6b]',
-  sound_healing: 'bg-purple-500',
+  mat:      'bg-[#8b6b5c]',
+  group:    'bg-[#c4a88a]',
+  reformer: 'bg-[#6b8e6b]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  mat:           'Mat Credit',
-  reformer:      'Reformer Credit',
-  group:         'Group Credit',
-  sound_healing: 'Sound Healing Credit',
+  mat:      'Mat Credit',
+  reformer: 'Reformer Credit',
+  group:    'Group Credit',
 };
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {

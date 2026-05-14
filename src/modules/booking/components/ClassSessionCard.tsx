@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'sound_healing';
+  creditType: 'reformer' | 'mat' | 'group';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -78,17 +78,15 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer:      'bg-[#6b8e6b]',
-  mat:           'bg-[#8b6b5c]',
-  group:         'bg-[#c4a88a]',
-  sound_healing: 'bg-purple-500',
+  reformer: 'bg-[#6b8e6b]',
+  mat:      'bg-[#8b6b5c]',
+  group:    'bg-[#c4a88a]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer:      'Reformer Credit',
-  mat:           'Mat Credit',
-  group:         'Group Credit',
-  sound_healing: 'Sound Healing Credit',
+  reformer: 'Reformer Credit',
+  mat:      'Mat Credit',
+  group:    'Group Credit',
 };
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

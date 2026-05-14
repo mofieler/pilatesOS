@@ -37,8 +37,8 @@ describe('Class Types Configuration', () => {
       expect(values).toContain('sound_healing');
     });
 
-    it('should have exactly 4 credit types', () => {
-      const expectedTypes: CreditType[] = ['reformer', 'mat', 'group', 'sound_healing'];
+    it('should have exactly 3 credit types', () => {
+      const expectedTypes: CreditType[] = ['reformer', 'mat', 'group'];
       expect(getCreditTypeValues()).toEqual(expectedTypes);
     });
   });
@@ -107,7 +107,7 @@ describe('Class Types Configuration', () => {
       expect(isValidCreditType('mat')).toBe(true);
       expect(isValidCreditType('reformer')).toBe(true);
       expect(isValidCreditType('group')).toBe(true);
-      expect(isValidCreditType('sound_healing')).toBe(true);
+      expect(isValidCreditType('sound_healing')).toBe(false);
       expect(isValidCreditType('mat_group')).toBe(false);
       expect(isValidCreditType('invalid')).toBe(false);
     });

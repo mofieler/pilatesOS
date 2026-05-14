@@ -1,9 +1,9 @@
-import { Users, Dumbbell, Sparkles, Music } from 'lucide-react';
+import { Users, Dumbbell, Sparkles } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CreditBalance = {
-  creditType: 'mat' | 'reformer' | 'group' | 'sound_healing';
+  creditType: 'mat' | 'reformer' | 'group';
   balance: number;
   expiresAt: Date | null;
 };
@@ -37,15 +37,6 @@ const TIER = {
     dot: 'bg-[#c4a88a]',
     numberColor: 'text-[#4e2b22]',
     gradient: 'from-[#faf8f5] to-[#f5ede0]',
-  },
-  sound_healing: {
-    label: 'Sound Healing',
-    icon: Music,
-    pill: 'bg-purple-100 text-purple-800 border-purple-200',
-    ring: 'ring-purple-200',
-    dot: 'bg-purple-500',
-    numberColor: 'text-purple-700',
-    gradient: 'from-purple-50 to-purple-100/60',
   },
 } as const;
 
@@ -96,7 +87,7 @@ function CreditCard({ balance }: { balance: CreditBalance }) {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }) {
-  const ALL_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group', 'sound_healing'];
+  const ALL_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group'];
 
   // Ensure all tiers are always shown, even if balance row doesn't exist yet
   const filled = ALL_TYPES.map(
@@ -104,7 +95,7 @@ export function CreditBalanceDisplay({ balances }: { balances: CreditBalance[] }
   );
 
   return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {filled.map((b) => (
         <CreditCard key={b.creditType} balance={b} />
       ))}

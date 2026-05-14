@@ -11,7 +11,7 @@ import { auditHelpers } from '@/lib/security/audit-system';
 
 const adjustSchema = z.object({
   userId:     z.string().uuid(),
-  creditType: z.enum(['mat', 'reformer', 'group', 'sound_healing']),
+  creditType: z.enum(['mat', 'reformer', 'group']),
   amountDelta: z.number().int().refine((n) => n !== 0, 'Amount must not be zero'),
   reason:      z.string().min(3).max(500),
   notes:       z.string().max(1000).optional(),

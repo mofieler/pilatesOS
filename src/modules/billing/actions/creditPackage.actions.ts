@@ -23,9 +23,9 @@ async function requireAdmin() {
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-// classType for credit packages: mat, reformer, group, or sound_healing.
+// classType for credit packages: mat, reformer, or group.
 // For session packages: mat or reformer only.
-const classTypeSchema = z.enum(['mat', 'reformer', 'group', 'sound_healing']);
+const classTypeSchema = z.enum(['mat', 'reformer', 'group']);
 
 const createSchema = z.object({
   name:          z.string().min(1, 'Name is required').max(255),

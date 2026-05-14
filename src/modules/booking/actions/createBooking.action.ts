@@ -161,9 +161,9 @@ export async function createBookingAction(
       if (!template) throw new BookingError('Class template not found.', 'NOT_FOUND');
 
       // Group-eligible classes also accept 'group' credits as fallback.
-      // chair and online always use group; reformer_group/mat_group try primary first.
-      // sound_healing uses its own credit type — no fallback.
-      const GROUP_FALLBACK_TYPES = new Set(['reformer_group', 'mat_group', 'chair', 'online']);
+      // chair, online, yoga, sound_healing always use group credits.
+      // reformer_group/mat_group try their primary type first, then fall back to group.
+      const GROUP_FALLBACK_TYPES = new Set(['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing']);
       const primaryCreditType = template.creditType;
       const useFallback =
         GROUP_FALLBACK_TYPES.has(template.classType) && primaryCreditType !== 'group';

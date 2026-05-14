@@ -9,10 +9,9 @@ import type { MyMembership } from '@/modules/billing/actions/membership.actions'
 // ─── Credit type accent colours ───────────────────────────────────────────────
 
 const CREDIT_ACCENT: Record<string, { bg: string; text: string; dot: string }> = {
-  reformer:     { bg: 'bg-[#4e2b22]/8',  text: 'text-[#4e2b22]',  dot: 'bg-[#4e2b22]' },
-  mat:          { bg: 'bg-[#6b8e6b]/10', text: 'text-[#4a7c4a]',  dot: 'bg-[#6b8e6b]' },
-  group:        { bg: 'bg-[#d4a574]/10', text: 'text-[#8b5e3c]',  dot: 'bg-[#d4a574]' },
-  sound_healing:{ bg: 'bg-purple-50',    text: 'text-purple-700',  dot: 'bg-purple-500' },
+  reformer: { bg: 'bg-[#4e2b22]/8',  text: 'text-[#4e2b22]', dot: 'bg-[#4e2b22]' },
+  mat:      { bg: 'bg-[#6b8e6b]/10', text: 'text-[#4a7c4a]', dot: 'bg-[#6b8e6b]' },
+  group:    { bg: 'bg-[#d4a574]/10', text: 'text-[#8b5e3c]', dot: 'bg-[#d4a574]' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

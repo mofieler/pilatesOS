@@ -29,10 +29,9 @@ function txColor(type: string) {
 }
 
 const CREDIT_TYPE_LABEL: Record<string, string> = {
-  mat:           'Mat',
-  reformer:      'Reformer',
-  group:         'Group',
-  sound_healing: 'Sound Healing',
+  mat:      'Mat',
+  reformer: 'Reformer',
+  group:    'Group',
 };
 
 function formatCreditType(type: string) {
@@ -98,12 +97,11 @@ export function StudentDetail({ userId, onClose }: Props) {
 
       {/* Credit balances */}
       {!loading && detail && (
-        <div className="grid grid-cols-4 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
+        <div className="grid grid-cols-3 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
           {[
             { label: 'Mat',      value: detail.matBalance },
             { label: 'Reformer', value: detail.reformerBalance },
             { label: 'Group',    value: detail.groupBalance },
-            { label: 'Sound',    value: detail.soundHealingBalance },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-xl bg-[#ede8e5]/40 px-3 py-3">
               <p className="text-[9px] font-semibold uppercase tracking-wide text-[#8b6b5c] mb-1">{label}</p>
@@ -115,8 +113,8 @@ export function StudentDetail({ userId, onClose }: Props) {
         </div>
       )}
       {loading && (
-        <div className="grid grid-cols-4 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-3 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-16 rounded-xl bg-[#ede8e5] animate-pulse" />
           ))}
         </div>

@@ -1,15 +1,14 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  *
- * Credit model — THREE active credit currencies (sound_healing kept for legacy data):
- *   'reformer'      Bloom / Return to Life packages + reformer membership.
- *                   Accepted for: reformer_group only.
- *   'mat'           Mat membership.
- *                   Accepted for: mat_group only.
- *   'group'         Essence / Empower packages (flexible).
- *                   Accepted for: reformer_group, mat_group, chair, online, yoga, sound_healing.
- *                   Booking service tries primary type first; falls back to 'group'.
- *   'sound_healing' Legacy — no new packages. Sound healing classes now use 'group' credits.
+ * Credit model — THREE credit currencies:
+ *   'reformer' Bloom / Return to Life packages + reformer membership.
+ *              Accepted for: reformer_group only.
+ *   'mat'      Mat membership.
+ *              Accepted for: mat_group only.
+ *   'group'    Essence / Empower packages (flexible).
+ *              Accepted for: reformer_group, mat_group, chair, online, yoga, sound_healing.
+ *              Booking service tries primary type first; falls back to 'group'.
  */
 
 // ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ export type ClassType =
   | 'sound_healing'
   | 'yoga';
 
-export type CreditType = 'reformer' | 'mat' | 'group' | 'sound_healing';
+export type CreditType = 'reformer' | 'mat' | 'group';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -151,12 +150,6 @@ export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
     description: 'Flexible — accepted for reformer_group, mat_group, chair, online, yoga, sound_healing (Essence, Empower)',
     badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
   },
-  sound_healing: {
-    value: 'sound_healing',
-    label: 'Sound Healing Credits',
-    description: 'Legacy credit type — sound healing classes now use group credits',
-    badgeStyle: 'bg-purple-100 text-purple-800',
-  },
 } as const;
 
 // ─── DERIVED MAPPING ───────────────────────────────────────────────────────────
@@ -229,17 +222,15 @@ export function isCreditType(value: unknown): value is CreditType {
 // ─── LEGACY COMPATIBILITY (used in booking pages / credit package cards) ────────
 
 export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
-  reformer:      'Reformer Credits',
-  mat:           'Mat Credits',
-  group:         'Group Credits',
-  sound_healing: 'Sound Healing Credits',
+  reformer: 'Reformer Credits',
+  mat:      'Mat Credits',
+  group:    'Group Credits',
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
-  reformer:      'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  mat:           'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  group:         'bg-[#c4a88a]/20 text-[#4e2b22]',
-  sound_healing: 'bg-purple-100 text-purple-800',
+  reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
+  mat:      'bg-[#6b8e6b]/10 text-[#4a7c4a]',
+  group:    'bg-[#c4a88a]/20 text-[#4e2b22]',
 };
 
 export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

@@ -41,10 +41,9 @@ export const cancellationTypeEnum = pgEnum('cancellation_type', [
 ]);
 
 export const creditTypeEnum = pgEnum('credit_type', [
-  'reformer',      // reformer_group only — Bloom / Return to Life packages + reformer membership
-  'mat',           // mat_group only — mat membership
-  'group',         // flexible — reformer_group, mat_group, chair, online — Essence / Empower packages
-  'sound_healing', // sound_healing classes only — dedicated sound healing packages
+  'reformer', // reformer group + private + duo — Bloom / Return to Life / session packages
+  'mat',      // mat group + private + duo — mat session packages
+  'group',    // any group class — reformer_group, mat_group, chair, online, yoga, sound_healing — Essence / Empower
 ]);
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [
@@ -74,10 +73,9 @@ export const guestPassStatusEnum = pgEnum('guest_pass_status', ['active', 'redee
 
 export const paymentMethodEnum = pgEnum('payment_method', [
   'stripe',
-  'pay_at_studio', 
+  'pay_at_studio',
   'bank_transfer',
   'cash',
-  'sound_healing_credits'
 ]);
 
 export const paymentStatusEnum = pgEnum('payment_status', [

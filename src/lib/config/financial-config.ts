@@ -13,7 +13,7 @@
 
 // ─── TYPE DEFINITIONS ────────────────────────────────────────────────────────
 
-export type PaymentMethod = 'stripe' | 'pay_at_studio' | 'bank_transfer' | 'cash' | 'sound_healing_credits';
+export type PaymentMethod = 'stripe' | 'pay_at_studio' | 'bank_transfer' | 'cash';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'overdue' | 'refunded';
 // Two-axis package model:
 // - 'credit'  → group-class credit packs (mat or reformer group classes)
@@ -85,17 +85,6 @@ export const PAYMENT_METHODS: Record<PaymentMethod, PaymentMethodConfig> = {
     requiresOnlinePayment: false,
     requiresManualConfirmation: true,
     supportedCurrencies: ['eur'],
-    isActive: true,
-  },
-  sound_healing_credits: {
-    value: 'sound_healing_credits',
-    label: 'Sound Healing Credits',
-    description: 'Pay using sound healing session credits',
-    icon: 'music',
-    requiresOnlinePayment: false,
-    requiresManualConfirmation: false,
-    supportedCurrencies: ['eur'],
-    processingFeePercent: 0,
     isActive: true,
   },
 } as const;
