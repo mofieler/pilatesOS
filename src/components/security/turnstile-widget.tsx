@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
  * Cloudflare Turnstile widget. Renders nothing if NEXT_PUBLIC_TURNSTILE_SITE_KEY
@@ -60,8 +60,14 @@ function loadScript(): Promise<void> {
 export function TurnstileWidget({ onToken, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onTokenRef = useRef(onToken);
   const [error, setError] = useState<string | null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  // Keep the ref current without re-mounting the widget on every parent render.
+  useEffect(() => { onTokenRef.current = onToken; });
+
+  const stableOnToken = useCallback((token: string | null) => onTokenRef.current(token), []);
 
   useEffect(() => {
     if (!siteKey || !containerRef.current) return;
@@ -74,12 +80,12 @@ export function TurnstileWidget({ onToken, className }: Props) {
           sitekey: siteKey,
           theme: 'light',
           size: 'flexible',
-          callback: (token) => onToken(token),
+          callback: (token) => stableOnToken(token),
           'error-callback': () => {
             setError('Captcha could not load. Please refresh the page.');
-            onToken(null);
+            stableOnToken(null);
           },
-          'expired-callback': () => onToken(null),
+          'expired-callback': () => stableOnToken(null),
         });
       })
       .catch(() => setError('Captcha could not load. Please refresh the page.'));
@@ -94,10 +100,7 @@ export function TurnstileWidget({ onToken, className }: Props) {
         }
       }
     };
-    // onToken may close over fresh state each render; use a ref pattern to
-    // avoid re-rendering the widget. For now, re-render only on siteKey.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteKey]);
+  }, [siteKey, stableOnToken]);
 
   if (!siteKey) {
     // Un-provisioned: hide entirely. Server still skips verification when

@@ -12,13 +12,18 @@ export function addSecurityHeaders(request: NextRequest, response: NextResponse)
   // user/instructor avatars come from arbitrary HTTPS origins (Google,
   // Gravatar, etc.). Add specific origins here when integrating Stripe,
   // Bunny CDN, etc.
+  // Cloudflare Turnstile needs:
+  //   script-src  — to load api.js from challenges.cloudflare.com
+  //   frame-src   — Turnstile renders its challenge inside a CF-hosted iframe
+  //   connect-src — the widget POSTs tokens back to challenges.cloudflare.com
   const cspHeader = [
     "default-src 'self';",
-    "script-src 'self' 'unsafe-inline';",
+    "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;",
     "style-src 'self' 'unsafe-inline';",
     "img-src 'self' blob: data: https:;",
     "font-src 'self' data:;",
-    "connect-src 'self';",
+    "connect-src 'self' https://challenges.cloudflare.com;",
+    "frame-src https://challenges.cloudflare.com;",
     "object-src 'none';",
     "base-uri 'self';",
     "form-action 'self';",
