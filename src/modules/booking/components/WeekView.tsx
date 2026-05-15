@@ -44,24 +44,23 @@ function WeekNavInner() {
         type="button"
         onClick={() => navigate(-1)}
         aria-label="Previous week"
-        className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
       >
-        <ChevronLeftIcon className="size-3.5" />
+        <ChevronLeftIcon className="size-4" />
       </button>
 
-      <div className="flex flex-col items-center flex-1 gap-0.5 min-w-0">
+      {/* Single-row center: date + optional Today pill — never wraps to a second line */}
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
         <span className="text-sm font-semibold text-[#4e2b22] tabular-nums whitespace-nowrap">
-          {format(weekStart, 'd MMM')}
-          {' – '}
-          {format(addDays(weekStart, 6), 'd MMM yyyy')}
+          {format(weekStart, 'd MMM')}–{format(addDays(weekStart, 6), 'd MMM')}
         </span>
         {!isCurrentWeek && (
           <button
             type="button"
             onClick={jumpToToday}
-            className="text-[11px] font-semibold text-[#6b8e6b] hover:text-[#4a7c4a] transition-colors underline underline-offset-2"
+            className="shrink-0 rounded-full border border-[#6b8e6b]/40 bg-[#6b8e6b]/10 px-2 py-0.5 text-[10px] font-semibold text-[#4a7c4a] transition-all hover:bg-[#6b8e6b]/20 active:scale-95"
           >
-            Jump to today
+            Today
           </button>
         )}
       </div>
@@ -70,9 +69,9 @@ function WeekNavInner() {
         type="button"
         onClick={() => navigate(1)}
         aria-label="Next week"
-        className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#ede8e5] text-[#8b6b5c] transition-all hover:bg-[#ede8e5]/60 hover:text-[#4e2b22] active:scale-95"
       >
-        <ChevronRightIcon className="size-3.5" />
+        <ChevronRightIcon className="size-4" />
       </button>
     </div>
   );
@@ -81,9 +80,9 @@ function WeekNavInner() {
 function WeekNavSkeleton() {
   return (
     <div className="flex items-center gap-1 py-1">
-      <div className="size-8 animate-pulse rounded-xl bg-[#ede8e5]/60" />
+      <div className="size-10 animate-pulse rounded-xl bg-[#ede8e5]/60" />
       <div className="flex-1 h-4 animate-pulse rounded-lg bg-[#ede8e5]/60 mx-4" />
-      <div className="size-8 animate-pulse rounded-xl bg-[#ede8e5]/60" />
+      <div className="size-10 animate-pulse rounded-xl bg-[#ede8e5]/60" />
     </div>
   );
 }
@@ -193,7 +192,10 @@ function SessionBlock({
       {/* Credit cost */}
       <p className="mt-1 text-[10px] opacity-60">
         {session.creditCost}{' '}
-        {session.creditType === 'mat' ? 'Mat' : 'Reformer'}
+        {session.creditType === 'mat' ? 'Mat / Group'
+          : session.creditType === 'group' ? 'Group'
+          : session.creditType === 'session' ? 'Session'
+          : 'Reformer / Group'}
       </p>
 
       {/* Status badges */}

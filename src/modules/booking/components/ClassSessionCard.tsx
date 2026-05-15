@@ -88,10 +88,10 @@ const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'Reformer Credit',
-  mat:      'Mat Credit',
-  group:    'Group Credit',
-  session:  'Session Credit',
+  reformer: 'Reformer / Group Credits',
+  mat:      'Mat / Group Credits',
+  group:    'Group Credits',
+  session:  'Session Credits',
 };
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -164,7 +164,7 @@ function SessionPackagesSection({
           <UserIcon className="size-3.5" aria-hidden />
         </span>
         <p className="text-sm font-semibold text-[#4e2b22]">Private &amp; Duo Sessions</p>
-        <span className="text-[11px] text-[#a6856f]">· 1 credit per session · Reformer only</span>
+        <span className="text-[11px] text-[#a6856f]">· 1 credit per session</span>
       </div>
 
       {isEmpty ? (

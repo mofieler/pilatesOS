@@ -74,7 +74,7 @@ const PACKAGE_SECTIONS: PackageSectionConfig[] = [
     key: 'private-sessions',
     icon: User,
     label: 'Private Sessions',
-    description: '1-on-1 reformer sessions with your instructor',
+    description: '1-on-1 sessions with your instructor — tailored to your individual needs using reformer, mat, and all other apparatus',
     accentClass: 'bg-[#4e2b22]/10 text-[#4e2b22]',
     cardStyle: 'tier',
     filter: (p) => p.category === 'session' && p.name.toLowerCase().includes('private'),
