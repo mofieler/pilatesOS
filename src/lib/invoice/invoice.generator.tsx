@@ -170,6 +170,21 @@ const S = StyleSheet.create({
   greeting:  { fontSize: 9, marginBottom: 4 },
   owners:    { fontSize: 9 },
 
+  // Legal note
+  legalNote: {
+    marginTop:        24,
+    paddingTop:       8,
+    borderTopWidth:   0.5,
+    borderTopColor:   '#cccccc',
+    borderTopStyle:   'solid',
+    marginBottom:     8,
+  },
+  legalNoteText: {
+    fontSize:   7,
+    color:      '#888888',
+    lineHeight: 1.5,
+  },
+
   // Footer
   footer: {
     position: 'absolute',
@@ -331,6 +346,15 @@ function InvoicePDF({
         </Text>
         <Text style={S.greeting}>Mit freundlichen Grüßen</Text>
         {studio.owners ? <Text style={S.owners}>{studio.owners}</Text> : null}
+
+        {/* Legal note */}
+        <View style={S.legalNote}>
+          <Text style={S.legalNoteText}>
+            Dieses Dokument wurde automatisch erstellt und ist ohne Unterschrift gültig (§ 14 UStG).
+            {'\n'}
+            This document was generated automatically and is valid without a signature (§ 14 UStG).
+          </Text>
+        </View>
 
         {/* Footer */}
         <View style={S.footer} fixed>
