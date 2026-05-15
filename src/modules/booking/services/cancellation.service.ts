@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { bookings, users, classSessions, classTemplates, waitlistEntries } from '@/db/schema';
 import type { Booking } from '@/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail } from '@/lib/email/resend';
 import { differenceInHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
@@ -167,7 +167,7 @@ export const cancellationService = {
 
         await tx
           .update(classSessions)
-          .set({ bookedCount: session.bookedCount - 1, updatedAt: now })
+          .set({ bookedCount: sql`${classSessions.bookedCount} - 1`, updatedAt: now })
           .where(eq(classSessions.id, session.id));
 
         if (mercyApplied) {

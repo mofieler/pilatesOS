@@ -104,7 +104,8 @@ function BillCard({ bill, isExpanded, onToggle }: {
       </div>
 
       {/* Expanded Details */}
-      {isExpanded && (
+      <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+        <div className="overflow-hidden">
         <div className="border-t border-[#ede8e5]/60 bg-[#faf9f7]/50 p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -176,7 +177,8 @@ function BillCard({ bill, isExpanded, onToggle }: {
             </div>
           )}
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

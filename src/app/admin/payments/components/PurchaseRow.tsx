@@ -41,7 +41,7 @@ export function PurchaseRow({ purchase, onMarkPaid, onDownload, onSendReminder, 
 
   return (
     <div className={cn(
-      'rounded-2xl border transition-all duration-200 bg-linear-to-br from-[#faf9f7]/90 to-[#f5f3f1]/60',
+      'rounded-2xl border transition-[border-color,box-shadow] duration-200 bg-linear-to-br from-[#faf9f7]/90 to-[#f5f3f1]/60',
       isExpanded ? 'border-[#c4a88a]/40 shadow-[0_4px_20px_rgba(78,43,34,0.08)]' : 'border-[#ede8e5]/80',
     )}>
       {/* ── Collapsed row ── */}
@@ -110,8 +110,9 @@ export function PurchaseRow({ purchase, onMarkPaid, onDownload, onSendReminder, 
       </div>
 
       {/* ── Expanded details ── */}
-      {isExpanded && (
-        <div className="px-4 pb-4 border-t border-[#ede8e5]/60 animate-in slide-in-from-top-2 duration-200">
+      <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+        <div className="overflow-hidden">
+        <div className="px-4 pb-4 border-t border-[#ede8e5]/60">
           <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div className="flex items-center gap-2 text-sm">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#ede8e5]/60 text-[#8b6b5c]"><Store className="size-3.5" /></span>
@@ -192,7 +193,8 @@ export function PurchaseRow({ purchase, onMarkPaid, onDownload, onSendReminder, 
             </div>
           )}
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

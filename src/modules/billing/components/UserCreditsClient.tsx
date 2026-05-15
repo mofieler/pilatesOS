@@ -342,7 +342,7 @@ function UserCard({ user }: { user: UserRow }) {
   return (
     <div
       className={cn(
-        'rounded-2xl border transition-all',
+        'rounded-2xl border transition-[border-color,box-shadow]',
         open
           ? 'border-[#c4a88a] shadow-[0_4px_20px_rgba(78,43,34,0.08)]'
           : 'border-[#ede8e5] hover:border-[#c4a88a]/50',
@@ -389,8 +389,9 @@ function UserCard({ user }: { user: UserRow }) {
       </button>
 
       {/* Expanded panel */}
-      {open && (
-        <div className="border-t border-[#ede8e5] px-4 pb-4 pt-4 animate-in slide-in-from-top-2">
+      <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+        <div className="overflow-hidden">
+        <div className="border-t border-[#ede8e5] px-4 pb-4 pt-4">
           <div className="grid md:grid-cols-2 gap-6">
             {/* Left: all balances */}
             <div>
@@ -436,7 +437,8 @@ function UserCard({ user }: { user: UserRow }) {
             </div>
           </div>
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
