@@ -122,8 +122,8 @@ export const creditPurchases = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
+    // NULL for membership-based purchases (no discrete package, plan tracked via adminNotes)
     packageId: uuid('package_id')
-      .notNull()
       .references(() => creditPackages.id, { onDelete: 'restrict' }),
     creditsAmount: integer('credits_amount').notNull(),
     creditType: creditTypeEnum('credit_type').notNull(),

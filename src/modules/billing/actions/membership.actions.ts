@@ -2,13 +2,22 @@
 
 import { z } from 'zod';
 import { db } from '@/db';
-import { membershipPlans, userMemberships, users } from '@/db/schema';
+import {
+  membershipPlans,
+  userMemberships,
+  users,
+  creditPurchases,
+  creditBalances,
+  creditTransactions,
+} from '@/db/schema';
 import type { CreditType } from '@/db/schema';
-import { eq, and, isNull, desc, asc } from 'drizzle-orm';
+import { eq, and, isNull, desc, asc, like } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { addDays } from 'date-fns';
 import { revalidatePath } from 'next/cache';
 import { getCreditTypeValues } from '@/lib/config/class-types';
+import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
+import { sendMembershipPurchaseEmail } from '@/lib/email/membership.emails';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -16,6 +25,21 @@ async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== 'admin') return null;
   return session;
+}
+
+// ─── Invoice number helper ────────────────────────────────────────────────────
+
+async function nextInvoiceNumber(tx: Parameters<Parameters<typeof db.transaction>[0]>[0]): Promise<string> {
+  const year   = new Date().getFullYear();
+  const prefix = `RE-${year}-`;
+  const [lastRow] = await tx
+    .select({ num: creditPurchases.invoiceNumber })
+    .from(creditPurchases)
+    .where(like(creditPurchases.invoiceNumber, `${prefix}%`))
+    .orderBy(desc(creditPurchases.invoiceNumber))
+    .limit(1);
+  const lastSeq = lastRow?.num ? parseInt(lastRow.num.slice(prefix.length), 10) : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(4, '0')}`;
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -196,18 +220,116 @@ export async function assignMembershipAction(input: z.infer<typeof assignSchema>
 
     if (existing) return { success: false as const, error: 'Student already has an active membership' };
 
-    const endsAt = addDays(startedAt, plan.durationWeeks * 7);
+    const [userRow] = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .limit(1);
 
-    const [membership] = await db.insert(userMemberships).values({
-      userId,
-      planId,
-      creditType:         plan.creditType as CreditType,
-      weeklyCredits:      plan.weeklyCredits,
-      startedAt,
-      endsAt,
-      status:             'active',
-      nextCreditGrantAt:  startedAt,
-    }).returning();
+    if (!userRow) return { success: false as const, error: 'User not found' };
+
+    const endsAt  = addDays(startedAt, plan.durationWeeks * 7);
+    const dueDate = addDays(startedAt, 14);
+    const now     = startedAt;
+
+    const { membership, invoiceNumber } = await db.transaction(async (tx) => {
+      const invNumber = await nextInvoiceNumber(tx);
+
+      const [membership] = await tx.insert(userMemberships).values({
+        userId,
+        planId,
+        creditType:        plan.creditType as CreditType,
+        weeklyCredits:     plan.weeklyCredits,
+        startedAt,
+        endsAt,
+        status:            'active',
+        lastCreditGrantAt: now,
+        nextCreditGrantAt: addDays(now, 7),
+      }).returning();
+
+      // Create bill record for the dashboard / admin payments view
+      await tx.insert(creditPurchases).values({
+        userId,
+        packageId:      null,
+        creditsAmount:  plan.weeklyCredits * plan.durationWeeks,
+        creditType:     plan.creditType as CreditType,
+        priceCents:     plan.priceCents,
+        currency:       plan.currency,
+        paymentMethod:  'pay_at_studio',
+        paymentStatus:  'pending',
+        paymentDueDate: dueDate,
+        invoiceNumber:  invNumber,
+        invoiceIssuedAt: now,
+        adminNotes:     plan.name,
+      });
+
+      // Grant first week's credits immediately
+      const [bal] = await tx
+        .select()
+        .from(creditBalances)
+        .where(and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, plan.creditType as CreditType)))
+        .for('update')
+        .limit(1);
+
+      const newBalance = (bal?.balance ?? 0) + plan.weeklyCredits;
+
+      if (bal) {
+        await tx.update(creditBalances).set({ balance: newBalance, updatedAt: now }).where(eq(creditBalances.id, bal.id));
+      } else {
+        await tx.insert(creditBalances).values({ userId, creditType: plan.creditType as CreditType, balance: newBalance });
+      }
+
+      await tx.insert(creditTransactions).values({
+        userId,
+        type:         'purchase',
+        creditType:   plan.creditType as CreditType,
+        amount:       plan.weeklyCredits,
+        balanceAfter: newBalance,
+        description:  `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
+      });
+
+      return { membership, invoiceNumber: invNumber };
+    });
+
+    // Fire-and-forget: generate PDF + send membership confirmation email
+    Promise.resolve().then(async () => {
+      try {
+        const pdfBuffer = await generateInvoicePDF({
+          invoiceNumber,
+          invoiceDate:     now,
+          dueDate,
+          customerName:    userRow.name ?? 'Customer',
+          customerEmail:   userRow.email ?? '',
+          customerAddress: null,
+          packageName:     plan.name,
+          creditsAmount:   plan.weeklyCredits * plan.durationWeeks,
+          creditType:      plan.creditType,
+          priceCents:      plan.priceCents,
+          currency:        plan.currency,
+          paymentMethod:   'pay_at_studio',
+        });
+
+        if (userRow.email) {
+          await sendMembershipPurchaseEmail(
+            userRow.email,
+            userRow.name ?? 'there',
+            plan.name,
+            plan.weeklyCredits,
+            plan.creditType,
+            plan.durationWeeks,
+            plan.priceCents,
+            plan.currency,
+            now,
+            endsAt,
+            invoiceNumber,
+            dueDate,
+            pdfBuffer,
+          );
+        }
+      } catch (err) {
+        console.warn('[membership] Failed to generate/send membership invoice:', err);
+      }
+    }).catch(() => {});
 
     revalidatePath('/admin/memberships');
     return { success: true as const, data: membership };
@@ -269,7 +391,7 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
 
   const { planId, acceptedTerms, acceptedWithdrawalWaiver, purchaseIpAddress } = parsed.data;
   const userId = session.user.id;
-  const now = new Date();
+  const now    = new Date();
 
   try {
     const [plan] = await db.select().from(membershipPlans).where(eq(membershipPlans.id, planId)).limit(1);
@@ -284,22 +406,117 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
 
     if (existing) return { success: false as const, error: 'You already have an active membership' };
 
-    const endsAt = addDays(now, plan.durationWeeks * 7);
+    const endsAt  = addDays(now, plan.durationWeeks * 7);
+    const dueDate = addDays(now, 14);
 
-    const [membership] = await db.insert(userMemberships).values({
-      userId,
-      planId,
-      creditType:                 plan.creditType as CreditType,
-      weeklyCredits:              plan.weeklyCredits,
-      startedAt:                  now,
-      endsAt,
-      status:                     'active',
-      nextCreditGrantAt:          now,
-      selfPurchased:              true,
-      acceptedTermsAt:            acceptedTerms ? now : undefined,
-      acceptedWithdrawalWaiverAt: acceptedWithdrawalWaiver ? now : undefined,
-      purchaseIpAddress:          purchaseIpAddress ?? null,
-    }).returning();
+    const { membership, invoiceNumber } = await db.transaction(async (tx) => {
+      const invNumber = await nextInvoiceNumber(tx);
+
+      const [membership] = await tx.insert(userMemberships).values({
+        userId,
+        planId,
+        creditType:                 plan.creditType as CreditType,
+        weeklyCredits:              plan.weeklyCredits,
+        startedAt:                  now,
+        endsAt,
+        status:                     'active',
+        lastCreditGrantAt:          now,
+        nextCreditGrantAt:          addDays(now, 7),
+        selfPurchased:              true,
+        acceptedTermsAt:            acceptedTerms ? now : undefined,
+        acceptedWithdrawalWaiverAt: acceptedWithdrawalWaiver ? now : undefined,
+        purchaseIpAddress:          purchaseIpAddress ?? null,
+      }).returning();
+
+      // Create bill record
+      await tx.insert(creditPurchases).values({
+        userId,
+        packageId:       null,
+        creditsAmount:   plan.weeklyCredits * plan.durationWeeks,
+        creditType:      plan.creditType as CreditType,
+        priceCents:      plan.priceCents,
+        currency:        plan.currency,
+        paymentMethod:   'pay_at_studio',
+        paymentStatus:   'pending',
+        paymentDueDate:  dueDate,
+        invoiceNumber:   invNumber,
+        invoiceIssuedAt: now,
+        adminNotes:      plan.name,
+      });
+
+      // Grant first week's credits immediately
+      const [bal] = await tx
+        .select()
+        .from(creditBalances)
+        .where(and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, plan.creditType as CreditType)))
+        .for('update')
+        .limit(1);
+
+      const newBalance = (bal?.balance ?? 0) + plan.weeklyCredits;
+
+      if (bal) {
+        await tx.update(creditBalances).set({ balance: newBalance, updatedAt: now }).where(eq(creditBalances.id, bal.id));
+      } else {
+        await tx.insert(creditBalances).values({ userId, creditType: plan.creditType as CreditType, balance: newBalance });
+      }
+
+      await tx.insert(creditTransactions).values({
+        userId,
+        type:         'purchase',
+        creditType:   plan.creditType as CreditType,
+        amount:       plan.weeklyCredits,
+        balanceAfter: newBalance,
+        description:  `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
+      });
+
+      return { membership, invoiceNumber: invNumber };
+    });
+
+    // Fire-and-forget: generate PDF + send membership confirmation email
+    Promise.resolve().then(async () => {
+      try {
+        const [userRow] = await db
+          .select({ email: users.email, name: users.name })
+          .from(users)
+          .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+          .limit(1);
+
+        if (!userRow?.email) return;
+
+        const pdfBuffer = await generateInvoicePDF({
+          invoiceNumber,
+          invoiceDate:     now,
+          dueDate,
+          customerName:    userRow.name ?? 'Customer',
+          customerEmail:   userRow.email,
+          customerAddress: null,
+          packageName:     plan.name,
+          creditsAmount:   plan.weeklyCredits * plan.durationWeeks,
+          creditType:      plan.creditType,
+          priceCents:      plan.priceCents,
+          currency:        plan.currency,
+          paymentMethod:   'pay_at_studio',
+        });
+
+        await sendMembershipPurchaseEmail(
+          userRow.email,
+          userRow.name ?? 'there',
+          plan.name,
+          plan.weeklyCredits,
+          plan.creditType,
+          plan.durationWeeks,
+          plan.priceCents,
+          plan.currency,
+          now,
+          endsAt,
+          invoiceNumber,
+          dueDate,
+          pdfBuffer,
+        );
+      } catch (err) {
+        console.warn('[membership] Failed to generate/send membership invoice:', err);
+      }
+    }).catch(() => {});
 
     revalidatePath('/credits');
     revalidatePath('/');

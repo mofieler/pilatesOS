@@ -12,7 +12,7 @@ import { differenceInCalendarDays } from 'date-fns';
 export type OpenBill = {
   id: string;
   invoiceNumber: string | null;
-  packageId: string;
+  packageId: string | null;
   creditsAmount: number;
   creditType: string;
   priceCents: number;

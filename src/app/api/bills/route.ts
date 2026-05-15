@@ -14,9 +14,8 @@ const ERROR_CODES = {
 function transformPurchaseData(purchase: any) {
   const now = new Date();
   const isPaid = purchase.paymentStatus === 'paid';
-  const isOpen = purchase.paymentStatus === 'pending';
-  const isOverdue = !isPaid && purchase.paymentDueDate 
-    ? new Date(purchase.paymentDueDate) < now 
+  const isOverdue = !isPaid && purchase.paymentDueDate
+    ? new Date(purchase.paymentDueDate) < now
     : false;
 
   const daysUntilDue = purchase.paymentDueDate && !isPaid
@@ -35,7 +34,8 @@ function transformPurchaseData(purchase: any) {
     status: isPaid ? 'paid' : (isOverdue ? 'overdue' : 'open'),
     createdAt: purchase.createdAt.toISOString(),
     paidAt: purchase.paidAt?.toISOString(),
-    packageName: purchase.packageName,
+    // adminNotes stores the plan name for membership purchases (packageId is null)
+    packageName: purchase.packageName ?? purchase.adminNotes ?? undefined,
   };
 }
 
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         createdAt: creditPurchases.createdAt,
         updatedAt: creditPurchases.updatedAt,
         packageName: creditPackages.name,
+        adminNotes: creditPurchases.adminNotes,
       })
       .from(creditPurchases)
       .leftJoin(creditPackages, eq(creditPurchases.packageId, creditPackages.id))
