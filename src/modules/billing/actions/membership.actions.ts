@@ -133,7 +133,14 @@ export async function deleteMembershipPlanAction(input: { id: string }) {
       .where(and(eq(userMemberships.planId, input.id), eq(userMemberships.status, 'active')))
       .limit(1);
 
-    if (active) return { success: false as const, error: 'Cannot delete — active members use this plan. Deactivate it instead.' };
+    if (active) return { success: false as const, error: 'Cannot delete — active members use this plan. Cancel all members first.' };
+
+    // Remove cancelled/expired membership rows that still reference this plan.
+    // Required because the FK uses onDelete: 'restrict' — the DB blocks the plan
+    // delete if any membership row (even cancelled) still points to it.
+    await db
+      .delete(userMemberships)
+      .where(and(eq(userMemberships.planId, input.id)));
 
     const deleted = await db.delete(membershipPlans).where(eq(membershipPlans.id, input.id)).returning({ id: membershipPlans.id });
     if (deleted.length === 0) return { success: false as const, error: 'Plan not found' };
@@ -298,6 +305,7 @@ export async function assignMembershipAction(input: z.infer<typeof assignSchema>
           invoiceNumber,
           invoiceDate:     now,
           dueDate,
+          customerId:      userId,
           customerName:    userRow.name ?? 'Customer',
           customerEmail:   userRow.email ?? '',
           customerAddress: null,
@@ -487,6 +495,7 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
           invoiceNumber,
           invoiceDate:     now,
           dueDate,
+          customerId:      userId,
           customerName:    userRow.name ?? 'Customer',
           customerEmail:   userRow.email,
           customerAddress: null,

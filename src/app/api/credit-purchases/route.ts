@@ -179,8 +179,9 @@ export async function POST(request: Request) {
 
         const pdfBuffer = await generateInvoicePDF({
           invoiceNumber,
-          invoiceDate: new Date(),
+          invoiceDate:     new Date(),
           dueDate,
+          customerId:      userId,
           customerName:    userRow.name ?? 'Customer',
           customerEmail:   userRow.email,
           customerAddress: null,

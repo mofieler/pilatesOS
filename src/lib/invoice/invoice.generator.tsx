@@ -1,27 +1,31 @@
 import React from 'react';
+import path from 'path';
 import {
   Document,
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
   renderToBuffer,
 } from '@react-pdf/renderer';
 
-// Studio info from env — set these in Coolify
 function getStudio() {
   return {
-    name:       process.env.STUDIO_NAME        ?? 'Paquita Pilates Reformer GbR',
-    address:    process.env.STUDIO_ADDRESS     ?? 'Haußmannstr. 126',
-    city:       process.env.STUDIO_CITY        ?? '70188 Stuttgart',
-    country:    process.env.STUDIO_COUNTRY     ?? 'Germany',
-    phone:      process.env.STUDIO_PHONE       ?? '',
-    email:      process.env.STUDIO_EMAIL       ?? process.env.EMAIL_FROM ?? '',
-    taxId:      process.env.STUDIO_TAX_ID      ?? '93150/09800', // Steuernummer (GbR freiberuflich)
-    vatId:      process.env.STUDIO_VAT_ID      ?? '',            // USt-IdNr (if registered)
-    // VAT rate as decimal, e.g. 0.19 for 19 % or 0 for Kleinunternehmer (§19 UStG)
-    vatRate:    parseFloat(process.env.STUDIO_VAT_RATE ?? '0'),
+    name:     process.env.STUDIO_NAME      ?? 'PAQUITA PILATES GbR',
+    address:  process.env.STUDIO_ADDRESS   ?? 'Haußmannstr. 126',
+    city:     process.env.STUDIO_CITY      ?? '70188 Stuttgart',
+    phone:    process.env.STUDIO_PHONE     ?? '+49 176 3061 4623',
+    email:    process.env.STUDIO_EMAIL     ?? (process.env.EMAIL_FROM ?? 'fgennari.studio@gmail.com'),
+    vatId:    process.env.STUDIO_VAT_ID    ?? '',
+    taxId:    process.env.STUDIO_TAX_ID    ?? '',
+    // STUDIO_VAT_RATE=0.19 for 19% VAT, 0 for Kleinunternehmer
+    vatRate:  parseFloat(process.env.STUDIO_VAT_RATE ?? '0'),
     kleinunternehmer: (process.env.STUDIO_VAT_RATE ?? '0') === '0',
+    bankName: process.env.STUDIO_BANK_NAME ?? 'KONTIST',
+    bankIban: process.env.STUDIO_BANK_IBAN ?? '',
+    bankBic:  process.env.STUDIO_BANK_BIC  ?? '',
+    owners:   process.env.STUDIO_OWNERS    ?? 'Fiorella Gennari & Camila Fernanda Arriaza Orrego',
   };
 }
 
@@ -32,6 +36,7 @@ export interface InvoiceData {
   customerName:    string;
   customerEmail:   string;
   customerAddress: string | null;
+  customerId?:     string | null;
   packageName:     string;
   creditsAmount:   number;
   creditType:      string;
@@ -40,249 +45,148 @@ export interface InvoiceData {
   paymentMethod:   string;
 }
 
-// ─── Palette (matches app brand) ────────────────────────────────────────────
-const C = {
-  primary:  '#4e2b22',
-  light:    '#6b3d32',
-  accent:   '#c4a88a',
-  bg:       '#fafafa',
-  border:   '#ede8e5',
-  muted:    '#8b6b5c',
-  text:     '#1a1a1a',
-  white:    '#ffffff',
-};
-
-const styles = StyleSheet.create({
+// ─── Styles (clean white, minimal — matches invoice screenshot) ───────────────
+const S = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
-    fontSize: 9,
-    color: C.text,
-    backgroundColor: C.white,
-    paddingTop: 48,
-    paddingBottom: 48,
+    fontFamily:        'Helvetica',
+    fontSize:          9,
+    color:             '#1a1a1a',
+    backgroundColor:   '#ffffff',
+    paddingTop:        36,
+    paddingBottom:     72,
     paddingHorizontal: 52,
   },
-  // Header bar
-  headerBar: {
-    backgroundColor: C.primary,
-    marginHorizontal: -52,
-    marginTop: -48,
-    paddingHorizontal: 52,
-    paddingVertical: 24,
-    marginBottom: 32,
+
+  // Logo
+  logoWrap: { alignItems: 'center', marginBottom: 20 },
+  logo:     { width: 110, height: 110 },
+
+  // RECHNUNG/INVOICE heading
+  headingWrap: {
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#1a1a1a',
+    borderBottomStyle: 'solid',
+    marginBottom:      18,
+    paddingBottom:     5,
   },
-  headerTitle: {
-    fontSize: 22,
+  heading: {
+    fontSize:   20,
     fontFamily: 'Helvetica-Bold',
-    color: C.white,
     letterSpacing: 0.5,
   },
-  headerSubtitle: {
-    fontSize: 9,
-    color: C.accent,
-    marginTop: 3,
-  },
-  // Two-column layout
-  row: {
-    flexDirection: 'row',
+
+  // Info row (customer left, invoice meta right)
+  infoRow: {
+    flexDirection:  'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom:   18,
   },
-  col: {
-    flex: 1,
-  },
-  colRight: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  sectionLabel: {
-    fontSize: 7,
-    fontFamily: 'Helvetica-Bold',
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 5,
-  },
-  addressName: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: C.primary,
-    marginBottom: 2,
-  },
-  addressLine: {
-    fontSize: 9,
-    color: C.text,
-    lineHeight: 1.5,
-  },
-  metaRow: {
+  infoCol: { flex: 1 },
+
+  infoLine: {
     flexDirection: 'row',
-    gap: 24,
-    marginBottom: 28,
-    paddingBottom: 16,
+    marginBottom:  3,
+  },
+  infoLabel: {
+    fontFamily: 'Helvetica-Bold',
+    width:      68,
+    fontSize:   9,
+  },
+  infoValue: { fontSize: 9 },
+
+  // Thank-you text
+  intro: { fontSize: 9, marginBottom: 14, lineHeight: 1.4 },
+
+  // ── Table ──────────────────────────────────────────────────────────────────
+  tableHeaderRow: {
+    flexDirection:   'row',
+    borderTopWidth:  1,
+    borderTopColor:  '#1a1a1a',
+    borderTopStyle:  'solid',
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    borderBottomColor: '#1a1a1a',
     borderBottomStyle: 'solid',
-  },
-  metaItem: {
-    gap: 2,
-  },
-  metaLabel: {
-    fontSize: 7,
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  metaValue: {
-    fontSize: 9,
-    fontFamily: 'Helvetica-Bold',
-    color: C.primary,
-  },
-  // Invoice title
-  invoiceTitle: {
-    fontSize: 18,
-    fontFamily: 'Helvetica-Bold',
-    color: C.primary,
-    marginBottom: 20,
-  },
-  // Table
-  table: {
-    marginBottom: 8,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: C.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-    marginBottom: 2,
+    paddingVertical:   5,
+    paddingHorizontal: 4,
   },
   tableHeaderCell: {
-    fontSize: 7,
+    fontSize:   9,
     fontFamily: 'Helvetica-Bold',
-    color: C.white,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    flexDirection:      'row',
+    borderBottomWidth:  0.5,
+    borderBottomColor:  '#cccccc',
+    borderBottomStyle:  'solid',
+    paddingVertical:    7,
+    paddingHorizontal:  4,
+  },
+  tableRowLast: {
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    borderBottomStyle: 'solid',
+    borderBottomColor: '#1a1a1a',
   },
-  tableRowAlt: {
-    backgroundColor: '#faf9f7',
+  tableCell: { fontSize: 9 },
+
+  colPos:   { width: 28 },
+  colDesc1: { flex: 2 },
+  colDesc2: { flex: 3 },
+  colPrice: { width: 72, textAlign: 'right' as const },
+
+  // ── Totals ─────────────────────────────────────────────────────────────────
+  totalsWrap: {
+    alignItems:   'flex-end',
+    marginTop:    6,
   },
-  tableCell: {
-    fontSize: 9,
-    color: C.text,
-  },
-  colDesc: { flex: 4 },
-  colQty:  { flex: 1, textAlign: 'right' as const },
-  colUnit: { flex: 2, textAlign: 'right' as const },
-  colTotal:{ flex: 2, textAlign: 'right' as const },
-  // Totals
-  totalsBlock: {
-    marginTop: 12,
-    marginLeft: 'auto',
-    width: 220,
-    gap: 4,
-  },
+  totalsBlock: { width: 200 },
+
   totalRow: {
-    flexDirection: 'row',
+    flexDirection:  'row',
     justifyContent: 'space-between',
     paddingVertical: 3,
   },
-  totalLabel: {
-    fontSize: 9,
-    color: C.muted,
-  },
-  totalValue: {
-    fontSize: 9,
-    color: C.text,
-  },
-  totalDivider: {
-    borderTopWidth: 1,
-    borderTopColor: C.primary,
-    borderTopStyle: 'solid',
-    marginVertical: 4,
-  },
-  grandTotalRow: {
-    flexDirection: 'row',
+  totalLabel: { fontSize: 9 },
+  totalValue: { fontSize: 9 },
+
+  grandRow: {
+    flexDirection:  'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    backgroundColor: C.primary,
-    borderRadius: 4,
+    marginTop:      4,
+    paddingTop:     4,
+    borderTopWidth: 1,
+    borderTopColor: '#1a1a1a',
+    borderTopStyle: 'solid',
   },
-  grandTotalLabel: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: C.white,
-  },
-  grandTotalValue: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: C.white,
-  },
-  // Payment box
-  paymentBox: {
-    marginTop: 28,
-    padding: 14,
-    backgroundColor: '#fdf8f5',
-    borderWidth: 1,
-    borderColor: C.accent,
-    borderStyle: 'solid',
-    borderRadius: 6,
-  },
-  paymentBoxTitle: {
-    fontSize: 9,
-    fontFamily: 'Helvetica-Bold',
-    color: C.primary,
-    marginBottom: 6,
-  },
-  paymentLine: {
-    fontSize: 8.5,
-    color: C.light,
-    lineHeight: 1.6,
-  },
-  // Legal notice
-  legalBox: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: '#f5f3f1',
-    borderRadius: 4,
-  },
-  legalText: {
-    fontSize: 7.5,
-    color: C.muted,
-    lineHeight: 1.5,
-  },
+  grandLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
+  grandValue: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
+
+  // Due date
+  dueSection: { marginTop: 28, marginBottom: 14 },
+  dueLine:    { flexDirection: 'row' },
+  dueLabel:   { fontFamily: 'Helvetica-Bold', fontSize: 9, width: 100 },
+  dueValue:   { fontSize: 9, fontFamily: 'Helvetica-Bold' },
+
+  // Closing
+  closing:   { fontSize: 9, marginBottom: 12, lineHeight: 1.4 },
+  greeting:  { fontSize: 9, marginBottom: 4 },
+  owners:    { fontSize: 9 },
+
   // Footer
   footer: {
     position: 'absolute',
-    bottom: 24,
-    left: 52,
-    right: 52,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    borderTopStyle: 'solid',
-    paddingTop: 10,
-    flexDirection: 'column',
+    bottom:   20,
+    left:     52,
+    right:    52,
+    alignItems: 'center',
   },
-  footerText: {
-    fontSize: 7,
-    color: C.muted,
-  },
-  footerCenter: {
-    fontSize: 7,
-    color: C.muted,
-    textAlign: 'center' as const,
-    marginTop: 4,
+  footerLine: {
+    fontSize:   7.5,
+    color:      '#555555',
+    textAlign:  'center' as const,
+    lineHeight: 1.5,
   },
 });
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(cents: number, currency: string): string {
   return new Intl.NumberFormat('de-DE', {
     style: 'currency',
@@ -294,177 +198,156 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function creditTypeLabel(ct: string): string {
-  const map: Record<string, string> = {
-    mat_group: 'Mat Group Class',
-    reformer_group: 'Reformer Group Class',
-    private_session: 'Private Session',
-    duo_group: 'Duo Group Class',
-    general_group: 'General Group Class',
-    online_class: 'Online Class',
-    sound_healing: 'Sound Healing Session',
-  };
-  return map[ct] ?? ct;
+// ─── Info line helper ─────────────────────────────────────────────────────────
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={S.infoLine}>
+      <Text style={S.infoLabel}>{label}</Text>
+      <Text style={S.infoValue}>{value}</Text>
+    </View>
+  );
 }
 
-// ─── PDF React component ─────────────────────────────────────────────────────
-function InvoicePDF({ data, studio }: { data: InvoiceData; studio: ReturnType<typeof getStudio> }) {
-  const vatRate     = studio.vatRate;
-  const grossCents  = data.priceCents;
-  // If VAT inclusive (standard): net = gross / (1 + rate)
-  const netCents    = vatRate > 0 ? Math.round(grossCents / (1 + vatRate)) : grossCents;
-  const vatCents    = grossCents - netCents;
+// Number of filler rows shown in the table (to match the 5-row template look)
+const TABLE_ROWS = 5;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://pilateq.de';
+// ─── PDF component ────────────────────────────────────────────────────────────
+function InvoicePDF({
+  data,
+  studio,
+}: {
+  data:   InvoiceData;
+  studio: ReturnType<typeof getStudio>;
+}) {
+  const vatRate    = studio.vatRate;
+  const grossCents = data.priceCents;
+  // Price is VAT-inclusive; extract net and VAT
+  const netCents   = vatRate > 0 ? Math.round(grossCents / (1 + vatRate)) : grossCents;
+  const vatCents   = grossCents - netCents;
+
+  const logoSrc = path.join(process.cwd(), 'public', 'logo_transparent.png');
+
+  const customerLabel = data.customerId
+    ? data.customerId.replace(/-/g, '').slice(0, 8).toUpperCase()
+    : '-';
 
   return (
     <Document
-      title={`Invoice ${data.invoiceNumber}`}
+      title={`Rechnung ${data.invoiceNumber}`}
       author={studio.name}
-      subject="Credit Package Invoice"
+      subject="Invoice / Rechnung"
     >
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={S.page}>
 
-        {/* Header bar */}
-        <View style={styles.headerBar}>
-          <Text style={styles.headerTitle}>{studio.name}</Text>
-          <Text style={styles.headerSubtitle}>Boutique Pilates Studio</Text>
+        {/* Logo */}
+        <View style={S.logoWrap}>
+          <Image src={logoSrc} style={S.logo} />
         </View>
 
-        {/* Invoice title */}
-        <Text style={styles.invoiceTitle}>Invoice / Rechnung</Text>
+        {/* Heading */}
+        <View style={S.headingWrap}>
+          <Text style={S.heading}>RECHNUNG/INVOICE</Text>
+        </View>
 
-        {/* Meta row: invoice number + date + due date */}
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Invoice No.</Text>
-            <Text style={styles.metaValue}>{data.invoiceNumber}</Text>
+        {/* Customer info (left) | Invoice meta (right) */}
+        <View style={S.infoRow}>
+          <View style={S.infoCol}>
+            <InfoLine label="Kundennr.:" value={customerLabel} />
+            <InfoLine label="Name:"       value={data.customerName} />
+            <InfoLine label="E-Mail:"     value={data.customerEmail} />
           </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Invoice Date</Text>
-            <Text style={styles.metaValue}>{fmtDate(data.invoiceDate)}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Service Date</Text>
-            <Text style={styles.metaValue}>{fmtDate(data.invoiceDate)}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Due Date</Text>
-            <Text style={styles.metaValue}>{fmtDate(data.dueDate)}</Text>
+          <View style={S.infoCol}>
+            <InfoLine label="Rechnung Nr.:" value={data.invoiceNumber} />
+            <InfoLine label="Datum:"         value={fmtDate(data.invoiceDate)} />
           </View>
         </View>
 
-        {/* From / To */}
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.sectionLabel}>From / Rechnungsaussteller</Text>
-            <Text style={styles.addressName}>{studio.name}</Text>
-            <Text style={styles.addressLine}>{studio.address}</Text>
-            <Text style={styles.addressLine}>{studio.city}</Text>
-            {studio.vatId  ? <Text style={styles.addressLine}>USt-IdNr.: {studio.vatId}</Text>   : null}
-            {studio.phone  ? <Text style={styles.addressLine}>Tel: {studio.phone}</Text>         : null}
-            {studio.email  ? <Text style={styles.addressLine}>{studio.email}</Text>              : null}
-          </View>
+        {/* Intro text */}
+        <Text style={S.intro}>
+          Vielen Dank für Ihr Vertrauen. Ich stelle Ihnen hiermit folgende Leistungen in Rechnung:
+        </Text>
 
-          <View style={styles.col}>
-            <Text style={styles.sectionLabel}>To / Rechnungsempfänger</Text>
-            <Text style={styles.addressName}>{data.customerName || 'Customer'}</Text>
-            <Text style={styles.addressLine}>{data.customerEmail}</Text>
-            {data.customerAddress ? <Text style={styles.addressLine}>{data.customerAddress}</Text> : null}
-          </View>
+        {/* ── Table ── */}
+        {/* Header */}
+        <View style={S.tableHeaderRow}>
+          <Text style={[S.tableHeaderCell, S.colPos]}>Pos.</Text>
+          <Text style={[S.tableHeaderCell, S.colDesc1]}>Beschreibung</Text>
+          <Text style={[S.tableHeaderCell, S.colDesc2]}>{''}</Text>
+          <Text style={[S.tableHeaderCell, S.colPrice]}>Gesamtpreis</Text>
         </View>
 
-        {/* Line items table */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, styles.colDesc]}>Description</Text>
-            <Text style={[styles.tableHeaderCell, styles.colQty]}>Qty</Text>
-            <Text style={[styles.tableHeaderCell, styles.colUnit]}>Unit Price</Text>
-            <Text style={[styles.tableHeaderCell, styles.colTotal]}>Total</Text>
-          </View>
+        {/* Row 1: item */}
+        <View style={S.tableRow}>
+          <Text style={[S.tableCell, S.colPos]}>1.</Text>
+          <Text style={[S.tableCell, S.colDesc1]}>-</Text>
+          <Text style={[S.tableCell, S.colDesc2]}>- {data.creditsAmount} credits</Text>
+          <Text style={[S.tableCell, S.colPrice]}>
+            {fmt(vatRate > 0 ? netCents : grossCents, data.currency)}
+          </Text>
+        </View>
 
-          <View style={[styles.tableRow, styles.tableRowAlt]}>
-            <View style={styles.colDesc}>
-              <Text style={[styles.tableCell, { fontFamily: 'Helvetica-Bold', color: C.primary }]}>
-                {data.packageName}
-              </Text>
-              <Text style={[styles.tableCell, { color: C.muted, marginTop: 2 }]}>
-                {data.creditsAmount}× {creditTypeLabel(data.creditType)} credits
-              </Text>
-              <Text style={[styles.tableCell, { color: C.muted, marginTop: 1 }]}>
-                Pay at Studio — due {fmtDate(data.dueDate)}
-              </Text>
+        {/* Filler rows 2–TABLE_ROWS */}
+        {Array.from({ length: TABLE_ROWS - 1 }, (_, i) => {
+          const rowStyle = i === TABLE_ROWS - 2
+            ? [S.tableRow, S.tableRowLast]
+            : [S.tableRow];
+          return (
+            <View key={i} style={rowStyle}>
+              <Text style={[S.tableCell, S.colPos]}>{i + 2}.</Text>
+              <Text style={[S.tableCell, S.colDesc1]}>-</Text>
+              <Text style={[S.tableCell, S.colDesc2]}>-</Text>
+              <Text style={[S.tableCell, S.colPrice]}>{''}</Text>
             </View>
-            <Text style={[styles.tableCell, styles.colQty]}>1</Text>
-            <Text style={[styles.tableCell, styles.colUnit]}>{fmt(grossCents, data.currency)}</Text>
-            <Text style={[styles.tableCell, styles.colTotal, { fontFamily: 'Helvetica-Bold' }]}>
-              {fmt(grossCents, data.currency)}
-            </Text>
+          );
+        })}
+
+        {/* ── Totals ── */}
+        <View style={S.totalsWrap}>
+          <View style={S.totalsBlock}>
+            {vatRate > 0 && (
+              <View style={S.totalRow}>
+                <Text style={S.totalLabel}>{Math.round(vatRate * 100)}% VAT</Text>
+                <Text style={S.totalValue}>{fmt(vatCents, data.currency)}</Text>
+              </View>
+            )}
+            <View style={S.grandRow}>
+              <Text style={S.grandLabel}>Gesamtsumme</Text>
+              <Text style={S.grandValue}>{fmt(grossCents, data.currency)}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Totals */}
-        <View style={styles.totalsBlock}>
-          {vatRate > 0 ? (
-            <>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Net amount (Netto)</Text>
-                <Text style={styles.totalValue}>{fmt(netCents, data.currency)}</Text>
-              </View>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>VAT {Math.round(vatRate * 100)} % (MwSt.)</Text>
-                <Text style={styles.totalValue}>{fmt(vatCents, data.currency)}</Text>
-              </View>
-            </>
-          ) : null}
-          <View style={styles.totalDivider} />
-          <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>Total (Gesamtbetrag)</Text>
-            <Text style={styles.grandTotalValue}>{fmt(grossCents, data.currency)}</Text>
+        {/* Due date */}
+        <View style={S.dueSection}>
+          <View style={S.dueLine}>
+            <Text style={S.dueLabel}>Fälligkeitsdatum:</Text>
+            <Text style={S.dueValue}>{fmtDate(data.dueDate)}</Text>
           </View>
         </View>
 
-        {/* Payment instructions */}
-        <View style={styles.paymentBox}>
-          <Text style={styles.paymentBoxTitle}>Payment Instructions / Zahlungshinweis</Text>
-          <Text style={styles.paymentLine}>
-            Please pay this invoice <Text style={{ fontFamily: 'Helvetica-Bold' }}>in person at the studio</Text> by {fmtDate(data.dueDate)}.
-          </Text>
-          <Text style={styles.paymentLine}>
-            Bitte zahlen Sie diesen Betrag bis {fmtDate(data.dueDate)} direkt im Studio.
-          </Text>
-          <Text style={[styles.paymentLine, { marginTop: 6 }]}>
-            Your credits are already available in your account at {appUrl}.
-          </Text>
-        </View>
-
-        {/* Legal / VAT notice */}
-        <View style={styles.legalBox}>
-          {studio.kleinunternehmer ? (
-            <Text style={styles.legalText}>
-              Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen (Kleinunternehmerregelung).
-              {'\n'}
-              In accordance with § 19 UStG, no VAT is charged (small business regulation).
-            </Text>
-          ) : (
-            <Text style={styles.legalText}>
-              Alle Preise enthalten {Math.round(vatRate * 100)} % Mehrwertsteuer gemäß § 14 UStG.
-            </Text>
-          )}
-          <Text style={[styles.legalText, { marginTop: 4 }]}>
-            This document was generated electronically and is valid without a signature (§ 14 UStG).
-            Dieses Dokument wurde elektronisch erstellt und ist ohne Unterschrift gültig (§ 14 UStG).
-          </Text>
-        </View>
+        {/* Closing */}
+        <Text style={S.closing}>
+          Bei Rückfragen stehe ich selbstverständlich jederzeit gerne zur Verfügung.
+        </Text>
+        <Text style={S.greeting}>Mit freundlichen Grüßen</Text>
+        {studio.owners ? <Text style={S.owners}>{studio.owners}</Text> : null}
 
         {/* Footer */}
-        <View style={styles.footer} fixed>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-            <Text style={styles.footerText}>{studio.name} · {studio.address}, {studio.city}</Text>
-            <Text style={styles.footerText}>{data.invoiceNumber} · {fmtDate(data.invoiceDate)}</Text>
-          </View>
-          {studio.taxId ? (
-            <Text style={styles.footerCenter}>Steuernr.: {studio.taxId}</Text>
+        <View style={S.footer} fixed>
+          <Text style={S.footerLine}>{studio.name}</Text>
+          <Text style={S.footerLine}>
+            {studio.address} x {studio.city}
+            {studio.email ? ` x ${studio.email}` : ''}
+            {studio.phone ? ` x ${studio.phone}` : ''}
+          </Text>
+          {(studio.vatId || studio.bankName || studio.bankIban) ? (
+            <Text style={S.footerLine}>
+              {studio.vatId ? `USt-ID-NR. ${studio.vatId}` : ''}
+              {studio.vatId && studio.bankName ? ' x ' : ''}
+              {studio.bankName ?? ''}
+              {studio.bankIban ? ` x ${studio.bankIban}` : ''}
+              {studio.bankBic ? ` x BIC: ${studio.bankBic}` : ''}
+            </Text>
           ) : null}
         </View>
 
@@ -473,7 +356,7 @@ function InvoicePDF({ data, studio }: { data: InvoiceData; studio: ReturnType<ty
   );
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 export async function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
   const studio = getStudio();
   // eslint-disable-next-line react/jsx-no-useless-fragment

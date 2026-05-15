@@ -35,6 +35,7 @@ export async function GET(
       creditType:     creditPurchases.creditType,
       paymentMethod:  creditPurchases.paymentMethod,
       packageName:    creditPackages.name,
+      customerId:     users.id,
       customerName:   users.name,
       customerEmail:  users.email,
     })
@@ -62,6 +63,7 @@ export async function GET(
     invoiceNumber:   row.invoiceNumber,
     invoiceDate,
     dueDate,
+    customerId:      row.customerId,
     customerName:    row.customerName  ?? 'Customer',
     customerEmail:   row.customerEmail ?? '',
     customerAddress: null,
