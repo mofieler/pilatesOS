@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { format } from 'date-fns';
 import { ClockIcon, CreditCardIcon, Loader2Icon, MapPinIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,17 +15,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { createBookingAction } from '@/modules/booking/actions/createBooking.action';
+import { createDuoInviteAction } from '@/modules/booking/actions/createDuoInvite.action';
+import { DuoInviteShareSheet } from './DuoInviteShareSheet';
 import type { ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import type { ClassSessionCardProps } from './ClassSessionCard';
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BookingConfirmModalProps {
   session: ClassSessionCardProps | null;
   onClose: () => void;
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+type Step = 'confirm' | 'duo-share';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
   mat:      'bg-[#8b6b5c]',
@@ -43,17 +47,31 @@ const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {
   switch (code) {
-    case 'INSUFFICIENT_CREDITS': return 'Top up your credits to book more classes.';
-    case 'CLASS_FULL':           return 'Try joining the waitlist instead.';
+    case 'INSUFFICIENT_CREDITS':    return 'Top up your credits to book more classes.';
+    case 'CLASS_FULL':              return 'Try joining the waitlist instead.';
     case 'BOOKING_ALREADY_EXISTS': return 'This class is already in your upcoming bookings.';
-    default:                     return undefined;
+    default:                        return undefined;
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function isDuoClass(classType: ClassSessionCardProps['classType']): boolean {
+  return classType === 'reformer_duo' || classType === 'mat_duo';
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function BookingConfirmModal({ session, onClose }: BookingConfirmModalProps) {
   const [isPending, startTransition] = useTransition();
+  const [step, setStep] = useState<Step>('confirm');
+  const [duoInvite, setDuoInvite] = useState<{ token: string; expiresAt: Date } | null>(null);
+  const [newBookingId, setNewBookingId] = useState<string | null>(null);
+
+  function handleClose() {
+    setStep('confirm');
+    setDuoInvite(null);
+    setNewBookingId(null);
+    onClose();
+  }
 
   function handleConfirm() {
     if (!session) return;
@@ -61,26 +79,59 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
     startTransition(async () => {
       const result = await createBookingAction({ sessionId: session.id });
 
-      if (result.success) {
-        onClose();
-        toast.success('Booking confirmed!', {
-          description: `See you at ${session.name} on ${format(session.startsAt, 'EEEE, d MMMM')}.`,
-        });
-      } else {
-        onClose();
-        toast.error(result.error, {
-          description: errorHint(result.code),
-        });
+      if (!result.success) {
+        handleClose();
+        toast.error(result.error, { description: errorHint(result.code) });
+        return;
       }
+
+      const bookingId = result.data?.id;
+
+      // For duo classes, generate an invite link before closing
+      if (isDuoClass(session.classType) && bookingId) {
+        setNewBookingId(bookingId);
+        const invite = await createDuoInviteAction({ bookingId });
+        if (invite.success && invite.data) {
+          setDuoInvite(invite.data);
+          setStep('duo-share');
+          return;
+        }
+      }
+
+      handleClose();
+      toast.success('Booking confirmed!', {
+        description: `See you at ${session.name} on ${format(session.startsAt, 'EEEE, d MMMM')}.`,
+      });
     });
+  }
+
+  // Show share sheet for duo classes
+  if (step === 'duo-share' && duoInvite && session) {
+    return (
+      <AlertDialog open onOpenChange={(open) => { if (!open) handleClose(); }}>
+        <AlertDialogContent className="p-0 overflow-hidden">
+          <DuoInviteShareSheet
+            sessionName={session.name}
+            startsAt={session.startsAt}
+            inviteToken={duoInvite.token}
+            expiresAt={duoInvite.expiresAt}
+            onDone={() => {
+              handleClose();
+              toast.success('Booking confirmed!', {
+                description: `See you at ${session.name} on ${format(session.startsAt, 'EEEE, d MMMM')}.`,
+              });
+            }}
+          />
+        </AlertDialogContent>
+      </AlertDialog>
+    );
   }
 
   return (
     <AlertDialog
       open={session !== null}
       onOpenChange={(open: boolean) => {
-        // Block closing while a booking request is in flight
-        if (!open && !isPending) onClose();
+        if (!open && !isPending) handleClose();
       }}
     >
       <AlertDialogContent>
@@ -90,6 +141,13 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
               <AlertDialogTitle>{session.name}</AlertDialogTitle>
               <AlertDialogDescription>with {session.instructorName}</AlertDialogDescription>
             </AlertDialogHeader>
+
+            {isDuoClass(session.classType) && (
+              <p className="text-xs text-[#8b6b5c] flex items-center gap-1.5 -mt-1">
+                <span className="text-[#c4a88a]">●</span>
+                After booking you'll get a link to invite your duo partner
+              </p>
+            )}
 
             {/* Session details */}
             <div className="space-y-2.5 rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-600">
@@ -121,14 +179,12 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
               </div>
             </div>
 
-            {/* Cancellation policy */}
             <p className="text-xs text-slate-400">
               Free cancellation up to 24 hours before the class starts.
             </p>
 
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-
               <AlertDialogAction
                 disabled={isPending}
                 onClick={handleConfirm}

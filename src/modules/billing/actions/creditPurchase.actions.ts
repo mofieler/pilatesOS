@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/db';
-import { creditPurchases, users, creditPackages } from '@/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { creditPurchases, users, creditPackages, invoiceReminders } from '@/db/schema';
+import { eq, sql, count, max, isNull, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { auditHelpers } from '@/lib/security/audit-system';
 import { handleApiError } from '@/lib/security/error-sanitizer';
@@ -29,6 +29,17 @@ export async function getAllCreditPurchasesAction() {
       return { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' };
     }
 
+    // Subquery: reminder count + last sent date per purchase
+    const reminderStats = db
+      .select({
+        purchaseId: invoiceReminders.purchaseId,
+        reminderCount: count(invoiceReminders.id).as('reminder_count'),
+        lastReminderAt: max(invoiceReminders.createdAt).as('last_reminder_at'),
+      })
+      .from(invoiceReminders)
+      .groupBy(invoiceReminders.purchaseId)
+      .as('reminder_stats');
+
     const purchases = await db
       .select({
         id: creditPurchases.id,
@@ -48,10 +59,13 @@ export async function getAllCreditPurchasesAction() {
         adminNotes: creditPurchases.adminNotes,
         invoiceNumber: creditPurchases.invoiceNumber,
         invoiceIssuedAt: creditPurchases.invoiceIssuedAt,
+        reminderCount: sql<number>`COALESCE(${reminderStats.reminderCount}, 0)`.mapWith(Number),
+        lastReminderAt: reminderStats.lastReminderAt,
       })
       .from(creditPurchases)
-      .leftJoin(users, eq(creditPurchases.userId, users.id))
+      .leftJoin(users, and(eq(creditPurchases.userId, users.id), isNull(users.deletedAt)))
       .leftJoin(creditPackages, eq(creditPurchases.packageId, creditPackages.id))
+      .leftJoin(reminderStats, eq(creditPurchases.id, reminderStats.purchaseId))
       .orderBy(sql`${creditPurchases.createdAt} DESC`);
 
     return { success: true, data: purchases };

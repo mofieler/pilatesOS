@@ -72,6 +72,18 @@ export const waitlistStatusEnum = pgEnum('waitlist_status', [
 
 export const guestPassStatusEnum = pgEnum('guest_pass_status', ['active', 'redeemed', 'expired']);
 
+export const duoInviteStatusEnum = pgEnum('duo_invite_status', [
+  'pending',   // created, awaiting partner
+  'accepted',  // partner confirmed + booked
+  'expired',   // expiresAt passed without acceptance
+  'cancelled', // organizer cancelled their booking
+]);
+
+export const invoiceReminderTypeEnum = pgEnum('invoice_reminder_type', [
+  'overdue_reminder', // admin triggers dunning email to user
+  'custom_send',      // admin sends invoice to arbitrary email address
+]);
+
 export const paymentMethodEnum = pgEnum('payment_method', [
   'stripe',
   'pay_at_studio',

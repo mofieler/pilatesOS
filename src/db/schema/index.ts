@@ -6,6 +6,8 @@ export * from './bookings.schema';
 export * from './waitlist.schema';
 export * from './credits.schema';
 export * from './calendar.schema';
+export * from './invoice-reminders.schema';
+export * from './duo-invites.schema';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export * from './enums';
@@ -24,6 +26,8 @@ import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
 import type { creditPackages, creditBalances, creditTransactions, creditPurchases, creditAdjustments, membershipPlans, userMemberships } from './credits.schema';
 import type { calendarConnections, externalCalendarBlocks } from './calendar.schema';
+import type { invoiceReminders } from './invoice-reminders.schema';
+import type { duoInvites } from './duo-invites.schema';
 import type {
   userRoleEnum,
   classTypeEnum,
@@ -39,6 +43,8 @@ import type {
   vodStatusEnum,
   vodDifficultyEnum,
   badgeTriggerTypeEnum,
+  duoInviteStatusEnum,
+  invoiceReminderTypeEnum,
 } from './enums';
 
 // Auth / user tables
@@ -102,6 +108,14 @@ export type NewCalendarConnection = InferInsertModel<typeof calendarConnections>
 export type ExternalCalendarBlock = InferSelectModel<typeof externalCalendarBlocks>;
 export type NewExternalCalendarBlock = InferInsertModel<typeof externalCalendarBlocks>;
 
+// Invoice reminders
+export type InvoiceReminder = InferSelectModel<typeof invoiceReminders>;
+export type NewInvoiceReminder = InferInsertModel<typeof invoiceReminders>;
+
+// Duo invites
+export type DuoInvite = InferSelectModel<typeof duoInvites>;
+export type NewDuoInvite = InferInsertModel<typeof duoInvites>;
+
 // ─── Enum value types — use these instead of raw strings ─────────────────────
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type ClassType = (typeof classTypeEnum.enumValues)[number];
@@ -117,3 +131,5 @@ export type GuestPassStatus = (typeof guestPassStatusEnum.enumValues)[number];
 export type VodStatus = (typeof vodStatusEnum.enumValues)[number];
 export type VodDifficulty = (typeof vodDifficultyEnum.enumValues)[number];
 export type BadgeTriggerType = (typeof badgeTriggerTypeEnum.enumValues)[number];
+export type DuoInviteStatus = (typeof duoInviteStatusEnum.enumValues)[number];
+export type InvoiceReminderType = (typeof invoiceReminderTypeEnum.enumValues)[number];

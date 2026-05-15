@@ -280,7 +280,15 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
       </div>
 
       {/* â”€â”€ Class name â”€â”€ */}
-      <h3 className="mb-3 text-lg font-semibold leading-snug text-primary">{name}</h3>
+      <h3 className="mb-1 text-lg font-semibold leading-snug text-primary">{name}</h3>
+
+      {/* Duo hint */}
+      {(classType === 'reformer_duo' || classType === 'mat_duo') && (
+        <p className="mb-3 text-xs text-[#8b6b5c] flex items-center gap-1.5">
+          <UsersIcon className="size-3.5 shrink-0" aria-hidden />
+          Book first — then invite your partner
+        </p>
+      )}
 
       {/* â”€â”€ Instructor â”€â”€ */}
       <div className="mb-4 flex items-center gap-3">

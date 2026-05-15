@@ -1,0 +1,173 @@
+import crypto from 'crypto';
+import { db } from '@/db';
+import { duoInvites, bookings, classSessions, classTemplates, users, creditBalances } from '@/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface InvitePageData {
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expiresAt: Date;
+  organizerFirstName: string;
+  /** Server-side only — for self-invite check. Never render in UI (DSGVO). */
+  organizerUserId: string;
+  sessionId: string;
+  sessionName: string;
+  startsAt: Date;
+  durationMinutes: number;
+  location: string | null;
+  creditType: string;
+  creditCost: number;
+}
+
+export interface EligibilityResult {
+  hasCredits: boolean;
+  balance: number;
+  isAlreadyBooked: boolean;
+  isSelf: boolean;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeExpiry(sessionStartsAt: Date): Date {
+  const twoHoursBeforeClass = new Date(sessionStartsAt.getTime() - 2 * 60 * 60 * 1000);
+  const fortyEightHoursFromNow = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  return new Date(Math.min(twoHoursBeforeClass.getTime(), fortyEightHoursFromNow.getTime()));
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
+
+export const duoInviteService = {
+  async create(
+    organizerBookingId: string,
+    organizerUserId: string,
+  ): Promise<{ token: string; expiresAt: Date }> {
+    const [booking] = await db
+      .select({ sessionId: bookings.sessionId })
+      .from(bookings)
+      .where(eq(bookings.id, organizerBookingId))
+      .limit(1);
+
+    if (!booking?.sessionId) throw new Error('Booking not found');
+
+    const [session] = await db
+      .select({ startsAt: classSessions.startsAt })
+      .from(classSessions)
+      .where(eq(classSessions.id, booking.sessionId))
+      .limit(1);
+
+    if (!session) throw new Error('Session not found');
+
+    const expiresAt = computeExpiry(session.startsAt);
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await db.insert(duoInvites).values({
+      organizerBookingId,
+      organizerUserId,
+      sessionId: booking.sessionId,
+      token,
+      expiresAt,
+    });
+
+    return { token, expiresAt };
+  },
+
+  async getByToken(token: string) {
+    const [invite] = await db
+      .select()
+      .from(duoInvites)
+      .where(eq(duoInvites.token, token))
+      .limit(1);
+    return invite ?? null;
+  },
+
+  async getInvitePageData(token: string): Promise<InvitePageData | null> {
+    const [row] = await db
+      .select({
+        status: duoInvites.status,
+        expiresAt: duoInvites.expiresAt,
+        organizerName: users.name,
+        organizerUserId: duoInvites.organizerUserId,
+        sessionId: classSessions.id,
+        sessionName: classTemplates.name,
+        startsAt: classSessions.startsAt,
+        durationMinutes: classTemplates.durationMinutes,
+        location: classTemplates.location,
+        creditType: classTemplates.creditType,
+        creditCost: classTemplates.creditCost,
+      })
+      .from(duoInvites)
+      .innerJoin(classSessions, eq(duoInvites.sessionId, classSessions.id))
+      .innerJoin(classTemplates, eq(classSessions.templateId, classTemplates.id))
+      .innerJoin(
+        users,
+        and(eq(duoInvites.organizerUserId, users.id), isNull(users.deletedAt)),
+      )
+      .where(eq(duoInvites.token, token))
+      .limit(1);
+
+    if (!row) return null;
+
+    // DSGVO: only first name, never full name, email, or photo
+    const firstName = (row.organizerName ?? 'Someone').split(' ')[0];
+
+    return {
+      status: row.status,
+      expiresAt: row.expiresAt,
+      organizerFirstName: firstName,
+      organizerUserId: row.organizerUserId,
+      sessionId: row.sessionId,
+      sessionName: row.sessionName,
+      startsAt: row.startsAt,
+      durationMinutes: row.durationMinutes,
+      location: row.location,
+      creditType: row.creditType,
+      creditCost: row.creditCost,
+    };
+  },
+
+  async checkPartnerEligibility(
+    userId: string,
+    sessionId: string,
+    organizerUserId: string,
+    creditType: string,
+    creditCost: number,
+  ): Promise<EligibilityResult> {
+    const isSelf = userId === organizerUserId;
+
+    const [balance] = await db
+      .select({ balance: creditBalances.balance, expiresAt: creditBalances.expiresAt })
+      .from(creditBalances)
+      .where(
+        and(
+          eq(creditBalances.userId, userId),
+          eq(creditBalances.creditType, creditType as any),
+        ),
+      )
+      .limit(1);
+
+    const hasCredits =
+      !!balance &&
+      balance.balance >= creditCost &&
+      (!balance.expiresAt || balance.expiresAt > new Date());
+
+    const [existing] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.userId, userId),
+          eq(bookings.sessionId, sessionId),
+          eq(bookings.status, 'confirmed'),
+        ),
+      )
+      .limit(1);
+
+    return {
+      hasCredits,
+      balance: balance?.balance ?? 0,
+      isAlreadyBooked: !!existing,
+      isSelf,
+    };
+  },
+};
