@@ -178,7 +178,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
 
       {/* ── List view body ────────────────────────────────────────────────────── */}
       {view === 'list' && (
-        <div className="pt-5">
+        <div className="pt-5 pb-10">
           <Suspense fallback={<SessionListSkeleton />}>
             <SessionList sessions={sessions} onBook={handleSessionClick} />
           </Suspense>
@@ -187,7 +187,7 @@ export function BookingCalendar({ sessions }: BookingCalendarProps) {
 
       {/* ── Week view body ────────────────────────────────────────────────────── */}
       {view === 'week' && (
-        <div className="pt-4">
+        <div className="pt-4 pb-10">
           <WeekView sessions={sessions} onBook={handleSessionClick} />
         </div>
       )}

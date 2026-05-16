@@ -5,11 +5,7 @@ import { classSessions, creditBalances, users } from '@/db/schema';
 import { auth } from '@/lib/auth/auth';
 import { BookingCalendar } from '@/modules/booking/components/BookingCalendar';
 import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSessionCard';
-
-// ─── Data layer ───────────────────────────────────────────────────────────────
-
-// Class types where group credits are accepted as fallback when primary is insufficient
-const GROUP_FALLBACK_TYPES = new Set(['reformer_group', 'mat_group']);
+import { GROUP_FALLBACK_CLASS_TYPES } from '@/constants/BOOKING_RULES';
 
 type Balance = { creditType: string; balance: number };
 
@@ -20,7 +16,7 @@ function resolveDisplayCreditType(
   creditCost: number,
   balances: Balance[],
 ): ClassSessionCardProps['creditType'] {
-  if (GROUP_FALLBACK_TYPES.has(classType) && primaryCreditType !== 'group') {
+  if (GROUP_FALLBACK_CLASS_TYPES.has(classType as never) && primaryCreditType !== 'group') {
     const primary = balances.find(b => b.creditType === primaryCreditType);
     if (!primary || primary.balance < creditCost) return 'group';
   }
@@ -39,7 +35,7 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
         bookings: {
           where: (b, { and: dbAnd, eq: dbEq }) =>
             dbAnd(dbEq(b.userId, userId), dbEq(b.status, 'confirmed')),
-          columns: { id: true, creditsSpent: true },
+          columns: { id: true, creditsSpent: true, bookedAt: true },
         },
       },
       where: and(
@@ -82,6 +78,8 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
       isBookedByUser:   s.bookings.length > 0,
       bookingId:        s.bookings[0]?.id,
       creditsSpent:     s.bookings[0]?.creditsSpent,
+      bookedAt:         s.bookings[0]?.bookedAt ?? null,
+      rescheduledAt:    s.rescheduledAt ?? null,
       mercyAvailable,
       location:         s.template?.location ?? null,
     };

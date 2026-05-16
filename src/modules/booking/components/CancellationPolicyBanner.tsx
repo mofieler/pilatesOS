@@ -1,11 +1,10 @@
-import { differenceInHours } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { differenceInHours, addHours } from 'date-fns';
 import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
-import { AlertTriangleIcon, HeartHandshakeIcon, ShieldCheckIcon } from 'lucide-react';
+import { AlertTriangleIcon, CalendarClockIcon, HeartHandshakeIcon, ShieldCheckIcon } from 'lucide-react';
 
-// â”€â”€â”€ Policy resolver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Policy resolver ──────────────────────────────────────────────────────────
 
-export type CancellationPolicyState = 'free' | 'mercy' | 'loss';
+export type CancellationPolicyState = 'free' | 'rescheduled' | 'mercy' | 'loss';
 
 export type CancellationPolicy = {
   state: CancellationPolicyState;
@@ -13,15 +12,26 @@ export type CancellationPolicy = {
   willReceiveRefund: boolean;
 };
 
-
 export function resolveCancellationPolicy(
   startsAt: Date,
   mercyAvailable: boolean,
   now: Date = new Date(),
+  rescheduledAt?: Date | null,
+  bookedAt?: Date | null,
 ): CancellationPolicy {
   const hoursUntilStart = differenceInHours(startsAt, now);
   const isWithinWindow = hoursUntilStart < CANCELLATION_WINDOW_HOURS;
 
+  // Mirrors server-side grace logic in cancellationService.cancel()
+  const rescheduledGrace =
+    !!rescheduledAt &&
+    !!bookedAt &&
+    rescheduledAt > bookedAt &&
+    now < addHours(rescheduledAt, CANCELLATION_WINDOW_HOURS);
+
+  if (rescheduledGrace) {
+    return { state: 'rescheduled', hoursUntilStart, willReceiveRefund: true };
+  }
   if (!isWithinWindow) {
     return { state: 'free', hoursUntilStart, willReceiveRefund: true };
   }
@@ -31,7 +41,7 @@ export function resolveCancellationPolicy(
   return { state: 'loss', hoursUntilStart, willReceiveRefund: false };
 }
 
-// â”€â”€â”€ Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Banner ───────────────────────────────────────────────────────────────────
 
 const VARIANTS = {
   free: {
@@ -41,6 +51,14 @@ const VARIANTS = {
     title: 'Free cancellation',
     titleColor: 'text-emerald-800',
     descColor: 'text-emerald-700',
+  },
+  rescheduled: {
+    icon: CalendarClockIcon,
+    container: 'border-blue-200 bg-blue-50',
+    iconColor: 'text-blue-600',
+    title: 'Free cancellation — class was rescheduled',
+    titleColor: 'text-blue-800',
+    descColor: 'text-blue-700',
   },
   mercy: {
     icon: HeartHandshakeIcon,
@@ -65,6 +83,8 @@ export type CancellationPolicyBannerProps = {
   mercyAvailable: boolean;
   creditsAtStake: number;
   creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
+  rescheduledAt?: Date | null;
+  bookedAt?: Date | null;
 };
 
 export function CancellationPolicyBanner({
@@ -72,21 +92,25 @@ export function CancellationPolicyBanner({
   mercyAvailable,
   creditsAtStake,
   creditType,
+  rescheduledAt,
+  bookedAt,
 }: CancellationPolicyBannerProps) {
-  const policy = resolveCancellationPolicy(startsAt, mercyAvailable);
+  const policy = resolveCancellationPolicy(startsAt, mercyAvailable, new Date(), rescheduledAt, bookedAt);
   const v = VARIANTS[policy.state];
   const Icon = v.icon;
 
   const creditLabel = `${creditsAtStake} ${creditType} ${creditsAtStake === 1 ? 'credit' : 'credits'}`;
+  const windowHours = CANCELLATION_WINDOW_HOURS;
 
-  // Build human-readable description per state
   let description: string;
-  if (policy.state === 'free') {
-    description = `You're outside the 24-hour window (${policy.hoursUntilStart}h remaining). You'll receive a full refund of ${creditLabel}.`;
+  if (policy.state === 'rescheduled') {
+    description = `This class was rescheduled after you booked. You have ${windowHours} hours from the reschedule notice to cancel for a full refund of ${creditLabel}.`;
+  } else if (policy.state === 'free') {
+    description = `You're outside the ${windowHours}-hour window (${policy.hoursUntilStart}h remaining). You'll receive a full refund of ${creditLabel}.`;
   } else if (policy.state === 'mercy') {
-    description = `You're within the 24-hour window, but as a one-time courtesy your grace period will be applied — you'll receive a full refund of ${creditLabel}. This grace can only be used once per account.`;
+    description = `You're within the ${windowHours}-hour window, but as a one-time courtesy your grace period will be applied — you'll receive a full refund of ${creditLabel}. This grace can only be used once per account.`;
   } else {
-    description = `You're within the 24-hour window and your one-time grace period has already been used. ${creditLabel} will be forfeited.`;
+    description = `You're within the ${windowHours}-hour window and your one-time grace period has already been used. ${creditLabel} will be forfeited.`;
   }
 
   return (

@@ -1,9 +1,9 @@
 import { db } from '@/db';
-import { bookings, users, classSessions, classTemplates, waitlistEntries } from '@/db/schema';
+import { bookings, users, classSessions, classTemplates, waitlistEntries, instructors } from '@/db/schema';
 import type { Booking } from '@/db/schema';
 import { eq, and, inArray, isNull, sql } from 'drizzle-orm';
-import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail } from '@/lib/email/resend';
-import { differenceInHours } from 'date-fns';
+import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail, sendInstructorCancellationNotificationEmail } from '@/lib/email/resend';
+import { differenceInHours, addHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
 import { creditService } from '@/modules/billing/services/credit.service';
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
@@ -120,15 +120,31 @@ export const cancellationService = {
 
     // ── 6. Apply cancellation rule engine ───────────────────────────────────
     const now = new Date();
+
+    // Block cancellation of classes that have already started or passed.
+    if (session.startsAt <= now) {
+      return { success: false, error: 'This class has already started or passed and cannot be cancelled.', code: 'INVALID_STATE' };
+    }
     const hoursUntilClass = differenceInHours(session.startsAt, now);
     const isWithinWindow = hoursUntilClass < CANCELLATION_WINDOW_HOURS;
+
+    // Grace window: if the class was rescheduled AFTER this student booked,
+    // they get CANCELLATION_WINDOW_HOURS from the reschedule announcement to cancel
+    // for free — even if the class is less than 24 hours away.
+    const rescheduledGraceFree =
+      session.rescheduledAt !== null &&
+      session.rescheduledAt > booking.bookedAt &&
+      now < addHours(session.rescheduledAt, CANCELLATION_WINDOW_HOURS);
 
     let refundIssued = false;
     let mercyApplied = false;
     let creditsRefunded = 0;
 
-    if (!isWithinWindow) {
+    if (!isWithinWindow || rescheduledGraceFree) {
       refundIssued = true;
+      if (rescheduledGraceFree) {
+        logger.info('Reschedule grace cancellation applied', { userId: student.id, bookingId, rescheduledAt: session.rescheduledAt });
+      }
     } else if (!student.firstMercyUsed) {
       mercyApplied = true;
       refundIssued = true;
@@ -209,6 +225,8 @@ export const cancellationService = {
           const classTime = session.startsAt.toLocaleTimeString('en-GB', {
             hour: '2-digit', minute: '2-digit',
           });
+
+          // Student cancellation confirmation
           await sendBookingCancellationEmail(
             student.email!,
             student.name ?? 'there',
@@ -217,6 +235,28 @@ export const cancellationService = {
             classTime,
             refundIssued,
           );
+
+          // Instructor notification — always sent regardless of refund outcome
+          if (session.instructorId) {
+            const [instructorRow] = await db
+              .select({ email: users.email, name: users.name })
+              .from(instructors)
+              .innerJoin(users, and(eq(instructors.userId, users.id), isNull(users.deletedAt)))
+              .where(eq(instructors.id, session.instructorId))
+              .limit(1);
+
+            if (instructorRow?.email) {
+              await sendInstructorCancellationNotificationEmail(
+                instructorRow.email,
+                instructorRow.name ?? 'Instructor',
+                student.name ?? 'A student',
+                tmpl?.name ?? 'the class',
+                classDate,
+                classTime,
+                refundIssued,
+              );
+            }
+          }
         } catch (err) {
           console.warn('[email] Cancellation email failed:', err);
         }
@@ -244,11 +284,13 @@ export const cancellationService = {
           refundIssued,
           mercyApplied,
           creditsRefunded,
-          message: mercyApplied
-            ? 'Booking cancelled. Your one-time grace has been applied and credits refunded.'
-            : refundIssued
-              ? 'Booking cancelled. Credits have been refunded.'
-              : 'Booking cancelled. Credits could not be refunded due to late cancellation policy.',
+          message: rescheduledGraceFree
+            ? 'Booking cancelled. Full refund issued — the class was rescheduled after you booked.'
+            : mercyApplied
+              ? 'Booking cancelled. Your one-time grace has been applied and credits refunded.'
+              : refundIssued
+                ? 'Booking cancelled. Credits have been refunded.'
+                : 'Booking cancelled. Credits could not be refunded due to late cancellation policy.',
         },
       };
     } catch (err) {

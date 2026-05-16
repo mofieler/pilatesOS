@@ -5,15 +5,27 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import {
   BadgeCheckIcon, CheckCircleIcon, CalendarIcon,
-  RefreshCwIcon, StarIcon, AlertCircleIcon,
+  RefreshCwIcon, StarIcon, AlertCircleIcon, XCircleIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { LEGACY_CREDIT_TYPE_LABELS } from '@/lib/config/class-types';
 
 const CREDIT_TYPE_LABEL = LEGACY_CREDIT_TYPE_LABELS;
-import { getActiveMembershipPlansAction, getMyMembershipAction, subscribeMembershipAction } from '@/modules/billing/actions/membership.actions';
+import { getActiveMembershipPlansAction, getMyMembershipAction, subscribeMembershipAction, cancelMyMembershipAction } from '@/modules/billing/actions/membership.actions';
 import type { MyMembership } from '@/modules/billing/actions/membership.actions';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -108,7 +120,23 @@ function PlanCard({
 
 // ─── Active membership view ────────────────────────────────────────────────────
 
-function ActiveMembershipView({ membership }: { membership: MyMembership }) {
+function ActiveMembershipView({ membership, onCancelled }: { membership: MyMembership; onCancelled: () => void }) {
+  const [isPending, startTransition] = useTransition();
+
+  function handleCancel() {
+    startTransition(async () => {
+      const res = await cancelMyMembershipAction();
+      if (!res.success) {
+        toast.error(res.error ?? 'Could not cancel membership.');
+        return;
+      }
+      toast.success('Membership cancelled', {
+        description: 'No further credits will be granted. Existing credits remain on your account.',
+      });
+      onCancelled();
+    });
+  }
+
   return (
     <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-[#faf9f7]/80 p-6">
       <div className="flex items-start gap-4">
@@ -149,9 +177,38 @@ function ActiveMembershipView({ membership }: { membership: MyMembership }) {
           </div>
         </div>
       </div>
-      <p className="mt-4 text-xs text-[#8b6b5c]">
-        To cancel your membership, please contact your studio. Cancellation takes effect at the end of the membership period.
-      </p>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-[#8b6b5c]">
+          Cancellation stops future credit grants. Credits already on your account remain valid.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+            <XCircleIcon className="size-3.5" aria-hidden />
+            Cancel
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel membership?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will stop all future weekly credit grants for <strong>{membership.planName}</strong>.
+                Credits already on your account will not be removed.
+                This action cannot be undone — you would need to subscribe to a new plan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Keep membership</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isPending}
+                onClick={handleCancel}
+                className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500 disabled:opacity-60"
+              >
+                {isPending ? 'Cancelling…' : 'Yes, cancel membership'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
@@ -358,7 +415,12 @@ export function MembershipShopSection() {
   return (
     <div className="space-y-6">
       {/* Active membership banner */}
-      {myMembership && <ActiveMembershipView membership={myMembership} />}
+      {myMembership && (
+        <ActiveMembershipView
+          membership={myMembership}
+          onCancelled={() => setMyMembership(null)}
+        />
+      )}
 
       {/* Plan list */}
       {!myMembership && (

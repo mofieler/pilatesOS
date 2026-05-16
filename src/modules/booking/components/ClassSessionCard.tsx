@@ -31,6 +31,8 @@ export type ClassSessionCardProps = {
   blockReason?: string | null;
   bookingId?: string;
   creditsSpent?: number;
+  bookedAt?: Date | null;
+  rescheduledAt?: Date | null;
   mercyAvailable?: boolean;
   onBook?: (sessionId: string) => void;
   onJoinWaitlist?: (sessionId: string) => void;

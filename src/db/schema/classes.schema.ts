@@ -66,6 +66,10 @@ export const classSessions = pgTable(
     cancelledAt: timestamp('cancelled_at', { withTimezone: true, mode: 'date' }),
     // [FIX-3] SET NULL — admin/instructor who cancelled; nullable, auditable
     cancelledBy: uuid('cancelled_by').references(() => users.id, { onDelete: 'set null' }),
+    // Stamped when admin/instructor reschedules the class time. Used to grant
+    // students a free 24-hour cancellation window after any reschedule.
+    // [FIX-2] withTimezone: true
+    rescheduledAt: timestamp('rescheduled_at', { withTimezone: true, mode: 'date' }),
 
     // Google Calendar sync — populated when the instructor's account has an active
     // calendar connection and we've pushed an event. Null = not synced yet.

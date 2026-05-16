@@ -32,7 +32,12 @@
       "Bash(grep -v \"//.*cookie\")",
       "PowerShell(cd \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\"; git add src/app/admin/statistics/ src/modules/statistics/ src/components/shared/PasswordStrengthMeter.tsx src/app/admin/components/AdminNav.tsx src/app/\\(auth\\)/register/page.tsx src/app/\\(auth\\)/reset-password/page.tsx src/modules/users/actions/register.action.ts src/modules/users/actions/reset-password.action.ts)",
       "PowerShell(cd \"c:\\\\Users\\\\morit\\\\MyCode\\\\pilatesOS\"; git add src/lib/config/class-types.test.ts src/lib/config/class-types.ts src/modules/users/components/CreditBalanceDisplay.tsx src/modules/users/components/UpcomingBookingsList.tsx src/modules/users/components/CancelBookingButton.tsx src/modules/booking/components/ClassSessionCard.tsx src/modules/booking/components/WeekView.tsx src/modules/booking/components/BookingConfirmModal.tsx src/modules/booking/components/CancellationPolicyBanner.tsx src/app/\\(dashboard\\)/page.tsx src/modules/billing/actions/adminCredits.actions.ts src/modules/billing/actions/creditPackage.actions.ts src/modules/billing/components/CreditPackagesManager.tsx src/modules/classes/components/AdminWeekView.tsx src/lib/email/resend.ts; git status --short)",
-      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Read(//c/Users/morit/Documents/harmony-pilates/**)",
+      "Bash(cp \"C:/Users/morit/MyCode/harmony-pilates/src/services/CookieConsentService.js\" \"C:/Users/morit/Documents/harmony-pilates/src/services/CookieConsentService.js\" && echo \"OK\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\morit\\MyCode\\harmony-pilates\\src\\services"
     ]
   }
 }

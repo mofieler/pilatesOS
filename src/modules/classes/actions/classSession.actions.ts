@@ -5,10 +5,11 @@ import { addMinutes } from 'date-fns';
 import { db } from '@/db';
 import { classTemplates, classSessions, instructors, users, bookings } from '@/db/schema';
 import type { ClassSession, ClassTemplate, Instructor, User } from '@/db/schema';
-import { asc, eq, and, isNull, gte, gt, lte, lt, ne } from 'drizzle-orm';
+import { asc, eq, and, isNull, inArray, gte, gt, lte, lt, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth/auth';
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
+import { sendClassRescheduledEmail } from '@/lib/email/resend';
 import type { ServiceResult } from '@/modules/billing/services/credit.service';
 import type { InstructorCancellationResult } from '@/modules/booking/services/cancellation.service';
 import type { ClassType, CreditType } from '@/lib/config/class-types';
@@ -87,6 +88,12 @@ const updateClassSessionSchema = z.object({
   id:           z.string().uuid('Invalid session ID'),
   instructorId: z.string().uuid().nullable().optional(),
   maxCapacity:  z.number().int().positive().optional(),
+});
+
+const rescheduleClassSessionSchema = z.object({
+  id:              z.string().uuid('Invalid session ID'),
+  startsAtISO:     z.string().datetime(),
+  durationMinutes: z.number().int().positive().optional(),
 });
 
 const checkSlotSchema = z.object({
@@ -273,6 +280,130 @@ export async function updateClassSessionAction(
   } catch (err) {
     console.error(JSON.stringify({ level: 'error', msg: 'updateClassSessionAction failed', err }));
     return { success: false, error: 'Failed to update session.', code: 'DB_ERROR' };
+  }
+}
+
+export async function rescheduleClassSessionAction(
+  input: z.infer<typeof rescheduleClassSessionSchema>,
+): Promise<ServiceResult<ClassSession>> {
+  const authSession = await requireAdminOrInstructor();
+  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+
+  const parsed = rescheduleClassSessionSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
+
+  const { id, startsAtISO, durationMinutes } = parsed.data;
+
+  try {
+    const [session] = await db
+      .select()
+      .from(classSessions)
+      .where(eq(classSessions.id, id))
+      .limit(1);
+
+    if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
+    if (session.status === 'cancelled') {
+      return { success: false, error: 'Cannot reschedule a cancelled class.', code: 'INVALID_STATE' };
+    }
+
+    const newStartsAt = new Date(startsAtISO);
+    if (isNaN(newStartsAt.getTime())) {
+      return { success: false, error: 'Invalid date or time.', code: 'INVALID_STATE' };
+    }
+    if (newStartsAt <= new Date()) {
+      return { success: false, error: 'New start time must be in the future.', code: 'INVALID_STATE' };
+    }
+
+    // Resolve duration: explicit override → template duration → fallback to existing gap
+    let resolvedDuration = durationMinutes;
+    if (!resolvedDuration && session.templateId) {
+      const [tmpl] = await db
+        .select({ durationMinutes: classTemplates.durationMinutes })
+        .from(classTemplates)
+        .where(eq(classTemplates.id, session.templateId))
+        .limit(1);
+      resolvedDuration = tmpl?.durationMinutes;
+    }
+    if (!resolvedDuration) {
+      resolvedDuration = Math.round((session.endsAt.getTime() - session.startsAt.getTime()) / 60000);
+    }
+
+    const newEndsAt = addMinutes(newStartsAt, resolvedDuration);
+    const now = new Date();
+
+    // Capture old times before updating — used in student notification emails
+    const oldStartsAt = session.startsAt;
+
+    const [updated] = await db
+      .update(classSessions)
+      .set({ startsAt: newStartsAt, endsAt: newEndsAt, rescheduledAt: now, updatedAt: now })
+      .where(eq(classSessions.id, id))
+      .returning();
+
+    revalidatePath('/admin/classes');
+    revalidatePath('/book');
+
+    // Fire-and-forget: notify all confirmed students
+    Promise.resolve().then(async () => {
+      try {
+        const confirmedBookings = await db
+          .select({ userId: bookings.userId })
+          .from(bookings)
+          .where(and(eq(bookings.sessionId, id), eq(bookings.status, 'confirmed')));
+
+        if (confirmedBookings.length === 0) return;
+
+        const [tmpl] = await db
+          .select({ name: classTemplates.name })
+          .from(classTemplates)
+          .where(eq(classTemplates.id, session.templateId!))
+          .limit(1);
+
+        const studentIds = confirmedBookings.map((b) => b.userId);
+        const students = await db
+          .select({ email: users.email, name: users.name })
+          .from(users)
+          .where(and(inArray(users.id, studentIds), isNull(users.deletedAt)));
+
+        const fmt = (d: Date) => ({
+          date: d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+          time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        });
+        const oldFmt = fmt(oldStartsAt);
+        const newFmt = fmt(newStartsAt);
+
+        await Promise.allSettled(
+          students
+            .filter((s) => s.email)
+            .map((s) =>
+              sendClassRescheduledEmail(
+                s.email!,
+                s.name ?? 'there',
+                tmpl?.name ?? 'your class',
+                oldFmt.date, oldFmt.time,
+                newFmt.date, newFmt.time,
+              ),
+            ),
+        );
+      } catch (err) {
+        console.warn('[email] Reschedule notification emails failed:', err);
+      }
+    }).catch(() => {});
+
+    // Fire-and-forget GCal sync with updated times
+    (async () => {
+      try {
+        const { pushSession } = await import('@/modules/calendar/services/calendar-sync.service');
+        await pushSession(id);
+      } catch (err) {
+        console.warn('[calendar] Reschedule GCal push failed:', err);
+      }
+    })();
+
+    return { success: true, data: updated as ClassSession };
+  } catch (err) {
+    console.error(JSON.stringify({ level: 'error', msg: 'rescheduleClassSessionAction failed', err }));
+    return { success: false, error: 'Failed to reschedule session.', code: 'DB_ERROR' };
   }
 }
 

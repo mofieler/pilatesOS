@@ -147,6 +147,13 @@ function parseDateParam(raw: string | null): Date {
 
 // ─── Session block ────────────────────────────────────────────────────────────
 
+const CREDIT_LABEL_SHORT: Record<ClassSessionCardProps['creditType'], string> = {
+  reformer: 'Reformer Credits',
+  mat:      'Mat Credits',
+  group:    'Group Credits',
+  session:  'Session Credits',
+};
+
 function SessionBlock({
   session,
   onClick,
@@ -159,6 +166,22 @@ function SessionBlock({
   const isCancelled = session.status === 'cancelled';
   const isBooked = session.isBookedByUser;
   const isFull = !isBooked && session.bookedCount >= session.maxCapacity;
+  const spotsLeft = Math.max(0, session.maxCapacity - session.bookedCount);
+
+  // Bottom status line — always rendered to keep all cards the same height
+  const statusText = isCancelled
+    ? 'Cancelled'
+    : isBooked
+      ? '✓ Booked'
+      : isFull
+        ? 'Full · waitlist'
+        : `${spotsLeft} / ${session.maxCapacity} spots free`;
+
+  const statusColor = isBooked
+    ? 'text-[#4a7c4a] font-semibold'
+    : isFull || isCancelled
+      ? 'opacity-50'
+      : 'opacity-60';
 
   return (
     <button
@@ -167,6 +190,7 @@ function SessionBlock({
       disabled={isCancelled}
       className={[
         'w-full rounded-lg border px-2.5 py-2 text-left transition-all',
+        'flex flex-col min-h-[88px]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4e2b22]/20 focus-visible:ring-offset-1',
         bg,
         isCancelled ? 'opacity-40 cursor-default' : 'cursor-pointer',
@@ -184,30 +208,20 @@ function SessionBlock({
         </p>
       </div>
 
-      {/* Class name */}
-      <p className="mt-1 text-xs font-bold leading-snug line-clamp-2">
+      {/* Class name — always 2 lines max so height stays stable */}
+      <p className="mt-1 text-xs font-bold leading-snug line-clamp-2 flex-1">
         {session.name}
       </p>
 
       {/* Credit cost */}
       <p className="mt-1 text-[10px] opacity-60">
-        {session.creditCost}{' '}
-        {session.creditType === 'mat' ? 'Mat / Group'
-          : session.creditType === 'group' ? 'Group'
-          : session.creditType === 'session' ? 'Session'
-          : 'Reformer / Group'}
+        {session.creditCost} {CREDIT_LABEL_SHORT[session.creditType]}
       </p>
 
-      {/* Status badges */}
-      {isBooked && (
-        <p className="mt-1.5 text-[10px] font-semibold text-[#4a7c4a]">✓ Booked</p>
-      )}
-      {isFull && (
-        <p className="mt-1.5 text-[10px] font-semibold opacity-60">Full</p>
-      )}
-      {isCancelled && (
-        <p className="mt-1.5 text-[10px] font-semibold opacity-60">Cancelled</p>
-      )}
+      {/* Status line — always present, keeps all cards the same height */}
+      <p className={`mt-1 text-[10px] ${statusColor}`}>
+        {statusText}
+      </p>
     </button>
   );
 }

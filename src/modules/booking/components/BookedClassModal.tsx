@@ -76,6 +76,8 @@ export function BookedClassModal({ session, onClose }: BookedClassModalProps) {
               creditsSpent={session.creditsSpent ?? session.creditCost}
               creditType={session.creditType as 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing'}
               mercyAvailable={session.mercyAvailable ?? false}
+              rescheduledAt={session.rescheduledAt}
+              bookedAt={session.bookedAt}
             />
           </div>
         </AlertDialogFooter>

@@ -30,6 +30,8 @@ export type CancelBookingButtonProps = {
   creditsSpent: number;
   creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
   mercyAvailable: boolean;
+  rescheduledAt?: Date | null;
+  bookedAt?: Date | null;
 };
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -41,12 +43,13 @@ export function CancelBookingButton({
   creditsSpent,
   creditType,
   mercyAvailable,
+  rescheduledAt,
+  bookedAt,
 }: CancelBookingButtonProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Compute the policy at render time of the dialog
-  const policy = resolveCancellationPolicy(startsAt, mercyAvailable);
+  const policy = resolveCancellationPolicy(startsAt, mercyAvailable, new Date(), rescheduledAt, bookedAt);
   const isLossState = policy.state === 'loss';
 
   function handleConfirm() {
@@ -117,6 +120,8 @@ export function CancelBookingButton({
           mercyAvailable={mercyAvailable}
           creditsAtStake={creditsSpent}
           creditType={creditType}
+          rescheduledAt={rescheduledAt}
+          bookedAt={bookedAt}
         />
 
         <AlertDialogFooter>

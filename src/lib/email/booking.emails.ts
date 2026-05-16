@@ -52,3 +52,95 @@ export async function sendClassCancelledByAdminEmail(
     }),
   });
 }
+
+export async function sendClassRescheduledEmail(
+  email: string,
+  name: string,
+  classTitle: string,
+  oldDate: string,
+  oldTime: string,
+  newDate: string,
+  newTime: string,
+): Promise<void> {
+  const C = COLORS;
+  const oldBlock = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 4px;border-radius:12px;overflow:hidden;border:1px solid ${C.border};">
+      <tr><td style="background-color:${C.background};padding:16px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr><td style="padding-bottom:10px;border-bottom:1px solid ${C.border};">
+            <p style="margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:${C.textLighter};"><font color="${C.textLighter}">Class</font></p>
+            <p style="margin:4px 0 0;font-size:15px;font-weight:700;color:${C.primary};"><font color="${C.primary}">${classTitle}</font></p>
+          </td></tr>
+          <tr><td style="padding-top:10px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td width="50%" style="vertical-align:top;">
+                  <p style="margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:${C.textLighter};"><font color="${C.textLighter}">Previous date</font></p>
+                  <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:${C.text};text-decoration:line-through;opacity:0.6;"><font color="${C.text}">${oldDate}</font></p>
+                </td>
+                <td width="50%" style="vertical-align:top;">
+                  <p style="margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:${C.textLighter};"><font color="${C.textLighter}">Previous time</font></p>
+                  <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:${C.text};text-decoration:line-through;opacity:0.6;"><font color="${C.text}">${oldTime}</font></p>
+                </td>
+              </tr>
+              <tr>
+                <td width="50%" style="vertical-align:top;padding-top:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:${C.textLighter};"><font color="${C.textLighter}">New date</font></p>
+                  <p style="margin:4px 0 0;font-size:14px;font-weight:700;color:${C.primary};"><font color="${C.primary}">${newDate}</font></p>
+                </td>
+                <td width="50%" style="vertical-align:top;padding-top:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:${C.textLighter};"><font color="${C.textLighter}">New time</font></p>
+                  <p style="margin:4px 0 0;font-size:14px;font-weight:700;color:${C.primary};"><font color="${C.primary}">${newTime}</font></p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:12px 0 0;border-radius:12px;overflow:hidden;border:1px solid #b8d4f0;">
+      <tr><td style="background-color:#f0f7ff;padding:14px 20px;">
+        <p style="margin:0;font-size:13px;font-weight:700;color:#1a4a7a;"><font color="#1a4a7a">Free cancellation available</font></p>
+        <p style="margin:3px 0 0;font-size:12px;line-height:1.5;color:#2a5a8a;"><font color="#2a5a8a">Because the schedule changed, you have 24 hours from this notice to cancel for a full credit refund — even if the class is less than 24 hours away.</font></p>
+      </td></tr>
+    </table>`;
+
+  await getResend().emails.send({
+    from: FROM, to: email,
+    subject: `Schedule change – ${classTitle} – ${APP_NAME}`,
+    html: buildBaseTemplate({
+      subject: 'Schedule change', title: 'Your class has been rescheduled',
+      greeting: `Hi ${name},`,
+      body: `The studio has updated the time for your upcoming class. Your booking remains confirmed — please note the new time below.<br><br>${oldBlock}`,
+      actionUrl: APP_URL, actionText: 'View my bookings',
+      expiryText: 'If the new time does not work for you, you can cancel for free within 24 hours of receiving this email.',
+    }),
+  });
+}
+
+export async function sendInstructorCancellationNotificationEmail(
+  email: string,
+  instructorName: string,
+  studentName: string,
+  classTitle: string,
+  classDate: string,
+  classTime: string,
+  refundIssued: boolean,
+): Promise<void> {
+  const C = COLORS;
+  const refundNote = refundIssued
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:12px 0 0;border-radius:12px;overflow:hidden;border:1px solid #b2dfb2;"><tr><td style="background-color:#f0faf0;padding:14px 20px;"><p style="margin:0;font-size:13px;font-weight:700;color:#2d6a2d;"><font color="#2d6a2d">Credit refunded to student</font></p></td></tr></table>`
+    : `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:12px 0 0;border-radius:12px;overflow:hidden;border:1px solid #f5cba7;"><tr><td style="background-color:#fff8f0;padding:14px 20px;"><p style="margin:0;font-size:13px;font-weight:700;color:#7b2d00;"><font color="#7b2d00">No refund issued (late cancellation)</font></p></td></tr></table>`;
+
+  await getResend().emails.send({
+    from: FROM, to: email,
+    subject: `Booking cancelled by student – ${classTitle}`,
+    html: buildBaseTemplate({
+      subject: 'Student cancellation', title: 'A student cancelled their booking',
+      greeting: `Hi ${instructorName},`,
+      body: `<strong>${studentName}</strong> has cancelled their booking for the following class:<br><br>${buildClassInfoBlock(classTitle, classDate, classTime)}${refundNote}`,
+      actionUrl: `${APP_URL}/admin/classes`, actionText: 'View class',
+      expiryText: 'This is an automated notification. No action is required from you.',
+    }),
+  });
+}

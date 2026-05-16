@@ -537,6 +537,29 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
   }
 }
 
+export async function cancelMyMembershipAction() {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false as const, error: 'Unauthorized' };
+
+  const userId = session.user.id;
+
+  try {
+    const [membership] = await db
+      .update(userMemberships)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(and(eq(userMemberships.userId, userId), eq(userMemberships.status, 'active')))
+      .returning();
+
+    if (!membership) return { success: false as const, error: 'No active membership found' };
+
+    revalidatePath('/credits');
+    revalidatePath('/');
+    return { success: true as const, data: membership };
+  } catch {
+    return { success: false as const, error: 'Failed to cancel membership. Please try again.' };
+  }
+}
+
 // ─── Student-facing ───────────────────────────────────────────────────────────
 
 export type MyMembership = NonNullable<Awaited<ReturnType<typeof getMyMembershipAction>>>;

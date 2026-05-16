@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { createBookingAction } from '@/modules/booking/actions/createBooking.action';
 import { createDuoInviteAction } from '@/modules/booking/actions/createDuoInvite.action';
+import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
 import { DuoInviteShareSheet } from './DuoInviteShareSheet';
 import type { ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import type { ClassSessionCardProps } from './ClassSessionCard';
@@ -180,7 +181,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
             </div>
 
             <p className="text-xs text-slate-400">
-              Free cancellation up to 24 hours before the class starts.
+              Free cancellation up to {CANCELLATION_WINDOW_HOURS} hours before the class starts.
             </p>
 
             <AlertDialogFooter>

@@ -152,6 +152,7 @@ export function ClassesPageClient({
           instructorName={detailSession.instructorName ?? '—'}
           bookedCount={detailSession.bookedCount}
           maxCapacity={detailSession.maxCapacity}
+          status={detailSession.status}
           open={detailSessionId !== null}
           onOpenChange={(open) => {
             if (!open) setDetailSessionId(null);

@@ -5,9 +5,8 @@ import { format } from 'date-fns';
 import {
   Loader2Icon,
   Trash2Icon,
-  X,
-  AlertTriangleIcon,
-  CheckCircleIcon,
+  CalendarClockIcon,
+  ChevronDownIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -36,6 +35,7 @@ import {
   removeStudentFromSessionAction,
   type SessionStudent,
 } from '@/modules/classes/actions/class.actions';
+import { rescheduleClassSessionAction } from '@/modules/classes/actions/classSession.actions';
 
 type Props = {
   sessionId: string;
@@ -45,6 +45,7 @@ type Props = {
   instructorName: string;
   bookedCount: number;
   maxCapacity: number;
+  status: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -59,6 +60,7 @@ export function SessionDetailModal({
   instructorName,
   bookedCount,
   maxCapacity,
+  status,
   open,
   onOpenChange,
 }: Props) {
@@ -71,6 +73,22 @@ export function SessionDetailModal({
   const [selectedStudent, setSelectedStudent] = useState<SessionStudent | null>(null);
   const [removeReason, setRemoveReason] = useState('');
   const [removeError, setRemoveError] = useState('');
+
+  // Reschedule form
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState(format(startsAt, 'yyyy-MM-dd'));
+  const [rescheduleTime, setRescheduleTime] = useState(format(startsAt, 'HH:mm'));
+  const [rescheduleError, setRescheduleError] = useState('');
+
+  // Reset reschedule form whenever the modal opens (possibly for a different session)
+  useEffect(() => {
+    if (open) {
+      setRescheduleOpen(false);
+      setRescheduleDate(format(startsAt, 'yyyy-MM-dd'));
+      setRescheduleTime(format(startsAt, 'HH:mm'));
+      setRescheduleError('');
+    }
+  }, [open, startsAt]);
 
   // Load students when modal opens
   useEffect(() => {
@@ -93,6 +111,29 @@ export function SessionDetailModal({
     setRemoveReason('');
     setRemoveError('');
     setRemoveDialog('remove');
+  }
+
+  function handleReschedule() {
+    if (!rescheduleDate || !rescheduleTime) {
+      setRescheduleError('Please enter a valid date and time.');
+      return;
+    }
+    setRescheduleError('');
+    const startsAtISO = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
+
+    startTransition(async () => {
+      const result = await rescheduleClassSessionAction({ id: sessionId, startsAtISO });
+      if (result.success) {
+        const studentNote = bookedCount > 0
+          ? ` ${bookedCount} student${bookedCount !== 1 ? 's' : ''} notified by email.`
+          : '';
+        toast.success(`Class rescheduled successfully.${studentNote}`);
+        setRescheduleOpen(false);
+        onOpenChange(false);
+      } else {
+        setRescheduleError(result.error ?? 'Failed to reschedule.');
+      }
+    });
   }
 
   function handleRemoveStudent() {
@@ -146,6 +187,77 @@ export function SessionDetailModal({
                 </div>
               </div>
             </div>
+
+            {/* Reschedule section */}
+            {status !== 'cancelled' && (
+              <div className="rounded-lg border border-[#ede8e5]">
+                <button
+                  type="button"
+                  onClick={() => setRescheduleOpen((v) => !v)}
+                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-[#4e2b22] hover:bg-[#faf9f7] rounded-lg transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <CalendarClockIcon className="size-4" />
+                    Reschedule class
+                  </span>
+                  <ChevronDownIcon className={['size-4 text-[#8b6b5c] transition-transform', rescheduleOpen ? 'rotate-180' : ''].join(' ')} />
+                </button>
+
+                {rescheduleOpen && (
+                  <div className="border-t border-[#ede8e5] px-4 pb-4 pt-3 space-y-3">
+                    {bookedCount > 0 && (
+                      <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                        <strong>{bookedCount} student{bookedCount !== 1 ? 's' : ''}</strong> will receive an email with the new time and a free 24-hour cancellation window.
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="reschedule-date" className="text-xs">New date</Label>
+                        <Input
+                          id="reschedule-date"
+                          type="date"
+                          value={rescheduleDate}
+                          onChange={(e) => setRescheduleDate(e.target.value)}
+                          disabled={isPending}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="reschedule-time" className="text-xs">New time</Label>
+                        <Input
+                          id="reschedule-time"
+                          type="time"
+                          value={rescheduleTime}
+                          onChange={(e) => setRescheduleTime(e.target.value)}
+                          disabled={isPending}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    {rescheduleError && (
+                      <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                        {rescheduleError}
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      onClick={handleReschedule}
+                      disabled={isPending}
+                      className="w-full bg-[#4e2b22] hover:bg-[#6b3d32] text-white text-sm"
+                    >
+                      {isPending ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2Icon className="size-4 animate-spin" />
+                          Rescheduling…
+                        </span>
+                      ) : (
+                        'Confirm reschedule & notify students'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Students list */}
             <div className="space-y-3">
