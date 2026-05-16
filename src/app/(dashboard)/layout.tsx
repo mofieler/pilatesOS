@@ -3,6 +3,7 @@ import { auth, signOut } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { ProfileCompletionOverlay } from '@/components/shared/ProfileCompletionOverlay';
 import { CookieNotice } from '@/components/shared/CookieNotice';
+import { InactivityWarningModal } from '@/components/shared/InactivityWarningModal';
 import { BillingReminderPopup } from '@/modules/billing/components/BillingReminderPopup';
 import { UserMobileNav } from './components/UserMobileNav';
 import { DesktopNavLinks } from './components/DesktopNavLinks';
@@ -92,6 +93,7 @@ export default async function DashboardLayout({ children }:  { children: React.R
       )}
       <CookieNotice />
       <BillingReminderPopup />
+      <InactivityWarningModal />
     </div>
   );
 }

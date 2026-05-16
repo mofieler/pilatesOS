@@ -8,7 +8,11 @@ import bcrypt from 'bcryptjs';
 import { checkRateLimit, authRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 export const authConfig: NextAuthConfig = {
-  session: { strategy: 'jwt' },
+  session: {
+    strategy: 'jwt',
+    maxAge: 8 * 60 * 60,     // absolute expiry: 8 hours
+    updateAge: 15 * 60,       // extend the cookie if active within 15 min
+  },
 
   cookies: {
     sessionToken: {

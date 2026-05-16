@@ -31,10 +31,14 @@ function LoginForm() {
     const reset = searchParams.get('reset');
     const errorParam = searchParams.get('error');
 
+    const reason = searchParams.get('reason');
+
     if (verified === 'true') {
       setInfo('Email verified! You can now sign in.');
     } else if (reset === 'true') {
       setInfo('Password reset successfully! You can now sign in.');
+    } else if (reason === 'idle') {
+      setInfo('You were signed out due to inactivity. Please sign in again.');
     } else if (errorParam === 'expired_token') {
       setError('Verification link expired. Please register again.');
     } else if (errorParam === 'invalid_token') {
