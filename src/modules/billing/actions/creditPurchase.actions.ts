@@ -1,3 +1,5 @@
+'use server';
+
 import { z } from 'zod';
 import { db } from '@/db';
 import { creditPurchases, users, creditPackages, invoiceReminders } from '@/db/schema';

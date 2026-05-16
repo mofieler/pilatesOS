@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { bookings, users, classSessions, classTemplates, waitlistEntries } from '@/db/schema';
 import type { Booking } from '@/db/schema';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, isNull, sql } from 'drizzle-orm';
 import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail } from '@/lib/email/resend';
 import { differenceInHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
@@ -81,7 +81,7 @@ export const cancellationService = {
     const [requestingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.id, requestingUserId))
+      .where(and(eq(users.id, requestingUserId), isNull(users.deletedAt)))
       .limit(1);
 
     const isOwner = booking.userId === requestingUserId;
@@ -371,7 +371,7 @@ export const cancellationService = {
               .then((rows) => rows[0]),
             db.select({ id: users.id, email: users.email, name: users.name })
               .from(users)
-              .where(inArray(users.id, result.affectedUserIds)),
+              .where(and(inArray(users.id, result.affectedUserIds), isNull(users.deletedAt))),
           ]);
           if (!sessionRow) return;
           const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {

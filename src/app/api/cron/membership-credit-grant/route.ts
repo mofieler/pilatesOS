@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '@/db';
 import { userMemberships, creditBalances, creditTransactions, users } from '@/db/schema';
-import { and, eq, lte } from 'drizzle-orm';
+import { and, eq, isNull, lte } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import {
   sendMembershipCreditGrantEmail,
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       const [userRow] = await db
         .select({ email: users.email, name: users.name })
         .from(users)
-        .where(eq(users.id, membership.userId))
+        .where(and(eq(users.id, membership.userId), isNull(users.deletedAt)))
         .limit(1);
 
       if (userRow?.email) {

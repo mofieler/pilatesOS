@@ -34,7 +34,7 @@ export function InactivityWarningModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="-mx-4 -mb-4">
+        <DialogFooter>
           <Button variant="outline" onClick={logOut} className="border-[#ede8e5] text-[#8b6b5c]">
             Sign out
           </Button>

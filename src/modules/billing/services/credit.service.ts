@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { creditBalances, creditTransactions } from '@/db/schema';
+import { creditBalances, creditTransactions, creditPurchases } from '@/db/schema';
 import type { CreditTransaction, CreditType } from '@/db/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
 
@@ -317,8 +317,23 @@ export const creditService = {
 
     try {
       const result = await db.transaction(async (tx) => {
-        // [FIX-5] Phase 2 TODO: add stripeTransactions FOR UPDATE idempotency check here
-        // before any balance mutation when stripeCheckoutSessionId is present.
+        // [FIX-5] Idempotency guard: if this Stripe session was already processed,
+        // a creditPurchases row with this stripeSessionId already exists. Lock it
+        // FOR UPDATE so concurrent webhook retries serialize and only one proceeds.
+        if (params.stripeCheckoutSessionId) {
+          const [processed] = await tx
+            .select({ id: creditPurchases.id })
+            .from(creditPurchases)
+            .where(eq(creditPurchases.stripeSessionId, params.stripeCheckoutSessionId))
+            .for('update')
+            .limit(1);
+
+          if (processed) {
+            throw new DuplicatePaymentError(
+              `Stripe session ${params.stripeCheckoutSessionId} already processed.`,
+            );
+          }
+        }
 
         // Calculate expiry date from validityWeeks if provided
         let calculatedExpiresAt: Date | null = null;

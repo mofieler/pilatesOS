@@ -10,8 +10,22 @@ const ERROR_CODES = {
   SERVER_ERROR: 500,
 } as const;
 
-// Helper function to transform purchase data
-function transformPurchaseData(purchase: any) {
+type PurchaseRow = {
+  id: string;
+  invoiceNumber: string | null;
+  creditsAmount: number;
+  priceCents: number;
+  currency: string;
+  paymentDueDate: Date | null;
+  paidAt: Date | null;
+  paymentStatus: string;
+  createdAt: Date;
+  updatedAt: Date;
+  packageName: string | null;
+  adminNotes: string | null;
+};
+
+function transformPurchaseData(purchase: PurchaseRow) {
   const now = new Date();
   const isPaid = purchase.paymentStatus === 'paid';
   const isOverdue = !isPaid && purchase.paymentDueDate

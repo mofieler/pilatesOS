@@ -112,7 +112,13 @@ export async function createBookingAction(
         }
       }
 
-      // Clean up any cancelled bookings for this user+session (allows rebooking)
+      // The unique index bookings_user_session_unique_idx covers (userId, sessionId)
+      // without a status filter, so a cancelled row blocks re-insertion for the same
+      // slot. We delete only the user's own cancelled row for this session so they can
+      // rebook. The credit ledger (creditTransactions) is the authoritative audit trail
+      // for the original booking and cancellation; this row's purpose is fulfilled.
+      // TODO: change the unique index to a partial index (WHERE status = 'confirmed')
+      // so cancelled rows are kept without needing this delete.
       await tx
         .delete(bookings)
         .where(

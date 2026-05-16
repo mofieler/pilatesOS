@@ -127,20 +127,22 @@ export async function deleteMembershipPlanAction(input: { id: string }) {
   if (!session) return { success: false as const, error: 'Unauthorized' };
 
   try {
-    const [active] = await db
+    // Block deletion if ANY membership rows reference this plan (active or historical).
+    // userMemberships are financial records — destroying them would erase the audit
+    // trail of who had which plan and when. The FK onDelete: 'restrict' also enforces
+    // this at the DB level. Use deactivation (isActive = false) to retire a plan.
+    const [anyMembership] = await db
       .select({ id: userMemberships.id })
       .from(userMemberships)
-      .where(and(eq(userMemberships.planId, input.id), eq(userMemberships.status, 'active')))
+      .where(eq(userMemberships.planId, input.id))
       .limit(1);
 
-    if (active) return { success: false as const, error: 'Cannot delete — active members use this plan. Cancel all members first.' };
-
-    // Remove cancelled/expired membership rows that still reference this plan.
-    // Required because the FK uses onDelete: 'restrict' — the DB blocks the plan
-    // delete if any membership row (even cancelled) still points to it.
-    await db
-      .delete(userMemberships)
-      .where(and(eq(userMemberships.planId, input.id)));
+    if (anyMembership) {
+      return {
+        success: false as const,
+        error: 'Cannot delete — this plan has membership history. Deactivate it instead.',
+      };
+    }
 
     const deleted = await db.delete(membershipPlans).where(eq(membershipPlans.id, input.id)).returning({ id: membershipPlans.id });
     if (deleted.length === 0) return { success: false as const, error: 'Plan not found' };

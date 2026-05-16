@@ -26,6 +26,9 @@ export function useInactivityLogout() {
   }, []);
 
   const startCountdown = useCallback(() => {
+    // Guard against double-start (belt-and-suspenders alongside warningActive check)
+    if (countdownRef.current) return;
+
     let remaining = Math.floor(WARNING_MS / 1000);
     setSecondsLeft(remaining);
     setShowWarning(true);
@@ -63,11 +66,21 @@ export function useInactivityLogout() {
       resetIdleTimer();
     };
 
+    // When the tab becomes visible again after being hidden, reset the idle timer
+    // so the countdown doesn't fire based on background-throttled intervals.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !warningActive.current) {
+        resetIdleTimer();
+      }
+    };
+
     ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibilityChange);
     resetIdleTimer();
 
     return () => {
       ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (idleTimer.current) clearTimeout(idleTimer.current);
       stopCountdown();
     };
