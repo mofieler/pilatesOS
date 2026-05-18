@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '@/db';
-import { userMemberships, creditBalances, creditTransactions, users } from '@/db/schema';
+import { userMemberships, creditBalances, users } from '@/db/schema';
 import { and, eq, isNull, lte } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import {
@@ -9,6 +9,7 @@ import {
   sendMembershipExpiryEmail,
 } from '@/lib/email/resend';
 import type { CreditType } from '@/db/schema';
+import { creditService } from '@/modules/billing/services/credit.service';
 
 // POST /api/cron/membership-credit-grant
 // Runs weekly (e.g. every Monday at 06:00 UTC via Coolify scheduled task).
@@ -60,42 +61,15 @@ export async function POST(req: NextRequest) {
     try {
       const isExpired = membership.endsAt <= now;
 
-      // Atomic: upsert credit balance + write ledger entry
+      // Atomic: grant credits (creates a lot via addCreditsInternal) + advance schedule.
+      // Membership grants get the default 52-week validity; the membership's
+      // ends_at governs when grants stop arriving, but each granted lot lives
+      // a full year so users on travel don't get truncated unexpectedly.
       await db.transaction(async (tx) => {
-        const [existing] = await tx
-          .select()
-          .from(creditBalances)
-          .where(
-            and(
-              eq(creditBalances.userId, membership.userId),
-              eq(creditBalances.creditType, membership.creditType as CreditType),
-            ),
-          )
-          .for('update')
-          .limit(1);
-
-        const currentBalance = existing?.balance ?? 0;
-        const newBalance = currentBalance + membership.weeklyCredits;
-
-        if (existing) {
-          await tx
-            .update(creditBalances)
-            .set({ balance: newBalance, updatedAt: now })
-            .where(eq(creditBalances.id, existing.id));
-        } else {
-          await tx.insert(creditBalances).values({
-            userId: membership.userId,
-            creditType: membership.creditType as CreditType,
-            balance: newBalance,
-          });
-        }
-
-        await tx.insert(creditTransactions).values({
+        await creditService.addCreditsInternal(tx, {
           userId: membership.userId,
-          type: 'purchase',
           creditType: membership.creditType as CreditType,
           amount: membership.weeklyCredits,
-          balanceAfter: newBalance,
           description: `Membership weekly grant (membership ${membership.id})`,
         });
 

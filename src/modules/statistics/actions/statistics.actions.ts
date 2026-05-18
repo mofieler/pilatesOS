@@ -60,9 +60,7 @@ export type StudentRow = {
   name: string;
   email: string;
   createdAt: Date;
-  matBalance: number;
-  reformerBalance: number;
-  groupBalance: number;
+  passBalance: number;
   sessionBalance: number;
   totalBookings: number;
   upcomingBookings: number;
@@ -73,9 +71,7 @@ export type StudentDetail = {
   name: string;
   email: string;
   createdAt: Date;
-  matBalance: number;
-  reformerBalance: number;
-  groupBalance: number;
+  passBalance: number;
   sessionBalance: number;
   recentBookings: {
     id: string;
@@ -209,7 +205,7 @@ export async function getActivityFeedAction(fromDate: Date): Promise<ActivityIte
       type = 'booking_cancelled_user';
     }
 
-    const CREDIT_LABEL: Record<string, string> = { mat: 'Mat', reformer: 'Reformer', group: 'Group', session: 'Session' };
+    const CREDIT_LABEL: Record<string, string> = { pass: 'Pass', session: 'Session' };
     const creditLabel = CREDIT_LABEL[r.creditType] ?? r.creditType;
 
     return {
@@ -238,7 +234,7 @@ export async function getActivityFeedAction(fromDate: Date): Promise<ActivityIte
     else if (r.type === 'refund') type = 'credit_refund';
     else type = 'credit_adjustment';
 
-    const CREDIT_LABEL: Record<string, string> = { mat: 'Mat', reformer: 'Reformer', group: 'Group', session: 'Session' };
+    const CREDIT_LABEL: Record<string, string> = { pass: 'Pass', session: 'Session' };
     const creditLabel = CREDIT_LABEL[r.creditType] ?? r.creditType;
     const sign = r.amount >= 0 ? '+' : '';
 
@@ -316,13 +312,11 @@ export async function getStudentListAction(): Promise<StudentRow[]> {
     .groupBy(bookings.userId);
 
   // Build lookup maps
-  const balanceMap = new Map<string, { mat: number; reformer: number; group: number; session: number }>();
+  const balanceMap = new Map<string, { pass: number; session: number }>();
   for (const b of balances) {
-    if (!balanceMap.has(b.userId)) balanceMap.set(b.userId, { mat: 0, reformer: 0, group: 0, session: 0 });
+    if (!balanceMap.has(b.userId)) balanceMap.set(b.userId, { pass: 0, session: 0 });
     const entry = balanceMap.get(b.userId)!;
-    if (b.creditType === 'mat') entry.mat = b.balance;
-    else if (b.creditType === 'reformer') entry.reformer = b.balance;
-    else if (b.creditType === 'group') entry.group = b.balance;
+    if (b.creditType === 'pass') entry.pass = b.balance;
     else if (b.creditType === 'session') entry.session = b.balance;
   }
 
@@ -334,10 +328,8 @@ export async function getStudentListAction(): Promise<StudentRow[]> {
     name: s.name ?? '—',
     email: s.email ?? '—',
     createdAt: s.createdAt,
-    matBalance:      balanceMap.get(s.id)?.mat ?? 0,
-    reformerBalance: balanceMap.get(s.id)?.reformer ?? 0,
-    groupBalance:    balanceMap.get(s.id)?.group ?? 0,
-    sessionBalance:  balanceMap.get(s.id)?.session ?? 0,
+    passBalance:    balanceMap.get(s.id)?.pass ?? 0,
+    sessionBalance: balanceMap.get(s.id)?.session ?? 0,
     totalBookings:       bookingCountMap.get(s.id) ?? 0,
     upcomingBookings:    upcomingCountMap.get(s.id) ?? 0,
   }));
@@ -392,19 +384,15 @@ export async function getStudentDetailAction(userId: string): Promise<StudentDet
       .limit(20),
   ]);
 
-  const matBalance          = balances.find(b => b.creditType === 'mat')?.balance ?? 0;
-  const reformerBalance     = balances.find(b => b.creditType === 'reformer')?.balance ?? 0;
-  const groupBalance        = balances.find(b => b.creditType === 'group')?.balance ?? 0;
-  const sessionBalance      = balances.find(b => b.creditType === 'session')?.balance ?? 0;
+  const passBalance    = balances.find(b => b.creditType === 'pass')?.balance ?? 0;
+  const sessionBalance = balances.find(b => b.creditType === 'session')?.balance ?? 0;
 
   return {
     id: studentRow.id,
     name: studentRow.name ?? '—',
     email: studentRow.email ?? '—',
     createdAt: studentRow.createdAt,
-    matBalance,
-    reformerBalance,
-    groupBalance,
+    passBalance,
     sessionBalance,
     recentBookings: recentBookings.map(b => ({
       id: b.id,

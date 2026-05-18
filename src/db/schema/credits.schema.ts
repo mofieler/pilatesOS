@@ -244,6 +244,59 @@ export const userMemberships = pgTable(
   }),
 );
 
+// Credit lots — one row per "deposit" of credits (purchase, membership grant,
+// admin adjustment). Lots are consumed in FIFO order by expires_at when a
+// booking debits credits, so credits that expire soonest are used first.
+// This replaces the single creditBalances.expiresAt column, which could only
+// represent ONE expiry date per (user, credit_type) and silently overwrote
+// older expiry dates on top-up.
+export const creditLots = pgTable(
+  'credit_lots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // [FIX-3] RESTRICT — financial record, never silently dropped
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    creditType: creditTypeEnum('credit_type').notNull(),
+    // originalAmount is immutable; remainingAmount decrements on debit/expiry.
+    originalAmount: integer('original_amount').notNull(),
+    remainingAmount: integer('remaining_amount').notNull(),
+    // Provenance — exactly one of these three is set per lot (or none for
+    // legacy backfill lots). SET NULL on parent delete keeps the lot alive
+    // for audit, but loses the reverse pointer.
+    purchaseId: uuid('purchase_id').references(() => creditPurchases.id, { onDelete: 'set null' }),
+    // membershipId / adjustmentId omitted in initial schema; both reference
+    // tables that already exist. Added here once dual-write extends to those
+    // grant paths in Sprint 4.
+    // [FIX-2] tz-aware
+    acquiredAt: timestamp('acquired_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+    // 'active' | 'exhausted' | 'expired'
+    // Status is denormalized for index-only filtering; remainingAmount=0 is the
+    // canonical "exhausted" marker, expires_at <= NOW() the canonical "expired".
+    status: varchar('status', { length: 16 }).notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // FIFO query: WHERE user_id AND credit_type AND status='active' AND expires_at > NOW()
+    // ORDER BY expires_at ASC FOR UPDATE
+    fifoIdx: index('credit_lots_fifo_idx').on(
+      t.userId,
+      t.creditType,
+      t.status,
+      t.expiresAt,
+    ),
+    // Cron sweep: WHERE status='active' AND expires_at <= NOW()
+    expirySweepIdx: index('credit_lots_expiry_sweep_idx').on(t.status, t.expiresAt),
+    userIdx: index('credit_lots_user_idx').on(t.userId),
+  }),
+);
+
 // Manual credit adjustments — §147 AO audit trail for all admin-initiated changes.
 // Records are immutable once written (never update, only insert).
 export const creditAdjustments = pgTable(

@@ -8,6 +8,7 @@ import { eq, and, isNull, desc, lt } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { handleApiError } from '@/lib/security/error-sanitizer';
 import { auditHelpers } from '@/lib/security/audit-system';
+import { creditService } from '@/modules/billing/services/credit.service';
 
 const adjustSchema = z.object({
   userId:     z.string().uuid(),
@@ -106,53 +107,83 @@ export async function adjustUserCreditsAction(input: z.infer<typeof adjustSchema
 
   try {
     const result = await db.transaction(async (tx) => {
-      // Lock the balance row to prevent concurrent adjustments
-      const [existing] = await tx
-        .select()
-        .from(creditBalances)
-        .where(
-          and(
-            eq(creditBalances.userId, userId),
-            eq(creditBalances.creditType, creditType as CreditType),
-          ),
-        )
-        .for('update')
-        .limit(1);
+      let newBalance: number;
+      let txRowId: string;
 
-      const currentBalance = existing?.balance ?? 0;
-      const newBalance     = currentBalance + amountDelta;
-
-      if (newBalance < 0) {
-        throw new Error(`Cannot reduce balance below zero. Current: ${currentBalance}, delta: ${amountDelta}`);
-      }
-
-      // Update or create the balance row
-      if (existing) {
-        await tx
-          .update(creditBalances)
-          .set({ balance: newBalance, updatedAt: new Date() })
-          .where(eq(creditBalances.id, existing.id));
-      } else {
-        await tx.insert(creditBalances).values({
+      if (amountDelta > 0) {
+        // Positive adjustment: route through canonical add path so a credit_lots
+        // row is created. The lot uses the default 52-week validity so admin
+        // grants behave the same as a purchased package.
+        const added = await creditService.addCreditsInternal(tx, {
           userId,
           creditType: creditType as CreditType,
-          balance: newBalance,
-        });
-      }
-
-      // Immutable credit transaction ledger entry
-      const [txRow] = await tx
-        .insert(creditTransactions)
-        .values({
-          userId,
-          type:        'manual_adjustment',
-          creditType:  creditType as CreditType,
-          amount:      amountDelta,
-          balanceAfter: newBalance,
+          amount: amountDelta,
           description: `Admin adjustment: ${reason}`,
-          processedBy: session.user.id,
-        })
-        .returning();
+        });
+        // The ledger entry from addCreditsInternal uses type 'purchase'.
+        // Overwrite the type to 'manual_adjustment' so the admin audit
+        // distinction is preserved.
+        await tx
+          .update(creditTransactions)
+          .set({
+            type: 'manual_adjustment',
+            processedBy: session.user.id,
+          })
+          .where(eq(creditTransactions.id, added.transaction.id));
+        newBalance = added.newBalance;
+        txRowId = added.transaction.id;
+      } else {
+        // Negative adjustment (deduction): balance-only update for now.
+        // Sprint 4 will replace this with FIFO lot reduction so the lot
+        // ledger stays consistent with the aggregate balance.
+        const [existing] = await tx
+          .select()
+          .from(creditBalances)
+          .where(
+            and(
+              eq(creditBalances.userId, userId),
+              eq(creditBalances.creditType, creditType as CreditType),
+            ),
+          )
+          .for('update')
+          .limit(1);
+
+        const currentBalance = existing?.balance ?? 0;
+        newBalance = currentBalance + amountDelta;
+
+        if (newBalance < 0) {
+          throw new Error(
+            `Cannot reduce balance below zero. Current: ${currentBalance}, delta: ${amountDelta}`,
+          );
+        }
+
+        if (existing) {
+          await tx
+            .update(creditBalances)
+            .set({ balance: newBalance, updatedAt: new Date() })
+            .where(eq(creditBalances.id, existing.id));
+        } else {
+          await tx.insert(creditBalances).values({
+            userId,
+            creditType: creditType as CreditType,
+            balance: newBalance,
+          });
+        }
+
+        const [txRow] = await tx
+          .insert(creditTransactions)
+          .values({
+            userId,
+            type:         'manual_adjustment',
+            creditType:   creditType as CreditType,
+            amount:       amountDelta,
+            balanceAfter: newBalance,
+            description:  `Admin adjustment: ${reason}`,
+            processedBy:  session.user.id,
+          })
+          .returning();
+        txRowId = txRow.id;
+      }
 
       // §147 AO audit record — never modify after insertion
       await tx.insert(creditAdjustments).values({
@@ -165,7 +196,7 @@ export async function adjustUserCreditsAction(input: z.infer<typeof adjustSchema
         notes: notes ?? null,
       });
 
-      return { newBalance, transactionId: txRow.id };
+      return { newBalance, transactionId: txRowId };
     });
 
     await auditHelpers.logAdminAction(

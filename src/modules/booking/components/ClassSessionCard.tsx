@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { formatStudioTime } from '@/lib/utils/date.utils';
 import { CheckCircleIcon, ClockIcon, MapPinIcon, UsersIcon, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ export type ClassSessionCardProps = {
   bookedCount: number;
   maxCapacity: number;
   creditCost: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session';
+  creditType: 'pass' | 'session';
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   isBookedByUser: boolean;
   location?: string | null;
@@ -33,7 +33,8 @@ export type ClassSessionCardProps = {
   creditsSpent?: number;
   bookedAt?: Date | null;
   rescheduledAt?: Date | null;
-  mercyAvailable?: boolean;
+  /** Remaining late-cancellation mercy uses this calendar month (0..3). */
+  mercyUsesLeft?: number;
   onBook?: (sessionId: string) => void;
   onJoinWaitlist?: (sessionId: string) => void;
 };
@@ -83,17 +84,13 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'bg-[#6b8e6b]',
-  mat:      'bg-[#8b6b5c]',
-  group:    'bg-[#c4a88a]',
-  session:  'bg-[#4e2b22]',
+  pass:    'bg-[#c4a88a]',
+  session: 'bg-[#4e2b22]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'Reformer / Group Credits',
-  mat:      'Mat / Group Credits',
-  group:    'Group Credits',
-  session:  'Session Credits',
+  pass:    'Credits',
+  session: 'Session Credits',
 };
 
 // â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -305,7 +302,7 @@ export function ClassSessionCard(props: ClassSessionCardProps) {
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary">
         <span className="inline-flex items-center gap-1.5 rounded-lg bg-cream/50 px-2.5 py-1">
           <ClockIcon className="size-4 shrink-0 text-muted" aria-hidden />
-          <span className="font-medium text-primary">{format(startsAt, 'HH:mm')}</span>
+          <span className="font-medium text-primary">{formatStudioTime(startsAt)}</span>
           <span className="text-muted">· {durationMinutes} min</span>
         </span>
         {location && (

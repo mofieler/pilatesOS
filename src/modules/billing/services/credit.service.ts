@@ -1,7 +1,7 @@
 import { db } from '@/db';
-import { creditBalances, creditTransactions, creditPurchases } from '@/db/schema';
-import type { CreditTransaction, CreditType } from '@/db/schema';
-import { eq, and, lt, desc } from 'drizzle-orm';
+import { creditBalances, creditTransactions, creditPurchases, creditLots } from '@/db/schema';
+import type { CreditTransaction, CreditLot, CreditType } from '@/db/schema';
+import { eq, and, lt, desc, asc, gt, sql } from 'drizzle-orm';
 
 // ─── Shared Result Types ──────────────────────────────────────────────────────
 
@@ -49,6 +49,10 @@ export type CreditAddParams = {
   creditType: CreditType;
   amount: number;
   packageId?: string;
+  // Direct link from the new lot to the credit_purchases row (pay-at-studio
+  // and Stripe paths both populate this). Separate from packageId because
+  // packageId points at the catalog SKU and purchaseId at the transaction.
+  purchaseId?: string;
   expiresAt?: Date;
   validityWeeks?: number;
   description?: string;
@@ -56,6 +60,17 @@ export type CreditAddParams = {
   // Phase 2: wired to stripeTransactions FOR UPDATE idempotency guard.
   stripeCheckoutSessionId?: string;
 };
+
+export type AddCreditsResult = {
+  transaction: CreditTransaction;
+  lot: CreditLot;
+  newBalance: number;
+};
+
+// Default validity if neither expiresAt nor validityWeeks is provided.
+// Mirrors creditPackages.validity_weeks default (52). Keeps the lot from
+// living forever if a caller forgets to specify an expiry.
+const DEFAULT_VALIDITY_WEEKS = 52;
 
 // [FIX-4] Cursor-based pagination result type.
 export type PaginatedTransactionHistory = {
@@ -118,7 +133,9 @@ export const creditService = {
   },
 
   /**
-   * Debit credits for a booking. Acquires FOR UPDATE lock to prevent race conditions.
+   * Debit credits for a booking. Public wrapper around debitInternal that
+   * opens its own transaction. Use debitInternal when composing with another
+   * transaction (createBooking does this so booking insert + debit are atomic).
    */
   async debit(params: CreditDebitParams): Promise<ServiceResult<CreditTransaction>> {
     const { userId, creditType, amount, bookingId, description } = params;
@@ -128,48 +145,16 @@ export const creditService = {
     }
 
     try {
-      const result = await db.transaction(async (tx) => {
-        const [current] = await tx
-          .select()
-          .from(creditBalances)
-          .where(
-            and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, creditType)),
-          )
-          .for('update')
-          .limit(1);
-
-        const currentAmount = current?.balance ?? 0;
-
-        if (currentAmount < amount) {
-          throw new InsufficientCreditsError(
-            `Insufficient ${creditType} credits. Has: ${currentAmount}, Needs: ${amount}`,
-          );
-        }
-
-        const newBalance = currentAmount - amount;
-
-        await tx
-          .update(creditBalances)
-          .set({ balance: newBalance, updatedAt: new Date() })
-          .where(eq(creditBalances.id, current.id));
-
-        const [transaction] = await tx
-          .insert(creditTransactions)
-          .values({
-            userId,
-            bookingId,
-            type: 'debit',
-            creditType,
-            amount: -amount,
-            balanceAfter: newBalance,
-            description: description ?? `Credit debit for booking ${bookingId}`,
-          })
-          .returning();
-
-        return transaction;
-      });
-
-      return { success: true, data: result as CreditTransaction };
+      const result = await db.transaction(async (tx) =>
+        creditService.debitInternal(tx, {
+          userId,
+          creditType,
+          amount,
+          bookingId,
+          description: description ?? `Credit debit for booking ${bookingId}`,
+        }),
+      );
+      return { success: true, data: result };
     } catch (err) {
       if (err instanceof InsufficientCreditsError) {
         return { success: false, error: err.message, code: 'INSUFFICIENT_CREDITS' };
@@ -183,6 +168,22 @@ export const creditService = {
    * Internal debit — accepts an existing tx client for composition.
    * Throws InsufficientCreditsError so the caller's transaction rolls back cleanly.
    * Used by createBooking so the debit is atomic with the booking insert.
+   *
+   * Strategy:
+   *   1. Lock and read active lots (status='active', expires_at > NOW())
+   *      ordered by expires_at ASC. This is FIFO over expiry — credits that
+   *      expire first are spent first.
+   *   2. If the sum of remaining_amount across those lots is sufficient,
+   *      iterate and decrement them one-by-one until `amount` is satisfied.
+   *      Mark exhausted (remaining=0) lots as status='exhausted'.
+   *   3. Decrement credit_balances.balance by the same amount.
+   *   4. Insert one ledger entry (type='debit', amount=-amount).
+   *
+   * Defensive fallback: if a user has positive credit_balances.balance but
+   * NO active lots, do a balance-only debit (legacy path). This protects
+   * existing users during the dual-write transition before Sprint 5's
+   * backfill has run. Once backfill is complete on the VPS, this branch
+   * effectively never triggers; it can be removed in a later cleanup.
    */
   async debitInternal(
     tx: TxClient,
@@ -190,6 +191,91 @@ export const creditService = {
   ): Promise<CreditTransaction> {
     const { userId, creditType, amount, bookingId, description } = params;
 
+    if (amount <= 0) {
+      throw new Error('debitInternal: amount must be positive');
+    }
+
+    const now = new Date();
+
+    // 1. Lock and read active, unexpired lots FIFO by expires_at.
+    const activeLots = await tx
+      .select()
+      .from(creditLots)
+      .where(
+        and(
+          eq(creditLots.userId, userId),
+          eq(creditLots.creditType, creditType),
+          eq(creditLots.status, 'active'),
+          gt(creditLots.expiresAt, now),
+        ),
+      )
+      .orderBy(asc(creditLots.expiresAt))
+      .for('update');
+
+    const totalAvailableInLots = activeLots.reduce(
+      (sum, lot) => sum + lot.remainingAmount,
+      0,
+    );
+
+    // Path A — lots exist for this user/creditType: FIFO debit
+    if (activeLots.length > 0) {
+      if (totalAvailableInLots < amount) {
+        throw new InsufficientCreditsError(
+          `Insufficient ${creditType} credits. Has: ${totalAvailableInLots}, Needs: ${amount}`,
+        );
+      }
+
+      let remaining = amount;
+      for (const lot of activeLots) {
+        if (remaining <= 0) break;
+        const take = Math.min(lot.remainingAmount, remaining);
+        const newLotRemaining = lot.remainingAmount - take;
+        const newLotStatus = newLotRemaining === 0 ? 'exhausted' : 'active';
+        await tx
+          .update(creditLots)
+          .set({ remainingAmount: newLotRemaining, status: newLotStatus })
+          .where(eq(creditLots.id, lot.id));
+        remaining -= take;
+      }
+
+      // Decrement aggregate balance cache.
+      const [balanceRow] = await tx
+        .select()
+        .from(creditBalances)
+        .where(
+          and(
+            eq(creditBalances.userId, userId),
+            eq(creditBalances.creditType, creditType),
+          ),
+        )
+        .for('update')
+        .limit(1);
+
+      const newBalance = (balanceRow?.balance ?? totalAvailableInLots) - amount;
+      if (balanceRow) {
+        await tx
+          .update(creditBalances)
+          .set({ balance: newBalance, updatedAt: now })
+          .where(eq(creditBalances.id, balanceRow.id));
+      }
+
+      const [transaction] = await tx
+        .insert(creditTransactions)
+        .values({
+          userId,
+          bookingId,
+          type: 'debit',
+          creditType,
+          amount: -amount,
+          balanceAfter: newBalance,
+          description,
+        })
+        .returning();
+
+      return transaction as CreditTransaction;
+    }
+
+    // Path B — no active lots: legacy balance-only debit (pre-backfill users)
     const [current] = await tx
       .select()
       .from(creditBalances)
@@ -205,10 +291,9 @@ export const creditService = {
       );
     }
 
-    // Check if credits are expired
-    if (current.expiresAt && new Date() > current.expiresAt) {
+    if (current.expiresAt && now > current.expiresAt) {
       throw new InsufficientCreditsError(
-        `${creditType} credits expired on ${current.expiresAt.toLocaleDateString()}`,
+        `${creditType} credits expired on ${current.expiresAt.toISOString().slice(0, 10)}`,
       );
     }
 
@@ -218,11 +303,15 @@ export const creditService = {
       );
     }
 
+    logger.info('debitInternal: legacy balance-only path (no lots present yet)', {
+      userId, creditType, amount,
+    });
+
     const newBalance = current.balance - amount;
 
     await tx
       .update(creditBalances)
-      .set({ balance: newBalance, updatedAt: new Date() })
+      .set({ balance: newBalance, updatedAt: now })
       .where(eq(creditBalances.id, current.id));
 
     const [transaction] = await tx
@@ -259,10 +348,38 @@ export const creditService = {
   /**
    * Internal refund — accepts a tx client for composition inside other transactions.
    * Used by cancellationService so refunds are atomic with the booking update.
+   *
+   * Strategy: create a fresh credit_lots row for the refunded amount with the
+   * default validity (52 weeks). This is generous to the user — they get a
+   * full new expiry rather than being tied to the original lot's remaining
+   * lifetime. The balance cache is incremented and a ledger entry written.
+   *
+   * Future enhancement (out of scope): trace the original lot via the debit
+   * ledger and write back to it, falling back to a fresh lot only if the
+   * original is already expired. Requires a credit_transactions.lot_id link.
    */
   async refundInternal(tx: TxClient, params: CreditRefundParams): Promise<CreditTransaction> {
     const { userId, creditType, amount, bookingId, description } = params;
 
+    if (amount <= 0) {
+      throw new Error('refundInternal: amount must be positive');
+    }
+
+    const now = new Date();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + DEFAULT_VALIDITY_WEEKS * 7);
+
+    // 1. Create a fresh lot for the refunded credits.
+    await tx.insert(creditLots).values({
+      userId,
+      creditType,
+      originalAmount: amount,
+      remainingAmount: amount,
+      expiresAt,
+      status: 'active',
+    });
+
+    // 2. Increment aggregate balance.
     const [existing] = await tx
       .select()
       .from(creditBalances)
@@ -276,15 +393,25 @@ export const creditService = {
 
     if (existing) {
       newBalance = existing.balance + amount;
+      // Extend balance.expiresAt if the new lot expires later.
+      const keepExpiry =
+        !existing.expiresAt
+          ? expiresAt
+          : expiresAt > existing.expiresAt
+            ? expiresAt
+            : existing.expiresAt;
       await tx
         .update(creditBalances)
-        .set({ balance: newBalance, updatedAt: new Date() })
+        .set({ balance: newBalance, expiresAt: keepExpiry, updatedAt: now })
         .where(eq(creditBalances.id, existing.id));
     } else {
       newBalance = amount;
-      await tx.insert(creditBalances).values({ userId, creditType, balance: newBalance });
+      await tx
+        .insert(creditBalances)
+        .values({ userId, creditType, balance: newBalance, expiresAt });
     }
 
+    // 3. Ledger entry.
     const [transaction] = await tx
       .insert(creditTransactions)
       .values({
@@ -302,14 +429,123 @@ export const creditService = {
   },
 
   /**
-   * Add credits after a purchase. Called by the Stripe webhook handler.
+   * Internal add-credits — composable inside an existing transaction.
    *
-   * [FIX-5] Phase 2: stripeCheckoutSessionId wires into a FOR UPDATE idempotency
-   * check on stripeTransactions to prevent double-crediting on webhook retries.
-   * The guard is stubbed here until stripeTransactions is added in Phase 2.
+   * Dual-writes: creates a new credit_lots row AND updates the
+   * credit_balances aggregate cache in the same transaction. Inserts a
+   * credit_transactions ledger entry.
+   *
+   * Caller is responsible for:
+   *   - Idempotency guard (Stripe session check)
+   *   - Wrapping the call in db.transaction()
+   *
+   * The balance row's expires_at is kept at MAX(old, new) so a shorter-
+   * validity top-up never silently shortens an existing longer expiry. The
+   * lot retains its own true expiry, which is what FIFO debit reads from.
+   */
+  async addCreditsInternal(
+    tx: TxClient,
+    params: CreditAddParams,
+  ): Promise<AddCreditsResult> {
+    const { userId, creditType, amount, packageId, purchaseId, validityWeeks, description } = params;
+
+    if (amount <= 0) {
+      throw new Error('addCreditsInternal: amount must be positive');
+    }
+
+    // Compute expiry: explicit expiresAt > validityWeeks > default
+    let expiresAt: Date;
+    if (params.expiresAt) {
+      expiresAt = params.expiresAt;
+    } else {
+      const weeks = validityWeeks && validityWeeks > 0 ? validityWeeks : DEFAULT_VALIDITY_WEEKS;
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + weeks * 7);
+    }
+
+    // 1. Upsert balance — keep the LATER expiry to avoid shortening older credits.
+    const [existing] = await tx
+      .select()
+      .from(creditBalances)
+      .where(
+        and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, creditType)),
+      )
+      .for('update')
+      .limit(1);
+
+    let newBalance: number;
+
+    if (existing) {
+      newBalance = existing.balance + amount;
+      const keepExpiry =
+        !existing.expiresAt
+          ? expiresAt
+          : expiresAt > existing.expiresAt
+            ? expiresAt
+            : existing.expiresAt;
+      await tx
+        .update(creditBalances)
+        .set({
+          balance: newBalance,
+          expiresAt: keepExpiry,
+          updatedAt: new Date(),
+        })
+        .where(eq(creditBalances.id, existing.id));
+    } else {
+      newBalance = amount;
+      await tx.insert(creditBalances).values({
+        userId,
+        creditType,
+        balance: newBalance,
+        expiresAt,
+      });
+    }
+
+    // 2. Insert lot — this is the FIFO record. Its expires_at is the
+    //    authoritative source for when *these specific credits* expire.
+    const [lot] = await tx
+      .insert(creditLots)
+      .values({
+        userId,
+        creditType,
+        originalAmount: amount,
+        remainingAmount: amount,
+        purchaseId: purchaseId ?? null,
+        expiresAt,
+        status: 'active',
+      })
+      .returning();
+
+    // 3. Ledger entry
+    const [transaction] = await tx
+      .insert(creditTransactions)
+      .values({
+        userId,
+        packageId: packageId ?? null,
+        type: 'purchase',
+        creditType,
+        amount: +amount,
+        balanceAfter: newBalance,
+        description: description ?? `Purchased ${amount} ${creditType} credits`,
+      })
+      .returning();
+
+    return {
+      transaction: transaction as CreditTransaction,
+      lot: lot as CreditLot,
+      newBalance,
+    };
+  },
+
+  /**
+   * Add credits after a purchase. Called by the Stripe webhook handler and by
+   * other purchase paths that don't manage their own transaction context.
+   *
+   * [FIX-5] stripeCheckoutSessionId wires into a FOR UPDATE idempotency check
+   * on creditPurchases to prevent double-crediting on webhook retries.
    */
   async addCredits(params: CreditAddParams): Promise<ServiceResult<CreditTransaction>> {
-    const { userId, creditType, amount, packageId, validityWeeks, description } = params;
+    const { userId, creditType, amount } = params;
 
     if (amount <= 0) {
       return { success: false, error: 'Amount must be positive.', code: 'INVALID_STATE' };
@@ -335,62 +571,11 @@ export const creditService = {
           }
         }
 
-        // Calculate expiry date from validityWeeks if provided
-        let calculatedExpiresAt: Date | null = null;
-        if (validityWeeks && validityWeeks > 0) {
-          calculatedExpiresAt = new Date();
-          calculatedExpiresAt.setDate(calculatedExpiresAt.getDate() + (validityWeeks * 7));
-        }
-
-        const [existing] = await tx
-          .select()
-          .from(creditBalances)
-          .where(
-            and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, creditType)),
-          )
-          .for('update')
-          .limit(1);
-
-        let newBalance: number;
-
-        if (existing) {
-          newBalance = existing.balance + amount;
-          await tx
-            .update(creditBalances)
-            .set({
-              balance: newBalance,
-              expiresAt: calculatedExpiresAt ?? existing.expiresAt,
-              updatedAt: new Date(),
-            })
-            .where(eq(creditBalances.id, existing.id));
-        } else {
-          newBalance = amount;
-          await tx.insert(creditBalances).values({
-            userId,
-            creditType,
-            balance: newBalance,
-            expiresAt: calculatedExpiresAt,
-          });
-        }
-
-        const [transaction] = await tx
-          .insert(creditTransactions)
-          .values({
-            userId,
-            packageId: packageId ?? null,
-            type: 'purchase',
-            creditType,
-            amount: +amount,
-            balanceAfter: newBalance,
-            description: description ?? `Purchased ${amount} ${creditType} credits`,
-          })
-          .returning();
-
-        return transaction;
+        return creditService.addCreditsInternal(tx, params);
       });
 
-      logger.info('Credits added', { userId, creditType, amount });
-      return { success: true, data: result as CreditTransaction };
+      logger.info('Credits added', { userId, creditType, amount, lotId: result.lot.id });
+      return { success: true, data: result.transaction };
     } catch (err) {
       if (err instanceof DuplicatePaymentError) {
         logger.info('Idempotency guard: duplicate Stripe webhook suppressed', {

@@ -18,6 +18,7 @@ import { revalidatePath } from 'next/cache';
 import { getCreditTypeValues } from '@/lib/config/class-types';
 import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendMembershipPurchaseEmail } from '@/lib/email/membership.emails';
+import { creditService } from '@/modules/billing/services/credit.service';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -272,29 +273,13 @@ export async function assignMembershipAction(input: z.infer<typeof assignSchema>
         adminNotes:     plan.name,
       });
 
-      // Grant first week's credits immediately
-      const [bal] = await tx
-        .select()
-        .from(creditBalances)
-        .where(and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, plan.creditType as CreditType)))
-        .for('update')
-        .limit(1);
-
-      const newBalance = (bal?.balance ?? 0) + plan.weeklyCredits;
-
-      if (bal) {
-        await tx.update(creditBalances).set({ balance: newBalance, updatedAt: now }).where(eq(creditBalances.id, bal.id));
-      } else {
-        await tx.insert(creditBalances).values({ userId, creditType: plan.creditType as CreditType, balance: newBalance });
-      }
-
-      await tx.insert(creditTransactions).values({
+      // Grant first week's credits immediately via the canonical add path,
+      // which dual-writes a credit_lots row for FIFO tracking.
+      await creditService.addCreditsInternal(tx, {
         userId,
-        type:         'purchase',
-        creditType:   plan.creditType as CreditType,
-        amount:       plan.weeklyCredits,
-        balanceAfter: newBalance,
-        description:  `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
+        creditType: plan.creditType as CreditType,
+        amount: plan.weeklyCredits,
+        description: `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
       });
 
       return { membership, invoiceNumber: invNumber };
@@ -454,29 +439,13 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
         adminNotes:      plan.name,
       });
 
-      // Grant first week's credits immediately
-      const [bal] = await tx
-        .select()
-        .from(creditBalances)
-        .where(and(eq(creditBalances.userId, userId), eq(creditBalances.creditType, plan.creditType as CreditType)))
-        .for('update')
-        .limit(1);
-
-      const newBalance = (bal?.balance ?? 0) + plan.weeklyCredits;
-
-      if (bal) {
-        await tx.update(creditBalances).set({ balance: newBalance, updatedAt: now }).where(eq(creditBalances.id, bal.id));
-      } else {
-        await tx.insert(creditBalances).values({ userId, creditType: plan.creditType as CreditType, balance: newBalance });
-      }
-
-      await tx.insert(creditTransactions).values({
+      // Grant first week's credits immediately via the canonical add path,
+      // which dual-writes a credit_lots row for FIFO tracking.
+      await creditService.addCreditsInternal(tx, {
         userId,
-        type:         'purchase',
-        creditType:   plan.creditType as CreditType,
-        amount:       plan.weeklyCredits,
-        balanceAfter: newBalance,
-        description:  `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
+        creditType: plan.creditType as CreditType,
+        amount: plan.weeklyCredits,
+        description: `Membership first week grant: ${plan.weeklyCredits} ${plan.creditType} credits (${invNumber})`,
       });
 
       return { membership, invoiceNumber: invNumber };

@@ -25,18 +25,15 @@ import { OpenBillsCard } from '@/modules/billing/components/OpenBillsCard';
 import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 import { MembershipStatusCard } from '@/modules/billing/components/MembershipStatusCard';
 import { getMyMembershipAction } from '@/modules/billing/actions/membership.actions';
+import { cancellationService } from '@/modules/booking/services/cancellation.service';
+import { lotService } from '@/modules/billing/services/lot.service';
+import { LotBreakdown } from '@/modules/billing/components/LotBreakdown';
+import { ExpiryWarningBanner } from '@/modules/billing/components/ExpiryWarningBanner';
 
 // ─── Data fetchers ────────────────────────────────────────────────────────────
 
-async function getMercyAvailable(userId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ firstMercyUsed: users.firstMercyUsed })
-    .from(users)
-    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-    .limit(1);
-
-  return row ? !row.firstMercyUsed : false;
-}
+// Mercy quota state is fetched via cancellationService.getMercyContext(userId).
+// Replaces the legacy lifetime first_mercy_used flag.
 
 async function getSessionPackages(userId: string): Promise<SessionPackage[]> {
   const rows = await db
@@ -70,7 +67,7 @@ async function getCreditBalances(userId: string): Promise<CreditBalance[]> {
     .from(creditBalances)
     .where(eq(creditBalances.userId, userId));
 
-  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['mat', 'reformer', 'group', 'session'];
+  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['pass', 'session'];
   return rows.filter((r): r is CreditBalance =>
     (DISPLAY_TYPES as readonly string[]).includes(r.creditType),
   );
@@ -136,13 +133,19 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   const userName = session.user.name ?? session.user.email ?? 'there';
 
-  const [balances, sessionPackages, upcomingBookings, mercyAvailable, billing, membership] = await Promise.all([
+  const [
+    balances, sessionPackages, upcomingBookings, mercyContext, billing, membership,
+    passLots, sessionLots, utilization,
+  ] = await Promise.all([
     getCreditBalances(userId),
     getSessionPackages(userId),
     getUpcomingBookings(userId),
-    getMercyAvailable(userId),
+    cancellationService.getMercyContext(userId),
     getUserBillingStatus(userId),
     getMyMembershipAction(),
+    lotService.getLotBreakdown(userId, 'pass'),
+    lotService.getLotBreakdown(userId, 'session'),
+    lotService.predictUtilization(userId, { lookbackDays: 90 }),
   ]);
 
   return (
@@ -152,6 +155,9 @@ export default async function DashboardPage() {
 
       {/* ── Streak (Phase 3) ─────────────────────────────────────────────────── */}
       {/* <StreakCard /> */}
+
+      {/* ── Expiry warning ─────────────────────────────────────────────────── */}
+      <ExpiryWarningBanner prediction={utilization} />
 
       {/* ── Open bills ─────────────────────────────────────────────────────── */}
       <OpenBillsCard openBills={billing.openBills} />
@@ -177,6 +183,28 @@ export default async function DashboardPage() {
           </Link>
         </div>
         <CreditBalanceDisplay balances={balances} sessionPackages={sessionPackages} />
+
+        {/* Lot-level breakdown for transparent expiry tracking */}
+        {(passLots.length > 0 || sessionLots.length > 0) && (
+          <div className="mt-5 space-y-4 border-t border-[#ede8e5]/60 pt-5">
+            {passLots.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#8b6b5c]">
+                  Pass credit lots
+                </p>
+                <LotBreakdown lots={passLots} />
+              </div>
+            )}
+            {sessionLots.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#8b6b5c]">
+                  Session credit lots
+                </p>
+                <LotBreakdown lots={sessionLots} />
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* ── Upcoming bookings ───────────────────────────────────────────────── */}
@@ -203,7 +231,7 @@ export default async function DashboardPage() {
             <ArrowRightIcon className="size-4" aria-hidden />
           </Link>
         </div>
-        <UpcomingBookingsList bookings={upcomingBookings} mercyAvailable={mercyAvailable} />
+        <UpcomingBookingsList bookings={upcomingBookings} mercyUsesLeft={mercyContext.mercyUsesLeft} />
       </section>
     </div>
   );

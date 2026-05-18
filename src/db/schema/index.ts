@@ -8,6 +8,7 @@ export * from './credits.schema';
 export * from './calendar.schema';
 export * from './invoice-reminders.schema';
 export * from './duo-invites.schema';
+export * from './cancellation-mercy.schema';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export * from './enums';
@@ -24,10 +25,11 @@ import type { instructors } from './instructors.schema';
 import type { classTemplates, classSessions } from './classes.schema';
 import type { bookings } from './bookings.schema';
 import type { waitlistEntries } from './waitlist.schema';
-import type { creditPackages, creditBalances, creditTransactions, creditPurchases, creditAdjustments, membershipPlans, userMemberships } from './credits.schema';
+import type { creditPackages, creditBalances, creditLots, creditTransactions, creditPurchases, creditAdjustments, membershipPlans, userMemberships } from './credits.schema';
 import type { calendarConnections, externalCalendarBlocks } from './calendar.schema';
 import type { invoiceReminders } from './invoice-reminders.schema';
 import type { duoInvites } from './duo-invites.schema';
+import type { cancellationMercyUses } from './cancellation-mercy.schema';
 import type {
   userRoleEnum,
   classTypeEnum,
@@ -86,6 +88,10 @@ export type NewCreditPackage = InferInsertModel<typeof creditPackages>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type NewCreditBalance = InferInsertModel<typeof creditBalances>;
 
+export type CreditLot = InferSelectModel<typeof creditLots>;
+export type NewCreditLot = InferInsertModel<typeof creditLots>;
+export type CreditLotStatus = 'active' | 'exhausted' | 'expired';
+
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type NewCreditTransaction = InferInsertModel<typeof creditTransactions>;
 
@@ -115,6 +121,10 @@ export type NewInvoiceReminder = InferInsertModel<typeof invoiceReminders>;
 // Duo invites
 export type DuoInvite = InferSelectModel<typeof duoInvites>;
 export type NewDuoInvite = InferInsertModel<typeof duoInvites>;
+
+// Cancellation mercy
+export type CancellationMercyUse = InferSelectModel<typeof cancellationMercyUses>;
+export type NewCancellationMercyUse = InferInsertModel<typeof cancellationMercyUses>;
 
 // ─── Enum value types — use these instead of raw strings ─────────────────────
 export type UserRole = (typeof userRoleEnum.enumValues)[number];

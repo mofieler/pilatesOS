@@ -49,7 +49,7 @@ function makeTx(balanceRows: unknown[]) {
             id: 'tx-1',
             userId: 'user-1',
             type: 'debit',
-            creditType: 'mat',
+            creditType: 'pass',
             amount: -3,
             balanceAfter: 7,
           },
@@ -67,7 +67,7 @@ describe('creditService.debit', () => {
   it('returns INVALID_STATE when amount is zero or negative', async () => {
     const result = await creditService.debit({
       userId: 'user-1',
-      creditType: 'mat',
+      creditType: 'pass',
       amount: 0,
       bookingId: 'booking-1',
     });
@@ -85,7 +85,7 @@ describe('creditService.debit', () => {
 
     const result = await creditService.debit({
       userId: 'user-1',
-      creditType: 'mat',
+      creditType: 'pass',
       amount: 3,
       bookingId: 'booking-1',
     });
@@ -106,7 +106,7 @@ describe('creditService.debit', () => {
 
     const result = await creditService.debit({
       userId: 'user-1',
-      creditType: 'mat',
+      creditType: 'pass',
       amount: 5,
       bookingId: 'booking-1',
     });
@@ -126,7 +126,7 @@ describe('creditService.debit', () => {
 
     const result = await creditService.debit({
       userId: 'user-1',
-      creditType: 'mat',
+      creditType: 'pass',
       amount: 1,
       bookingId: 'booking-1',
     });

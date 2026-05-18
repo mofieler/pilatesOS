@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { formatStudio } from '@/lib/utils/date.utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -49,15 +50,15 @@ type Adjustment = {
 };
 
 const CREDIT_TYPE_LABELS: Record<string, string> = {
-  mat:       'Mat Credits',
-  reformer:  'Reformer Credits',
+  pass:    'Credits',
+  session: 'Session Credits',
 };
 
 const CREDIT_TYPES = Object.keys(CREDIT_TYPE_LABELS) as (keyof typeof CREDIT_TYPE_LABELS)[];
 
 const CREDIT_TYPE_COLORS: Record<string, string> = {
-  mat:       'bg-[#6b8e6b]/15 text-[#4a7c4a] border-[#6b8e6b]/30',
-  reformer:  'bg-[#4e7a9e]/15 text-[#2d5f82] border-[#4e7a9e]/30',
+  pass:    'bg-[#c4a88a]/20 text-[#4e2b22] border-[#c4a88a]/40',
+  session: 'bg-[#4e2b22]/10 text-[#4e2b22] border-[#4e2b22]/20',
 };
 
 function BalancePill({ creditType, balance }: { creditType: string; balance: number }) {
@@ -303,7 +304,7 @@ function AdjustmentHistory({ userId }: { userId: string }) {
             {h.notes && <p className="text-xs text-[#a6856f] mt-0.5 italic">{h.notes}</p>}
           </div>
           <span className="text-xs text-[#a6856f] shrink-0 whitespace-nowrap">
-            {new Date(h.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+            {formatStudio(new Date(h.createdAt), 'dd.MM.yy')}
           </span>
         </div>
       ))}

@@ -373,12 +373,7 @@ export function ClassTemplatesManager({
                     </span>
                   ) : (
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getCreditTypeBadgeStyle(t.creditType)}`}>
-                      {t.creditCost}{' '}
-                      {(t.classType === 'reformer_group' && t.creditType !== 'group')
-                        ? 'Reformer / Group Credits'
-                        : (t.classType === 'mat_group' && t.creditType !== 'group')
-                          ? 'Mat / Group Credits'
-                          : getCreditTypeLabel(t.creditType)}
+                      {t.creditCost} {getCreditTypeLabel(t.creditType)}
                     </span>
                   )}
                 </td>

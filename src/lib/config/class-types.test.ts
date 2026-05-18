@@ -37,8 +37,8 @@ describe('Class Types Configuration', () => {
       expect(values).toContain('sound_healing');
     });
 
-    it('should have exactly 3 credit types', () => {
-      const expectedTypes: CreditType[] = ['reformer', 'mat', 'group'];
+    it('should have exactly 2 credit types', () => {
+      const expectedTypes: CreditType[] = ['pass', 'session'];
       expect(getCreditTypeValues()).toEqual(expectedTypes);
     });
   });
@@ -53,11 +53,11 @@ describe('Class Types Configuration', () => {
       expect(typeof config?.defaultCapacity).toBe('number');
     });
 
-    it('should return correct credit type config for reformer', () => {
-      const config = getCreditTypeConfig('reformer');
+    it('should return correct credit type config for pass', () => {
+      const config = getCreditTypeConfig('pass');
       expect(config).toBeDefined();
-      expect(config?.value).toBe('reformer');
-      expect(config?.label).toBe('Reformer Credits');
+      expect(config?.value).toBe('pass');
+      expect(config?.label).toBe('Credits');
     });
 
     it('should return undefined for invalid types', () => {
@@ -70,8 +70,8 @@ describe('Class Types Configuration', () => {
     it('should return correct labels for valid types', () => {
       expect(getClassTypeLabel('mat_group')).toBe('Mat Group');
       expect(getClassTypeLabel('reformer_private')).toBe('Reformer Private');
-      expect(getCreditTypeLabel('mat')).toBe('Mat Credits');
-      expect(getCreditTypeLabel('reformer')).toBe('Reformer Credits');
+      expect(getCreditTypeLabel('pass')).toBe('Credits');
+      expect(getCreditTypeLabel('session')).toBe('Session Credits');
     });
 
     it('should return the value for invalid types', () => {
@@ -83,8 +83,8 @@ describe('Class Types Configuration', () => {
   describe('Style Functions', () => {
     it('should return badge styles for valid types', () => {
       expect(getClassTypeBadgeStyle('mat_group')).toBe('bg-emerald-100 text-emerald-800');
-      expect(getCreditTypeBadgeStyle('mat')).toBeTruthy();
-      expect(getCreditTypeBadgeStyle('reformer')).toBeTruthy();
+      expect(getCreditTypeBadgeStyle('pass')).toBeTruthy();
+      expect(getCreditTypeBadgeStyle('session')).toBeTruthy();
     });
 
     it('should return default style for invalid types', () => {
@@ -104,10 +104,11 @@ describe('Class Types Configuration', () => {
     });
 
     it('should validate credit types correctly', () => {
-      expect(isValidCreditType('mat')).toBe(true);
-      expect(isValidCreditType('reformer')).toBe(true);
-      expect(isValidCreditType('group')).toBe(true);
-      expect(isValidCreditType('sound_healing')).toBe(false);
+      expect(isValidCreditType('pass')).toBe(true);
+      expect(isValidCreditType('session')).toBe(true);
+      expect(isValidCreditType('mat')).toBe(false);
+      expect(isValidCreditType('reformer')).toBe(false);
+      expect(isValidCreditType('group')).toBe(false);
       expect(isValidCreditType('mat_group')).toBe(false);
       expect(isValidCreditType('invalid')).toBe(false);
     });
@@ -120,9 +121,9 @@ describe('Class Types Configuration', () => {
         expect(unknownValue satisfies ClassType).toBe('mat_group');
       }
 
-      const unknownCreditValue: unknown = 'mat';
+      const unknownCreditValue: unknown = 'pass';
       if (isCreditType(unknownCreditValue)) {
-        expect(unknownCreditValue satisfies CreditType).toBe('mat');
+        expect(unknownCreditValue satisfies CreditType).toBe('pass');
       }
     });
   });
@@ -133,33 +134,28 @@ describe('Class Types Configuration', () => {
       expect(options).toHaveLength(9);
     });
 
-    it('should generate 4 credit type select options', () => {
+    it('should generate 2 credit type select options', () => {
       const options = getCreditTypeSelectOptions();
-      expect(options).toHaveLength(4);
-      expect(options.map((o) => o.value)).toEqual(['reformer', 'mat', 'group', 'sound_healing']);
+      expect(options).toHaveLength(2);
+      expect(options.map((o) => o.value)).toEqual(['pass', 'session']);
     });
   });
 
   describe('Credit Type Derivation', () => {
-    it('should map reformer class types to reformer credits', () => {
-      expect(getCreditTypeForClassType('reformer_group')).toBe('reformer');
-      expect(getCreditTypeForClassType('reformer_private')).toBe('reformer');
-      expect(getCreditTypeForClassType('reformer_duo')).toBe('reformer');
+    it('should map private/duo class types to session credits', () => {
+      expect(getCreditTypeForClassType('reformer_private')).toBe('session');
+      expect(getCreditTypeForClassType('reformer_duo')).toBe('session');
+      expect(getCreditTypeForClassType('mat_private')).toBe('session');
+      expect(getCreditTypeForClassType('mat_duo')).toBe('session');
     });
 
-    it('should map mat class types to mat credits', () => {
-      expect(getCreditTypeForClassType('mat_group')).toBe('mat');
-      expect(getCreditTypeForClassType('mat_private')).toBe('mat');
-      expect(getCreditTypeForClassType('mat_duo')).toBe('mat');
-    });
-
-    it('should map group-eligible class types to group credits', () => {
-      expect(getCreditTypeForClassType('chair')).toBe('group');
-      expect(getCreditTypeForClassType('online')).toBe('group');
-    });
-
-    it('should map sound_healing to its own credit type', () => {
-      expect(getCreditTypeForClassType('sound_healing')).toBe('sound_healing');
+    it('should map every group class type to pass credits', () => {
+      expect(getCreditTypeForClassType('reformer_group')).toBe('pass');
+      expect(getCreditTypeForClassType('mat_group')).toBe('pass');
+      expect(getCreditTypeForClassType('chair')).toBe('pass');
+      expect(getCreditTypeForClassType('online')).toBe('pass');
+      expect(getCreditTypeForClassType('yoga')).toBe('pass');
+      expect(getCreditTypeForClassType('sound_healing')).toBe('pass');
     });
   });
 

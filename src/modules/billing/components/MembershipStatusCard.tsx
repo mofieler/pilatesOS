@@ -9,9 +9,8 @@ import type { MyMembership } from '@/modules/billing/actions/membership.actions'
 // ─── Credit type accent colours ───────────────────────────────────────────────
 
 const CREDIT_ACCENT: Record<string, { bg: string; text: string; dot: string }> = {
-  reformer: { bg: 'bg-[#4e2b22]/8',  text: 'text-[#4e2b22]', dot: 'bg-[#4e2b22]' },
-  mat:      { bg: 'bg-[#6b8e6b]/10', text: 'text-[#4a7c4a]', dot: 'bg-[#6b8e6b]' },
-  group:    { bg: 'bg-[#d4a574]/10', text: 'text-[#8b5e3c]', dot: 'bg-[#d4a574]' },
+  pass:    { bg: 'bg-[#d4a574]/10', text: 'text-[#8b5e3c]', dot: 'bg-[#d4a574]' },
+  session: { bg: 'bg-[#4e2b22]/8',  text: 'text-[#4e2b22]', dot: 'bg-[#4e2b22]' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -23,7 +22,7 @@ interface Props {
 export function MembershipStatusCard({ membership }: Props) {
   if (!membership) return null;
 
-  const accent   = CREDIT_ACCENT[membership.creditType] ?? CREDIT_ACCENT.group;
+  const accent   = CREDIT_ACCENT[membership.creditType] ?? CREDIT_ACCENT.pass;
   const expired  = isPast(membership.endsAt);
   const nextGrant = membership.nextCreditGrantAt;
 

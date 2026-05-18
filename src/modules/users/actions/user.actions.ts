@@ -1,22 +1,22 @@
 'use server';
 
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { and, eq, isNull } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
+import { cancellationService } from '@/modules/booking/services/cancellation.service';
+import { MERCY_USES_PER_MONTH } from '@/constants/BOOKING_RULES';
 
 /**
- * Check if the current session user still has their one-time "mercy" available.
+ * Remaining late-cancellation mercy uses for the current calendar month.
+ * Replaces the lifetime getMercyAvailable() helper.
  * userId is derived from the session — never accepted from the caller.
  */
-export async function getMercyAvailable(): Promise<boolean> {
+export async function getMercyContext(): Promise<{
+  mercyUsesLeft: number;
+  mercyUsesLimit: number;
+  usedThisMonth: number;
+}> {
   const session = await auth();
-  if (!session?.user?.id) return false;
-
-  const [row] = await db
-    .select({ firstMercyUsed: users.firstMercyUsed })
-    .from(users)
-    .where(and(eq(users.id, session.user.id), isNull(users.deletedAt)));
-
-  return !row?.firstMercyUsed;
+  if (!session?.user?.id) {
+    return { mercyUsesLeft: 0, mercyUsesLimit: MERCY_USES_PER_MONTH, usedThisMonth: 0 };
+  }
+  return cancellationService.getMercyContext(session.user.id);
 }

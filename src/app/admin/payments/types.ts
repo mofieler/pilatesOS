@@ -5,7 +5,7 @@ export interface CreditPurchase {
   userEmail: string | null;
   packageName: string | null;
   creditsAmount: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
+  creditType: 'pass' | 'session';
   priceCents: number;
   currency: string;
   paymentMethod: 'stripe' | 'pay_at_studio';

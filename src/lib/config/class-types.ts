@@ -25,7 +25,7 @@ export type ClassType =
   | 'sound_healing'
   | 'yoga';
 
-export type CreditType = 'reformer' | 'mat' | 'group' | 'session';
+export type CreditType = 'pass' | 'session';
 
 export interface ClassTypeConfig {
   value: ClassType;
@@ -132,40 +132,33 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
 // ─── CREDIT TYPES ──────────────────────────────────────────────────────────────
 
 export const CREDIT_TYPES: Record<CreditType, CreditTypeConfig> = {
-  reformer: {
-    value: 'reformer',
-    label: 'Reformer Credits',
-    description: 'For reformer group classes only (Bloom, Return to Life packages)',
-    badgeStyle: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  },
-  mat: {
-    value: 'mat',
-    label: 'Mat Credits',
-    description: 'For mat group classes only (mat membership)',
-    badgeStyle: 'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  },
-  group: {
-    value: 'group',
-    label: 'Group Credits',
-    description: 'Flexible — accepted for reformer_group, mat_group, chair, online, yoga, sound_healing (Essence, Empower)',
+  pass: {
+    value: 'pass',
+    label: 'Credits',
+    description: 'Universal credits — accepted for every group class (Mat, Reformer, Chair, Yoga, Sound Healing). Cost varies by class.',
     badgeStyle: 'bg-[#c4a88a]/20 text-[#4e2b22]',
   },
   session: {
     value: 'session',
     label: 'Session Credits',
-    description: 'For private 1:1 and duo reformer sessions only',
+    description: 'For private 1:1 and duo sessions — Mat costs 3, Reformer costs 5.',
     badgeStyle: 'bg-[#4e2b22]/10 text-[#4e2b22]',
   },
 } as const;
 
 // ─── DERIVED MAPPING ───────────────────────────────────────────────────────────
 
-/** Returns the PRIMARY credit type a class template should default to. */
+/** Returns the credit type a class template should default to. */
 export function getCreditTypeForClassType(classType: ClassType): CreditType {
-  if (classType === 'chair' || classType === 'online' || classType === 'yoga' || classType === 'sound_healing') return 'group';
-  if (classType === 'reformer_private' || classType === 'reformer_duo') return 'session';
-  if (classType.startsWith('reformer')) return 'reformer';
-  return 'mat';
+  if (
+    classType === 'reformer_private' ||
+    classType === 'reformer_duo' ||
+    classType === 'mat_private' ||
+    classType === 'mat_duo'
+  ) {
+    return 'session';
+  }
+  return 'pass';
 }
 
 // ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────────────
@@ -229,17 +222,13 @@ export function isCreditType(value: unknown): value is CreditType {
 // ─── LEGACY COMPATIBILITY (used in booking pages / credit package cards) ────────
 
 export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {
-  reformer: 'Reformer Credits',
-  mat:      'Mat Credits',
-  group:    'Group Credits',
-  session:  'Session Credits',
+  pass:    'Credits',
+  session: 'Session Credits',
 };
 
 export const LEGACY_CREDIT_TYPE_STYLES: Record<string, string> = {
-  reformer: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-  mat:      'bg-[#6b8e6b]/10 text-[#4a7c4a]',
-  group:    'bg-[#c4a88a]/20 text-[#4e2b22]',
-  session:  'bg-[#4e2b22]/10 text-[#4e2b22]',
+  pass:    'bg-[#c4a88a]/20 text-[#4e2b22]',
+  session: 'bg-[#4e2b22]/10 text-[#4e2b22]',
 };
 
 export const LEGACY_CLASS_TYPE_OPTIONS = getClassTypeSelectOptions();

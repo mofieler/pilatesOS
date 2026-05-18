@@ -1,6 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
+import { formatStudio, formatStudioTime } from '@/lib/utils/date.utils';
 import { ClockIcon, MapPinIcon, CheckCircleIcon, UserIcon } from 'lucide-react';
 import {
   AlertDialog,
@@ -43,8 +43,8 @@ export function BookedClassModal({ session, onClose }: BookedClassModalProps) {
           <div className="flex items-center gap-3">
             <ClockIcon className="size-4 shrink-0 text-slate-400" aria-hidden />
             <span className="font-medium">
-              {format(session.startsAt, 'EEEE, d MMMM')} at{' '}
-              {format(session.startsAt, 'HH:mm')}
+              {formatStudio(session.startsAt, 'EEEE, d MMMM')} at{' '}
+              {formatStudioTime(session.startsAt)}
               {' · '}
               {session.durationMinutes} min
             </span>
@@ -74,8 +74,8 @@ export function BookedClassModal({ session, onClose }: BookedClassModalProps) {
               className={session.name}
               startsAt={session.startsAt}
               creditsSpent={session.creditsSpent ?? session.creditCost}
-              creditType={session.creditType as 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing'}
-              mercyAvailable={session.mercyAvailable ?? false}
+              creditType={session.creditType as 'pass' | 'session'}
+              mercyUsesLeft={session.mercyUsesLeft ?? 0}
               rescheduledAt={session.rescheduledAt}
               bookedAt={session.bookedAt}
             />

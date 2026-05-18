@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { bookings, classSessions, classTemplates, instructors, users } from '@/db/schema';
 import { CancelBookingButton } from '@/modules/users/components/CancelBookingButton';
-import { getMercyAvailable } from '@/modules/users/actions/user.actions';
+import { cancellationService } from '@/modules/booking/services/cancellation.service';
 import { CalendarCheck, CalendarX, Clock, MapPin, User, HistoryIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -18,7 +18,7 @@ type BookingWithDetails = {
   sessionId: string;
   status: 'confirmed' | 'cancelled' | 'attended' | 'no_show' | 'waitlisted';
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
+  creditType: 'pass' | 'session';
   name: string;
   classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing';
   durationMinutes: number;
@@ -89,11 +89,11 @@ async function getUserBookings(userId: string): Promise<{
 
 function BookingCard({
   booking,
-  mercyAvailable,
+  mercyUsesLeft,
   isPast,
 }: {
   booking: BookingWithDetails;
-  mercyAvailable: boolean;
+  mercyUsesLeft: number;
   isPast: boolean;
 }) {
   const dateLabel = formatStudioRelativeDay(booking.startsAt);
@@ -117,20 +117,14 @@ function BookingCard({
   const classTypeLabel = CLASS_TYPE_LABEL[booking.classType];
 
   const CREDIT_LABEL: Record<BookingWithDetails['creditType'], string> = {
-    mat:           'Mat Credit',
-    reformer:      'Reformer Credit',
-    group:         'Group Credit',
-    session:       'Session Credit',
-    sound_healing: 'Sound Healing Credit',
+    pass:    'Credit',
+    session: 'Session Credit',
   };
   const creditLabel = CREDIT_LABEL[booking.creditType];
 
   const CREDIT_DOT: Record<BookingWithDetails['creditType'], string> = {
-    mat:           'bg-[#6b8e6b]',
-    reformer:      'bg-[#8b5a3c]',
-    group:         'bg-[#c4a88a]',
-    session:       'bg-[#4e2b22]',
-    sound_healing: 'bg-purple-500',
+    pass:    'bg-[#c4a88a]',
+    session: 'bg-[#4e2b22]',
   };
 
   return (
@@ -223,7 +217,7 @@ function BookingCard({
               startsAt={booking.startsAt}
               creditsSpent={booking.creditsSpent}
               creditType={booking.creditType}
-              mercyAvailable={mercyAvailable}
+              mercyUsesLeft={mercyUsesLeft}
             />
           </div>
         </div>
@@ -262,7 +256,8 @@ export default async function MyBookingsPage() {
 
   const userId = session.user.id;
   const { upcoming, past } = await getUserBookings(userId);
-  const mercyAvailable = await getMercyAvailable();
+  const mercyContext = await cancellationService.getMercyContext(userId);
+  const mercyUsesLeft = mercyContext.mercyUsesLeft;
 
   return (
     <div className="space-y-8">
@@ -321,7 +316,7 @@ export default async function MyBookingsPage() {
               <BookingCard
                 key={booking.bookingId}
                 booking={booking}
-                mercyAvailable={mercyAvailable}
+                mercyUsesLeft={mercyUsesLeft}
                 isPast={false}
               />
             ))}
@@ -346,7 +341,7 @@ export default async function MyBookingsPage() {
               <BookingCard
                 key={booking.bookingId}
                 booking={booking}
-                mercyAvailable={mercyAvailable}
+                mercyUsesLeft={mercyUsesLeft}
                 isPast={true}
               />
             ))}

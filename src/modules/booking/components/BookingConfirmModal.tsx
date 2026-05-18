@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { format } from 'date-fns';
+import { formatStudio, formatStudioTime } from '@/lib/utils/date.utils';
 import { ClockIcon, CreditCardIcon, Loader2Icon, MapPinIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -33,17 +33,13 @@ type Step = 'confirm' | 'duo-share';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {
-  mat:      'bg-[#8b6b5c]',
-  group:    'bg-[#c4a88a]',
-  reformer: 'bg-[#6b8e6b]',
+  pass:    'bg-[#c4a88a]',
   session:  'bg-[#4e2b22]',
 };
 
 const CREDIT_LABEL: Record<ClassSessionCardProps['creditType'], string> = {
-  mat:      'Mat Credit',
-  reformer: 'Reformer Credit',
-  group:    'Group Credit',
-  session:  'Session Credit',
+  pass:    'Credit',
+  session: 'Session Credit',
 };
 
 function errorHint(code: ServiceErrorCode | undefined): string | undefined {
@@ -101,7 +97,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
 
       handleClose();
       toast.success('Booking confirmed!', {
-        description: `See you at ${session.name} on ${format(session.startsAt, 'EEEE, d MMMM')}.`,
+        description: `See you at ${session.name} on ${formatStudio(session.startsAt, 'EEEE, d MMMM')}.`,
       });
     });
   }
@@ -119,7 +115,7 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
             onDone={() => {
               handleClose();
               toast.success('Booking confirmed!', {
-                description: `See you at ${session.name} on ${format(session.startsAt, 'EEEE, d MMMM')}.`,
+                description: `See you at ${session.name} on ${formatStudio(session.startsAt, 'EEEE, d MMMM')}.`,
               });
             }}
           />
@@ -155,8 +151,8 @@ export function BookingConfirmModal({ session, onClose }: BookingConfirmModalPro
               <div className="flex items-center gap-2">
                 <ClockIcon className="size-4 shrink-0 text-slate-400" aria-hidden />
                 <span>
-                  {format(session.startsAt, 'EEEE, d MMMM')} at{' '}
-                  {format(session.startsAt, 'HH:mm')}
+                  {formatStudio(session.startsAt, 'EEEE, d MMMM')} at{' '}
+                  {formatStudioTime(session.startsAt)}
                   {' · '}
                   {session.durationMinutes} min
                 </span>

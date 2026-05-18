@@ -1,4 +1,18 @@
+import { formatInTimeZone } from 'date-fns-tz';
+
 const STUDIO_TZ = 'Europe/Berlin';
+
+// ─── Studio-timezone-aware formatters (deterministic on SSR + client) ──────────
+
+/**
+ * Format a Date in the studio's timezone with a date-fns pattern.
+ * Use this anywhere a class time/date is rendered. Never use `format()` from
+ * date-fns directly on DB timestamps — that uses the process timezone (UTC in
+ * the Coolify container) and produces 14:30 instead of 16:30.
+ */
+export function formatStudio(d: Date, pattern: string): string {
+  return formatInTimeZone(d, STUDIO_TZ, pattern);
+}
 
 export function formatStudioDate(d: Date): string {
   return d.toLocaleDateString('en-GB', {

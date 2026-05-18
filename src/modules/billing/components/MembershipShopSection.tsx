@@ -42,10 +42,8 @@ function formatPrice(cents: number, currency: string) {
 }
 
 const CREDIT_BADGE: Record<string, string> = {
-  reformer:     'bg-[#4e2b22]/10 text-[#4e2b22] border-[#4e2b22]/20',
-  mat:          'bg-[#6b8e6b]/10 text-[#6b8e6b] border-[#6b8e6b]/20',
-  group:        'bg-[#d4a574]/10 text-[#8b5e3c] border-[#d4a574]/30',
-  sound_healing:'bg-purple-50 text-purple-700 border-purple-200',
+  pass:    'bg-[#d4a574]/10 text-[#8b5e3c] border-[#d4a574]/30',
+  session: 'bg-[#4e2b22]/10 text-[#4e2b22] border-[#4e2b22]/20',
 };
 
 // ─── Plan card ─────────────────────────────────────────────────────────────────

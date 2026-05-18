@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { db } from '@/db';
-import { duoInvites, bookings, classSessions, classTemplates, users, creditBalances } from '@/db/schema';
+import { duoInvites, bookings, classSessions, classTemplates, users } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
+import { lotService } from '@/modules/billing/services/lot.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,21 +136,22 @@ export const duoInviteService = {
   ): Promise<EligibilityResult> {
     const isSelf = userId === organizerUserId;
 
-    const [balance] = await db
-      .select({ balance: creditBalances.balance, expiresAt: creditBalances.expiresAt })
-      .from(creditBalances)
-      .where(
-        and(
-          eq(creditBalances.userId, userId),
-          eq(creditBalances.creditType, creditType as any),
-        ),
-      )
-      .limit(1);
+    // FIFO-aware availability check: sum of remaining_amount across all
+    // active, unexpired lots for this user + credit type. Matches what the
+    // debit path actually consumes.
+    const hasCredits = await lotService.hasSufficientCredits(
+      userId,
+      creditType as 'pass' | 'session',
+      creditCost,
+    );
 
-    const hasCredits =
-      !!balance &&
-      balance.balance >= creditCost &&
-      (!balance.expiresAt || balance.expiresAt > new Date());
+    // For the UI: total credits the partner currently has available.
+    // Sum across active lots — same source of truth as hasCredits.
+    const lotEntries = await lotService.getLotBreakdown(
+      userId,
+      creditType as 'pass' | 'session',
+    );
+    const totalAvailable = lotEntries.reduce((sum, lot) => sum + lot.remainingAmount, 0);
 
     const [existing] = await db
       .select({ id: bookings.id })
@@ -165,7 +167,7 @@ export const duoInviteService = {
 
     return {
       hasCredits,
-      balance: balance?.balance ?? 0,
+      balance: totalAvailable,
       isAlreadyBooked: !!existing,
       isSelf,
     };

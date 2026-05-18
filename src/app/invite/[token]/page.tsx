@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { formatStudio, formatStudioTime } from '@/lib/utils/date.utils';
 import { Clock, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/lib/auth/auth';
@@ -48,11 +48,9 @@ export default async function InvitePage({ params }: Props) {
     : null;
 
   const creditLabel = {
-    reformer: 'Reformer Credit',
-    mat:      'Mat Credit',
-    group:    'Group Credit',
-    session:  'Session Credit',
-  }[data.creditType] ?? `${data.creditType} Credit`;
+    pass:    'Credit',
+    session: 'Session Credit',
+  }[data.creditType as 'pass' | 'session'] ?? `${data.creditType} Credit`;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
 
@@ -78,7 +76,7 @@ export default async function InvitePage({ params }: Props) {
               <div className="flex items-center gap-2">
                 <Clock className="size-4 text-[#c4a88a] shrink-0" />
                 <span>
-                  {format(new Date(data.startsAt), 'EEEE, d MMMM')} · {format(new Date(data.startsAt), 'HH:mm')} · {data.durationMinutes} min
+                  {formatStudio(new Date(data.startsAt), 'EEEE, d MMMM')} · {formatStudioTime(new Date(data.startsAt))} · {data.durationMinutes} min
                 </span>
               </div>
               {data.location && (
@@ -127,7 +125,7 @@ export default async function InvitePage({ params }: Props) {
         {/* Expiry */}
         <p className="text-center text-xs text-[#a6856f] flex items-center justify-center gap-1.5">
           <Clock className="size-3.5" />
-          Invite expires {format(new Date(data.expiresAt), "d MMM 'at' HH:mm")}
+          Invite expires {formatStudio(new Date(data.expiresAt), "d MMM 'at' HH:mm")}
         </p>
       </div>
     </InviteShell>

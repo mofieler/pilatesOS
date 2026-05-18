@@ -1,33 +1,17 @@
 import { addDays, startOfToday } from 'date-fns';
-import { eq, and, gte, lt } from 'drizzle-orm';
+import { and, eq, gte, lt } from 'drizzle-orm';
 import { db } from '@/db';
-import { classSessions, creditBalances, users } from '@/db/schema';
+import { classSessions } from '@/db/schema';
 import { auth } from '@/lib/auth/auth';
 import { BookingCalendar } from '@/modules/booking/components/BookingCalendar';
 import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSessionCard';
-import { GROUP_FALLBACK_CLASS_TYPES } from '@/constants/BOOKING_RULES';
-
-type Balance = { creditType: string; balance: number };
-
-// Determines which credit type will actually be charged — mirrors booking action logic
-function resolveDisplayCreditType(
-  classType: string,
-  primaryCreditType: string,
-  creditCost: number,
-  balances: Balance[],
-): ClassSessionCardProps['creditType'] {
-  if (GROUP_FALLBACK_CLASS_TYPES.has(classType as never) && primaryCreditType !== 'group') {
-    const primary = balances.find(b => b.creditType === primaryCreditType);
-    if (!primary || primary.balance < creditCost) return 'group';
-  }
-  return primaryCreditType as ClassSessionCardProps['creditType'];
-}
+import { cancellationService } from '@/modules/booking/services/cancellation.service';
 
 async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProps[]> {
   const today = startOfToday();
   const cutoff = addDays(today, 14);
 
-  const [rows, balances, user] = await Promise.all([
+  const [rows, mercyContext] = await Promise.all([
     db.query.classSessions.findMany({
       with: {
         template: true,
@@ -45,43 +29,37 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
       ),
       orderBy: (s, { asc }) => [asc(s.startsAt)],
     }),
-    db.select({ creditType: creditBalances.creditType, balance: creditBalances.balance })
-      .from(creditBalances)
-      .where(eq(creditBalances.userId, userId)),
-    db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: { firstMercyUsed: true },
-    })
+    cancellationService.getMercyContext(userId),
   ]);
 
-  const mercyAvailable = user ? !user.firstMercyUsed : false;
+  const mercyUsesLeft = mercyContext.mercyUsesLeft;
 
   return rows.map((s) => {
-    const classType      = s.template?.classType ?? 'mat_group';
-    const primaryType    = s.template?.creditType ?? 'mat';
-    const creditCost     = s.template?.creditCost ?? 1;
+    const classType   = s.template?.classType ?? 'mat_group';
+    const creditType  = (s.template?.creditType ?? 'pass') as ClassSessionCardProps['creditType'];
+    const creditCost  = s.template?.creditCost ?? 1;
 
     return {
-      id:               s.id,
-      name:             s.template?.name ?? 'Unnamed Class',
+      id:                  s.id,
+      name:                s.template?.name ?? 'Unnamed Class',
       classType,
-      startsAt:         s.startsAt,
-      durationMinutes:  s.template?.durationMinutes ?? 60,
-      instructorName:   s.instructor?.user?.name ?? 'TBA',
+      startsAt:            s.startsAt,
+      durationMinutes:     s.template?.durationMinutes ?? 60,
+      instructorName:      s.instructor?.user?.name ?? 'TBA',
       instructorAvatarUrl: null,
-      vibeTags:         (s.template?.vibeTags ?? []) as string[],
-      bookedCount:      s.bookedCount,
-      maxCapacity:      s.maxCapacity,
+      vibeTags:            (s.template?.vibeTags ?? []) as string[],
+      bookedCount:         s.bookedCount,
+      maxCapacity:         s.maxCapacity,
       creditCost,
-      creditType:       resolveDisplayCreditType(classType, primaryType, creditCost, balances),
-      status:           s.status,
-      isBookedByUser:   s.bookings.length > 0,
-      bookingId:        s.bookings[0]?.id,
-      creditsSpent:     s.bookings[0]?.creditsSpent,
-      bookedAt:         s.bookings[0]?.bookedAt ?? null,
-      rescheduledAt:    s.rescheduledAt ?? null,
-      mercyAvailable,
-      location:         s.template?.location ?? null,
+      creditType,
+      status:              s.status,
+      isBookedByUser:      s.bookings.length > 0,
+      bookingId:           s.bookings[0]?.id,
+      creditsSpent:        s.bookings[0]?.creditsSpent,
+      bookedAt:            s.bookings[0]?.bookedAt ?? null,
+      rescheduledAt:       s.rescheduledAt ?? null,
+      mercyUsesLeft,
+      location:            s.template?.location ?? null,
     };
   });
 }

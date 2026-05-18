@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { format } from 'date-fns';
+import { formatStudio, formatStudioTime } from '@/lib/utils/date.utils';
 import { ClockIcon, Loader2Icon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -28,8 +28,9 @@ export type CancelBookingButtonProps = {
   className: string;
   startsAt: Date;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
-  mercyAvailable: boolean;
+  creditType: 'pass' | 'session';
+  /** Remaining late-cancellation mercy uses for this calendar month (0..3). */
+  mercyUsesLeft: number;
   rescheduledAt?: Date | null;
   bookedAt?: Date | null;
 };
@@ -42,14 +43,14 @@ export function CancelBookingButton({
   startsAt,
   creditsSpent,
   creditType,
-  mercyAvailable,
+  mercyUsesLeft,
   rescheduledAt,
   bookedAt,
 }: CancelBookingButtonProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const policy = resolveCancellationPolicy(startsAt, mercyAvailable, new Date(), rescheduledAt, bookedAt);
+  const policy = resolveCancellationPolicy(startsAt, mercyUsesLeft, new Date(), rescheduledAt, bookedAt);
   const isLossState = policy.state === 'loss';
 
   function handleConfirm() {
@@ -109,7 +110,7 @@ export function CancelBookingButton({
           <div className="flex items-center gap-2 text-slate-600">
             <ClockIcon className="size-4 shrink-0 text-slate-400" aria-hidden />
             <span>
-              {format(startsAt, 'EEEE, d MMMM')} at {format(startsAt, 'HH:mm')}
+              {formatStudio(startsAt, 'EEEE, d MMMM')} at {formatStudioTime(startsAt)}
             </span>
           </div>
         </div>
@@ -117,7 +118,7 @@ export function CancelBookingButton({
         {/* Policy banner */}
         <CancellationPolicyBanner
           startsAt={startsAt}
-          mercyAvailable={mercyAvailable}
+          mercyUsesLeft={mercyUsesLeft}
           creditsAtStake={creditsSpent}
           creditType={creditType}
           rescheduledAt={rescheduledAt}

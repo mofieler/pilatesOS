@@ -6,7 +6,6 @@ import { duoInvites, bookings, classSessions, classTemplates } from '@/db/schema
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
-import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 import { revalidatePath } from 'next/cache';
 
 const schema = z.object({
@@ -23,12 +22,6 @@ export async function acceptDuoInviteAction(
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid token', code: 'INVALID_INPUT' };
   const { token } = parsed.data;
-
-  // Overdue bills block bookings
-  const billing = await getUserBillingStatus(userId);
-  if (billing.blockActions) {
-    return { success: false, error: 'You have overdue invoices. Please settle them before booking.', code: 'OVERDUE_BILLS' };
-  }
 
   try {
     await db.transaction(async (tx) => {

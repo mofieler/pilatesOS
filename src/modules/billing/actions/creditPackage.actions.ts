@@ -23,17 +23,12 @@ async function requireAdmin() {
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-// classType for credit packages: mat, reformer, or group.
-// For session packages: mat or reformer only.
-const classTypeSchema = z.enum(['mat', 'reformer', 'group']);
-
 const createSchema = z.object({
   name:          z.string().min(1, 'Name is required').max(255),
   description:   z.string().max(1000).optional().nullable(),
   creditsAmount: z.number().int().positive('Credits must be positive'),
   creditType:    z.enum(getCreditTypeValues()),
   category:      z.enum(getCreditPackCategoryValues()).default('credit'),
-  classType:     classTypeSchema.optional().nullable(),
   priceCents:    z.number().int().min(0, 'Price must be 0 or more'),
   currency:      z.string().length(3).optional().default('eur'),
   validityDays:  z.number().int().positive('Validity must be positive').optional().default(365),
@@ -50,7 +45,6 @@ const updateSchema = z.object({
   creditsAmount: z.number().int().positive().optional(),
   creditType:    z.enum(getCreditTypeValues()).optional(),
   category:      z.enum(getCreditPackCategoryValues()).optional(),
-  classType:     classTypeSchema.optional().nullable(),
   priceCents:    z.number().int().min(0).optional(),
   currency:      z.string().length(3).optional(),
   validityDays:  z.number().int().positive().optional(),

@@ -113,7 +113,7 @@ async function seed() {
         name: 'Mat Starter Pack',
         description: 'Perfect for beginners - 5 group mat classes',
         creditsAmount: 5,
-        creditType: 'mat',
+        creditType: 'pass',
         priceCents: 7500, // €75 in cents
         currency: 'eur',
         isActive: true,
@@ -122,7 +122,7 @@ async function seed() {
         name: 'Mat Regular Pack',
         description: 'Most popular - 10 group mat classes',
         creditsAmount: 10,
-        creditType: 'mat',
+        creditType: 'pass',
         priceCents: 14000, // €140 in cents
         currency: 'eur',
         isActive: true,
@@ -131,7 +131,7 @@ async function seed() {
         name: 'Reformer Starter Pack',
         description: 'Start your reformer journey - 5 classes',
         creditsAmount: 5,
-        creditType: 'reformer',
+        creditType: 'pass',
         priceCents: 10000, // €100 in cents
         currency: 'eur',
         isActive: true,
@@ -140,7 +140,7 @@ async function seed() {
         name: 'Reformer Regular Pack',
         description: '10 reformer group classes',
         creditsAmount: 10,
-        creditType: 'reformer',
+        creditType: 'pass',
         priceCents: 18000, // €180 in cents
         currency: 'eur',
         isActive: true,
@@ -149,7 +149,7 @@ async function seed() {
         name: 'Reformer Private Pack',
         description: '3 private reformer sessions (1:1 or 1:2)',
         creditsAmount: 3,
-        creditType: 'reformer',
+        creditType: 'session',
         priceCents: 24000, // €240 in cents
         currency: 'eur',
         isActive: true,
@@ -166,7 +166,7 @@ async function seed() {
         durationMinutes: 45,
         maxCapacity: 12,
         creditCost: 1,
-        creditType: 'mat',
+        creditType: 'pass',
         instructorId: instructorRecords[0].id,
         vibeTags: ['beginner-friendly', 'foundational', 'slow-paced'],
         location: 'Studio A',
@@ -178,7 +178,7 @@ async function seed() {
         durationMinutes: 55,
         maxCapacity: 6,
         creditCost: 3,
-        creditType: 'reformer',
+        creditType: 'pass',
         instructorId: instructorRecords[1].id,
         vibeTags: ['dynamic', 'full-body', 'energetic'],
         location: 'Studio B',
@@ -190,7 +190,7 @@ async function seed() {
         durationMinutes: 60,
         maxCapacity: 10,
         creditCost: 1,
-        creditType: 'mat',
+        creditType: 'pass',
         instructorId: instructorRecords[1].id,
         vibeTags: ['intense', 'core-focused', 'advanced'],
         location: 'Studio A',
@@ -202,7 +202,7 @@ async function seed() {
         durationMinutes: 50,
         maxCapacity: 8,
         creditCost: 1,
-        creditType: 'mat',
+        creditType: 'pass',
         instructorId: instructorRecords[0].id,
         vibeTags: ['gentle', 'prenatal', 'supportive'],
         location: 'Studio C',
@@ -214,7 +214,7 @@ async function seed() {
         durationMinutes: 60,
         maxCapacity: 2,
         creditCost: 5,
-        creditType: 'reformer',
+        creditType: 'session',
         instructorId: instructorRecords[0].id,
         vibeTags: ['personalized', 'focused', 'flexible'],
         location: 'Private Studio',
@@ -278,22 +278,22 @@ async function seed() {
     await db.insert(creditBalances).values([
       {
         userId: studentUsers[0].id,
-        creditType: 'mat',
+        creditType: 'pass',
         balance: 8,
       },
       {
         userId: studentUsers[0].id,
-        creditType: 'reformer',
+        creditType: 'pass',
         balance: 3,
       },
       {
         userId: studentUsers[1].id,
-        creditType: 'mat',
+        creditType: 'pass',
         balance: 5,
       },
       {
         userId: studentUsers[2].id,
-        creditType: 'reformer',
+        creditType: 'pass',
         balance: 2,
       },
     ]);
@@ -308,7 +308,7 @@ async function seed() {
       sessionId: createdSessions[0].id, // Beginner Mat Pilates
       status: 'confirmed',
       creditsSpent: 1,
-      creditType: 'mat',
+      creditType: 'pass',
     });
 
     bookingsData.push({
@@ -316,7 +316,7 @@ async function seed() {
       sessionId: createdSessions[2].id, // Advanced Mat Challenge
       status: 'confirmed',
       creditsSpent: 1,
-      creditType: 'mat',
+      creditType: 'pass',
     });
 
     // Bob books a reformer class
@@ -325,7 +325,7 @@ async function seed() {
       sessionId: createdSessions[1].id, // Reformer Flow
       status: 'confirmed',
       creditsSpent: 3,
-      creditType: 'reformer',
+      creditType: 'pass',
     });
 
     await db.insert(bookings).values(bookingsData);
@@ -339,7 +339,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[0].id, // Mat Starter Pack
         creditsAmount: 5,
-        creditType: 'mat',
+        creditType: 'pass',
         priceCents: 7500,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -351,7 +351,7 @@ async function seed() {
         userId: studentUsers[1].id, // Bob
         packageId: createdPackages[1].id, // Mat Regular Pack
         creditsAmount: 10,
-        creditType: 'mat',
+        creditType: 'pass',
         priceCents: 14000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -363,7 +363,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[2].id, // Reformer Starter Pack
         creditsAmount: 5,
-        creditType: 'reformer',
+        creditType: 'pass',
         priceCents: 10000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -375,7 +375,7 @@ async function seed() {
         userId: studentUsers[2].id, // Carol
         packageId: createdPackages[4].id, // Private Session Pack
         creditsAmount: 3,
-        creditType: 'reformer',
+        creditType: 'pass',
         priceCents: 24000,
         currency: 'eur',
         paymentMethod: 'stripe',
@@ -386,7 +386,7 @@ async function seed() {
         userId: studentUsers[1].id, // Bob
         packageId: createdPackages[3].id, // Reformer Regular Pack
         creditsAmount: 10,
-        creditType: 'reformer',
+        creditType: 'pass',
         priceCents: 18000,
         currency: 'eur',
         paymentMethod: 'pay_at_studio',
@@ -403,7 +403,7 @@ async function seed() {
         userId: studentUsers[0].id, // Alice
         packageId: createdPackages[2].id, // Reformer Starter Pack
         type: 'purchase',
-        creditType: 'reformer',
+        creditType: 'pass',
         amount: 5,
         balanceAfter: 5,
         description: 'Credits from Reformer Starter Pack',

@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { db } from '@/db';
-import { bookings, classSessions, classTemplates, creditBalances, users } from '@/db/schema';
+import { bookings, classSessions, classTemplates, users } from '@/db/schema';
 import type { Booking } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -11,7 +11,6 @@ import { creditService, InsufficientCreditsError } from '@/modules/billing/servi
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import { checkRateLimit, bookingRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 import { sendBookingConfirmationEmail } from '@/lib/email/resend';
-import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -38,20 +37,6 @@ export async function createBookingAction(
       success: false,
       error: 'Too many booking attempts. Please try again in a minute.',
       code: 'RATE_LIMITED',
-    };
-  }
-
-  // ── 1b. Overdue bills check ──────────────────────────────────────────────────
-  // Users with overdue pay-at-studio invoices cannot create new bookings until
-  // they settle the outstanding amount. Uses the same source of truth as the
-  // /api/credit-purchases guard so the policy is enforced consistently.
-  const billing = await getUserBillingStatus(userId);
-  if (billing.blockActions) {
-    return {
-      success: false,
-      error:
-        'You have overdue invoices. Please settle them at the studio before booking more classes.',
-      code: 'OVERDUE_BILLS',
     };
   }
 
@@ -166,38 +151,10 @@ export async function createBookingAction(
 
       if (!template) throw new BookingError('Class template not found.', 'NOT_FOUND');
 
-      // Group-eligible classes also accept 'group' credits as fallback.
-      // chair, online, yoga, sound_healing always use group credits.
-      // reformer_group/mat_group try their primary type first, then fall back to group.
-      const GROUP_FALLBACK_TYPES = new Set(['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing']);
-      const primaryCreditType = template.creditType;
-      const useFallback =
-        GROUP_FALLBACK_TYPES.has(template.classType) && primaryCreditType !== 'group';
-
-      // Determine which credit type to actually debit.
-      // Check primary balance first; if insufficient and fallback applies, use 'group'.
-      let resolvedCreditType = primaryCreditType;
-      if (useFallback) {
-        const [primaryBalance] = await tx
-          .select({ balance: creditBalances.balance, expiresAt: creditBalances.expiresAt })
-          .from(creditBalances)
-          .where(
-            and(
-              eq(creditBalances.userId, userId),
-              eq(creditBalances.creditType, primaryCreditType),
-            ),
-          )
-          .limit(1);
-
-        const primaryAvailable =
-          primaryBalance &&
-          primaryBalance.balance >= template.creditCost &&
-          (!primaryBalance.expiresAt || primaryBalance.expiresAt > new Date());
-
-        if (!primaryAvailable) {
-          resolvedCreditType = 'group';
-        }
-      }
+      // Unified wallet system: classTemplates.creditType is either 'pass' or
+      // 'session'. Cost is driven by classTemplates.creditCost. No fallback
+      // resolution needed — the FIFO debit handles availability checks.
+      const resolvedCreditType = template.creditType;
 
       // Insert booking first so the FK from creditTransactions → bookings resolves
       const [newBooking] = await tx

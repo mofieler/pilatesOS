@@ -1,20 +1,33 @@
 import { differenceInHours, addHours } from 'date-fns';
-import { CANCELLATION_WINDOW_HOURS } from '@/constants/BOOKING_RULES';
+import { CANCELLATION_WINDOW_HOURS, MERCY_USES_PER_MONTH } from '@/constants/BOOKING_RULES';
 import { AlertTriangleIcon, CalendarClockIcon, HeartHandshakeIcon, ShieldCheckIcon } from 'lucide-react';
 
 // ─── Policy resolver ──────────────────────────────────────────────────────────
 
-export type CancellationPolicyState = 'free' | 'rescheduled' | 'mercy' | 'loss';
+// 'free'         — ≥24h before class, no mercy needed
+// 'rescheduled'  — class was rescheduled after booking; bonus window applies
+// 'mercy'        — <24h, mercy will be consumed, refund issued (still ≥2 left after)
+// 'mercy_last'   — <24h, this is the LAST mercy for the month (1 left)
+// 'loss'         — <24h, no mercy left this month; credits will be forfeited
+export type CancellationPolicyState =
+  | 'free'
+  | 'rescheduled'
+  | 'mercy'
+  | 'mercy_last'
+  | 'loss';
 
 export type CancellationPolicy = {
   state: CancellationPolicyState;
   hoursUntilStart: number;
   willReceiveRefund: boolean;
+  mercyUsesLeft: number;       // remaining BEFORE this cancellation
+  mercyUsesLeftAfter: number;  // remaining AFTER this cancellation (informational)
+  mercyUsesLimit: number;
 };
 
 export function resolveCancellationPolicy(
   startsAt: Date,
-  mercyAvailable: boolean,
+  mercyUsesLeft: number,
   now: Date = new Date(),
   rescheduledAt?: Date | null,
   bookedAt?: Date | null,
@@ -24,8 +37,6 @@ export function resolveCancellationPolicy(
   const classHasStarted = now >= startsAt;
 
   // Mirrors server-side grace logic in cancellationService.cancel().
-  // The grace is bounded by class start — once the class begins, no
-  // cancellation is possible regardless of how the booking got here.
   const rescheduledGrace =
     !!rescheduledAt &&
     !!bookedAt &&
@@ -33,16 +44,25 @@ export function resolveCancellationPolicy(
     now < addHours(rescheduledAt, CANCELLATION_WINDOW_HOURS) &&
     !classHasStarted;
 
+  const base = {
+    hoursUntilStart,
+    mercyUsesLeft,
+    mercyUsesLimit: MERCY_USES_PER_MONTH,
+  };
+
   if (rescheduledGrace) {
-    return { state: 'rescheduled', hoursUntilStart, willReceiveRefund: true };
+    return { ...base, state: 'rescheduled', willReceiveRefund: true, mercyUsesLeftAfter: mercyUsesLeft };
   }
   if (!isWithinWindow) {
-    return { state: 'free', hoursUntilStart, willReceiveRefund: true };
+    return { ...base, state: 'free', willReceiveRefund: true, mercyUsesLeftAfter: mercyUsesLeft };
   }
-  if (mercyAvailable) {
-    return { state: 'mercy', hoursUntilStart, willReceiveRefund: true };
+  if (mercyUsesLeft >= 2) {
+    return { ...base, state: 'mercy', willReceiveRefund: true, mercyUsesLeftAfter: mercyUsesLeft - 1 };
   }
-  return { state: 'loss', hoursUntilStart, willReceiveRefund: false };
+  if (mercyUsesLeft === 1) {
+    return { ...base, state: 'mercy_last', willReceiveRefund: true, mercyUsesLeftAfter: 0 };
+  }
+  return { ...base, state: 'loss', willReceiveRefund: false, mercyUsesLeftAfter: 0 };
 }
 
 // ─── Banner ───────────────────────────────────────────────────────────────────
@@ -68,9 +88,17 @@ const VARIANTS = {
     icon: HeartHandshakeIcon,
     container: 'border-amber-200 bg-amber-50',
     iconColor: 'text-amber-600',
-    title: 'One-time grace period applies',
+    title: 'Late-cancellation mercy will apply',
     titleColor: 'text-amber-800',
     descColor: 'text-amber-700',
+  },
+  mercy_last: {
+    icon: AlertTriangleIcon,
+    container: 'border-orange-200 bg-orange-50',
+    iconColor: 'text-orange-600',
+    title: 'Last mercy this month',
+    titleColor: 'text-orange-800',
+    descColor: 'text-orange-700',
   },
   loss: {
     icon: AlertTriangleIcon,
@@ -84,27 +112,31 @@ const VARIANTS = {
 
 export type CancellationPolicyBannerProps = {
   startsAt: Date;
-  mercyAvailable: boolean;
+  /** Mercy uses still available this calendar month (0..MERCY_USES_PER_MONTH). */
+  mercyUsesLeft: number;
   creditsAtStake: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session' | 'sound_healing';
+  creditType: 'pass' | 'session';
   rescheduledAt?: Date | null;
   bookedAt?: Date | null;
 };
 
 export function CancellationPolicyBanner({
   startsAt,
-  mercyAvailable,
+  mercyUsesLeft,
   creditsAtStake,
   creditType,
   rescheduledAt,
   bookedAt,
 }: CancellationPolicyBannerProps) {
-  const policy = resolveCancellationPolicy(startsAt, mercyAvailable, new Date(), rescheduledAt, bookedAt);
+  const policy = resolveCancellationPolicy(startsAt, mercyUsesLeft, new Date(), rescheduledAt, bookedAt);
   const v = VARIANTS[policy.state];
   const Icon = v.icon;
 
-  const creditLabel = `${creditsAtStake} ${creditType} ${creditsAtStake === 1 ? 'credit' : 'credits'}`;
+  const isSession = creditType === 'session';
+  const creditNoun = isSession ? 'Session credit' : 'Credit';
+  const creditLabel = `${creditsAtStake} ${creditNoun}${creditsAtStake === 1 ? '' : 's'}`;
   const windowHours = CANCELLATION_WINDOW_HOURS;
+  const limit = policy.mercyUsesLimit;
 
   let description: string;
   if (policy.state === 'rescheduled') {
@@ -112,9 +144,11 @@ export function CancellationPolicyBanner({
   } else if (policy.state === 'free') {
     description = `You're outside the ${windowHours}-hour window (${policy.hoursUntilStart}h remaining). You'll receive a full refund of ${creditLabel}.`;
   } else if (policy.state === 'mercy') {
-    description = `You're within the ${windowHours}-hour window, but as a one-time courtesy your grace period will be applied — you'll receive a full refund of ${creditLabel}. This grace can only be used once per account.`;
+    description = `You're within the ${windowHours}-hour window. ${creditLabel} will be refunded — this counts as one mercy use. You have ${policy.mercyUsesLeft} of ${limit} mercy uses left this month.`;
+  } else if (policy.state === 'mercy_last') {
+    description = `This is your LAST late-cancellation mercy this month. ${creditLabel} will be refunded, but any further late cancellation before the 1st will forfeit credits.`;
   } else {
-    description = `You're within the ${windowHours}-hour window and your one-time grace period has already been used. ${creditLabel} will be forfeited.`;
+    description = `You've used all ${limit} late-cancellation mercy uses this month. ${creditLabel} will be forfeited. Your quota resets on the 1st.`;
   }
 
   return (

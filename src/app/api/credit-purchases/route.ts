@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { creditPurchases, creditPackages, creditBalances, creditTransactions, users } from '@/db/schema';
+import { creditPurchases, creditPackages, users } from '@/db/schema';
 import { eq, and, like, desc, isNull } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import { requireUserOwnership } from '@/lib/auth/api-auth';
@@ -10,6 +10,7 @@ import { handleApiError } from '@/lib/security/error-sanitizer';
 import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendPurchaseConfirmationWithInvoice } from '@/lib/email/resend';
 import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
+import { creditService } from '@/modules/billing/services/credit.service';
 
 export async function POST(request: Request) {
   const rateLimitResult = await purchaseRateLimiter(request as any);
@@ -124,42 +125,16 @@ export async function POST(request: Request) {
         })
         .returning();
 
-      // Upsert credit balance (FOR UPDATE prevents concurrent races)
-      const [existing] = await tx
-        .select()
-        .from(creditBalances)
-        .where(
-          and(
-            eq(creditBalances.userId, userId),
-            eq(creditBalances.creditType, package_.creditType),
-          ),
-        )
-        .for('update')
-        .limit(1);
-
-      let balance: number;
-      if (existing) {
-        balance = existing.balance + package_.creditsAmount;
-        await tx
-          .update(creditBalances)
-          .set({ balance, updatedAt: new Date() })
-          .where(eq(creditBalances.id, existing.id));
-      } else {
-        balance = package_.creditsAmount;
-        await tx.insert(creditBalances).values({
-          userId,
-          creditType: package_.creditType,
-          balance,
-        });
-      }
-
-      await tx.insert(creditTransactions).values({
+      // Dual-write balance + lot + ledger entry via credit service.
+      // The lot's expiry is computed from the package's validity_weeks so
+      // pay-at-studio credits respect the same FIFO expiry rules as Stripe.
+      const { newBalance: balance } = await creditService.addCreditsInternal(tx, {
         userId,
-        packageId: package_.id,
-        type: 'purchase',
         creditType: package_.creditType,
         amount: package_.creditsAmount,
-        balanceAfter: balance,
+        packageId: package_.id,
+        purchaseId: newPurchase.id,
+        validityWeeks: package_.validityWeeks,
         description: `Pay-at-studio purchase: ${package_.creditsAmount} ${package_.creditType} credits (${invNumber})`,
       });
 

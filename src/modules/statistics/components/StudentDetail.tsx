@@ -29,9 +29,8 @@ function txColor(type: string) {
 }
 
 const CREDIT_TYPE_LABEL: Record<string, string> = {
-  mat:      'Mat',
-  reformer: 'Reformer',
-  group:    'Group',
+  pass:    'Pass',
+  session: 'Session',
 };
 
 function formatCreditType(type: string) {
@@ -97,11 +96,10 @@ export function StudentDetail({ userId, onClose }: Props) {
 
       {/* Credit balances */}
       {!loading && detail && (
-        <div className="grid grid-cols-3 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
+        <div className="grid grid-cols-2 gap-2 px-5 py-4 border-b border-[#ede8e5]/60">
           {[
-            { label: 'Mat',      value: detail.matBalance },
-            { label: 'Reformer', value: detail.reformerBalance },
-            { label: 'Group',    value: detail.groupBalance },
+            { label: 'Pass',    value: detail.passBalance },
+            { label: 'Session', value: detail.sessionBalance },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-xl bg-[#ede8e5]/40 px-3 py-3">
               <p className="text-[9px] font-semibold uppercase tracking-wide text-[#8b6b5c] mb-1">{label}</p>

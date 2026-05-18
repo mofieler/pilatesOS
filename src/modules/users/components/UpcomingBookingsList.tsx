@@ -1,5 +1,6 @@
-import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
+import { differenceInHours } from 'date-fns';
 import { CalendarCheckIcon, ClockIcon, MapPinIcon, ShieldCheckIcon } from 'lucide-react';
+import { formatStudio, formatStudioRelativeDay, formatStudioTime } from '@/lib/utils/date.utils';
 import { CancelBookingButton } from './CancelBookingButton';
 
 // â”€â”€â”€ List-level props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -7,7 +8,8 @@ import { CancelBookingButton } from './CancelBookingButton';
 export type UpcomingBookingsListProps = {
   bookings: UpcomingBooking[];
   /** Whether the user's one-time grace period (first late-cancel mercy) is still available */
-  mercyAvailable: boolean;
+  /** Remaining late-cancellation mercy uses for this calendar month (0..3). */
+  mercyUsesLeft: number;
 };
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -15,7 +17,7 @@ export type UpcomingBookingsListProps = {
 export type UpcomingBooking = {
   bookingId: string;
   creditsSpent: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session';
+  creditType: 'pass' | 'session';
   name: string;
   classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing' | 'yoga';
   startsAt: Date;
@@ -41,16 +43,12 @@ const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
 };
 
 const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {
-  mat:      'bg-[#6b8e6b]',
-  reformer: 'bg-[#8b5a3c]',
-  group:    'bg-[#c4a88a]',
-  session:  'bg-[#4e2b22]',
+  pass:    'bg-[#c4a88a]',
+  session: 'bg-[#4e2b22]',
 };
 
 function dateLabel(date: Date): string {
-  if (isToday(date)) return 'Today';
-  if (isTomorrow(date)) return 'Tomorrow';
-  return format(date, 'EEEE, d MMMM');
+  return formatStudioRelativeDay(date);
 }
 
 function freeCancellationLabel(startsAt: Date): string | null {
@@ -95,10 +93,10 @@ function InstructorAvatar({
 
 function BookingRow({
   booking,
-  mercyAvailable,
+  mercyUsesLeft,
 }: {
   booking: UpcomingBooking;
-  mercyAvailable: boolean;
+  mercyUsesLeft: number;
 }) {
   const cancellationLabel = freeCancellationLabel(booking.startsAt);
   const hoursUntil = differenceInHours(booking.startsAt, new Date());
@@ -111,10 +109,10 @@ function BookingRow({
         {/* Date block */}
         <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-[#ede8e5]/60 to-[#e5dfdb]/40 px-4 py-3 text-center min-w-[60px] ring-1 ring-[#c4a88a]/20">
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b6b5c]">
-            {format(booking.startsAt, 'MMM')}
+            {formatStudio(booking.startsAt, 'MMM')}
           </span>
           <span className="text-2xl font-bold leading-none text-[#4e2b22] tabular-nums">
-            {format(booking.startsAt, 'd')}
+            {formatStudio(booking.startsAt, 'd')}
           </span>
         </div>
 
@@ -138,7 +136,7 @@ function BookingRow({
             <span className="inline-flex items-center gap-1.5 rounded-md bg-[#ede8e5]/40 px-2 py-1">
               <ClockIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="font-medium text-[#6b3d32]">{dateLabel(booking.startsAt)}</span>
-              <span>· {format(booking.startsAt, 'HH:mm')}</span>
+              <span>· {formatStudioTime(booking.startsAt)}</span>
               <span>· {booking.durationMinutes} min</span>
             </span>
             {booking.location && (
@@ -152,7 +150,7 @@ function BookingRow({
           <div className="mt-3 flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6b3d32]">
               <span className={`size-2.5 rounded-full ${CREDIT_DOT[booking.creditType]}`} />
-              {booking.creditsSpent} {booking.creditType}
+              {booking.creditsSpent} {booking.creditType === 'session' ? 'session' : ''}{booking.creditsSpent === 1 ? ' credit' : ' credits'}
             </span>
 
             {cancellationLabel && (
@@ -179,7 +177,7 @@ function BookingRow({
           startsAt={booking.startsAt}
           creditsSpent={booking.creditsSpent}
           creditType={booking.creditType}
-          mercyAvailable={mercyAvailable}
+          mercyUsesLeft={mercyUsesLeft}
         />
       </div>
     </li>
@@ -202,13 +200,13 @@ function EmptyBookings() {
 
 // â”€â”€â”€ Public component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export function UpcomingBookingsList({ bookings, mercyAvailable }: UpcomingBookingsListProps) {
+export function UpcomingBookingsList({ bookings, mercyUsesLeft }: UpcomingBookingsListProps) {
   if (bookings.length === 0) return <EmptyBookings />;
 
   return (
     <ul className="space-y-3">
       {bookings.map((b) => (
-        <BookingRow key={b.bookingId} booking={b} mercyAvailable={mercyAvailable} />
+        <BookingRow key={b.bookingId} booking={b} mercyUsesLeft={mercyUsesLeft} />
       ))}
     </ul>
   );

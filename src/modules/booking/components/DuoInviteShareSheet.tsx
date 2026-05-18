@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { formatStudio } from '@/lib/utils/date.utils';
 import { CheckCircle, Copy, Share2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,13 +18,13 @@ export function DuoInviteShareSheet({ sessionName, startsAt, inviteToken, expire
   const [copied, setCopied] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
   const inviteUrl = `${appUrl}/invite/${inviteToken}`;
-  const formattedDate = format(startsAt, "EEEE, d MMMM 'at' HH:mm");
-  const formattedExpiry = format(expiresAt, "d MMM 'at' HH:mm");
+  const formattedDate = formatStudio(startsAt, "EEEE, d MMMM 'at' HH:mm");
+  const formattedExpiry = formatStudio(expiresAt, "d MMM 'at' HH:mm");
 
   async function handleShare() {
     const shareData = {
       title: 'Pilates Duo Invite',
-      text: `Join me for ${sessionName} on ${format(startsAt, 'd MMMM')}!`,
+      text: `Join me for ${sessionName} on ${formatStudio(startsAt, 'd MMMM')}!`,
       url: inviteUrl,
     };
 

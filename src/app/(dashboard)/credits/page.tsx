@@ -13,6 +13,12 @@ import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { BillsSection } from '@/modules/billing/components/BillsSection';
 import { MembershipShopSection } from '@/modules/billing/components/MembershipShopSection';
+import {
+  PackageRecommenderControls,
+  DisabledPackageCaption,
+  usePackageRecommender,
+  useRecommenderState,
+} from '@/modules/billing/components/PackageRecommender';
 import { useSearchParams } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 
@@ -23,9 +29,8 @@ interface CreditPackage {
   name: string;
   description: string | null;
   creditsAmount: number;
-  creditType: 'reformer' | 'mat' | 'group' | 'session';
+  creditType: 'pass' | 'session';
   category: 'credit' | 'session';
-  classType: string | null;
   priceCents: number;
   currency: string;
   validityDays: number;
@@ -53,22 +58,13 @@ interface PackageSectionConfig {
 
 const PACKAGE_SECTIONS: PackageSectionConfig[] = [
   {
-    key: 'reformer-group',
-    icon: Dumbbell,
-    label: 'Reformer Group Classes',
-    description: 'Reformer group classes only — Return to Life or Bloom',
-    accentClass: 'bg-[#8b5a3c]/10 text-[#6b3d32]',
-    cardStyle: 'group',
-    filter: (p) => p.category === 'credit' && p.creditType === 'reformer',
-  },
-  {
     key: 'all-group',
     icon: Users,
     label: 'All Group Classes',
-    description: 'Yoga · Chair Pilates · Sound Healing · Reformer & Mat group classes',
+    description: 'Mat · Reformer · Chair · Yoga · Sound Healing — cost per class is shown on the booking page',
     accentClass: 'bg-[#c4a88a]/20 text-[#6b3d32]',
     cardStyle: 'group',
-    filter: (p) => p.category === 'credit' && p.creditType === 'group',
+    filter: (p) => p.category === 'credit' && p.creditType === 'pass',
   },
   {
     key: 'private-sessions',
@@ -241,10 +237,29 @@ function PackageSection({
   onSelect: (id: string) => void;
 }) {
   const sectionPkgs = packages.filter(config.filter);
+
+  // The 'all-group' section uses the Paquita-style recommender to filter
+  // and grey-out packages based on the user's planned class frequency.
+  const isPassSection = config.key === 'all-group';
+  const recommender = useRecommenderState();
+  const decisions = usePackageRecommender(
+    sectionPkgs.map((p) => ({
+      id: p.id,
+      creditsAmount: p.creditsAmount,
+      validityWeeks: p.validityWeeks,
+      creditType: p.creditType,
+    })),
+    recommender.intent,
+    recommender.frequency,
+  );
+
   if (sectionPkgs.length === 0) return null;
 
   const bestValueId = findBestValueId(sectionPkgs);
   const Icon = config.icon;
+  const visiblePkgs = isPassSection
+    ? sectionPkgs.filter((p) => !decisions.find((d) => d.pkg.id === p.id)?.hidden)
+    : sectionPkgs;
 
   return (
     <div className="rounded-2xl border border-[#ede8e5]/80 bg-linear-to-br from-[#faf9f7]/90 to-[#f5f3f1]/80 p-5 shadow-[0_2px_12px_rgba(78,43,34,0.04)]">
@@ -259,22 +274,42 @@ function PackageSection({
         </div>
       </div>
 
+      {/* Paquita-style recommender controls — only for the universal pass section */}
+      {isPassSection && (
+        <div className="mb-5 rounded-xl border border-[#ede8e5]/80 bg-white/60 px-4 py-4">
+          <PackageRecommenderControls
+            intent={recommender.intent}
+            frequency={recommender.frequency}
+            onIntentChange={recommender.setIntent}
+            onFrequencyChange={recommender.setFrequency}
+          />
+        </div>
+      )}
+
       {/* Cards */}
       {config.cardStyle === 'group' ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {sectionPkgs.map((pkg) => (
-            <GroupPackageCard
-              key={pkg.id}
-              pkg={pkg}
-              isSelected={selected === pkg.id}
-              onSelect={() => onSelect(pkg.id)}
-              isBestValue={pkg.id === bestValueId}
-            />
-          ))}
+          {visiblePkgs.map((pkg) => {
+            const decision = decisions.find((d) => d.pkg.id === pkg.id);
+            const disabled = isPassSection && (decision?.disabled ?? false);
+            return (
+              <div key={pkg.id} className={disabled ? 'opacity-50 pointer-events-none' : ''}>
+                <GroupPackageCard
+                  pkg={pkg}
+                  isSelected={selected === pkg.id}
+                  onSelect={() => !disabled && onSelect(pkg.id)}
+                  isBestValue={pkg.id === bestValueId}
+                />
+                {disabled && decision?.disabledReason && (
+                  <DisabledPackageCaption reason={decision.disabledReason} />
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {sectionPkgs.map((pkg) => (
+          {visiblePkgs.map((pkg) => (
             <SessionTierCard
               key={pkg.id}
               pkg={pkg}

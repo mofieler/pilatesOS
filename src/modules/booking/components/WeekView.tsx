@@ -12,6 +12,7 @@ import {
   parseISO,
   startOfToday,
 } from 'date-fns';
+import { formatStudioTime } from '@/lib/utils/date.utils';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { ClassSessionCardProps } from './ClassSessionCard';
 import { DATE_PARAM } from './DateScroller';
@@ -148,10 +149,8 @@ function parseDateParam(raw: string | null): Date {
 // ─── Session block ────────────────────────────────────────────────────────────
 
 const CREDIT_LABEL_SHORT: Record<ClassSessionCardProps['creditType'], string> = {
-  reformer: 'Reformer Credits',
-  mat:      'Mat Credits',
-  group:    'Group Credits',
-  session:  'Session Credits',
+  pass:    'Credits',
+  session: 'Session Credits',
 };
 
 function SessionBlock({
@@ -196,13 +195,13 @@ function SessionBlock({
         isCancelled ? 'opacity-40 cursor-default' : 'cursor-pointer',
         isBooked ? 'ring-1 ring-[#6b8e6b]' : '',
       ].join(' ')}
-      aria-label={`${session.name} at ${format(session.startsAt, 'HH:mm')}`}
+      aria-label={`${session.name} at ${formatStudioTime(session.startsAt)}`}
     >
       {/* Dot + time */}
       <div className="flex items-center gap-1 mb-0.5">
         <span className={`size-1.5 rounded-full shrink-0 ${dot} ${isCancelled ? 'opacity-50' : ''}`} />
         <p className="text-[10px] font-semibold tabular-nums leading-none opacity-70">
-          {format(session.startsAt, 'HH:mm')}
+          {formatStudioTime(session.startsAt)}
           {' · '}
           {session.durationMinutes}m
         </p>

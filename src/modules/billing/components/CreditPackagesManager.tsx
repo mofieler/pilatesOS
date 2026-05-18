@@ -33,20 +33,14 @@ type Props = {
   packages: CreditPackage[];
 };
 
-type ClassType = 'mat' | 'reformer' | 'group';
-
 // ─── Derivation helpers ──────────────────────────────────────────────────────
 
-function deriveCreditType(category: CreditPackCategory, classType: ClassType): CreditType {
-  if (category === 'session') return 'session';
-  return classType as CreditType;
+function deriveCreditType(category: CreditPackCategory): CreditType {
+  return category === 'session' ? 'session' : 'pass';
 }
 
-function categoryClassTypeLabel(category: CreditPackCategory, classType: ClassType | null): string {
-  if (!classType) return getCreditPackCategoryConfig(category)?.label ?? category;
-  if (classType === 'group') return 'Group Credits';
-  const equipment = classType === 'mat' ? 'Mat' : 'Reformer';
-  return category === 'session' ? `Private ${equipment}` : `${equipment} Group`;
+function categoryLabel(category: CreditPackCategory): string {
+  return getCreditPackCategoryConfig(category)?.label ?? category;
 }
 
 // ─── Form state ──────────────────────────────────────────────────────────────
@@ -56,7 +50,6 @@ type FormState = {
   description: string;
   creditsAmount: string;
   category: CreditPackCategory;
-  classType: ClassType;
   priceEur: string;
   validityWeeks: string;
   sortOrder: string;
@@ -65,22 +58,16 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', description: '', creditsAmount: '', category: 'credit', classType: 'mat',
+  name: '', description: '', creditsAmount: '', category: 'credit',
   priceEur: '', validityWeeks: '52', sortOrder: '0', isActive: true, stripePriceId: '',
 };
 
 function fromPackage(p: CreditPackage): FormState {
-  // Derive classType for legacy packages that don't have it set
-  const inferredClassType: ClassType =
-    (p.classType as ClassType | null) ??
-    (p.creditType === 'reformer' || p.creditType === 'session' ? 'reformer' : p.creditType === 'group' ? 'group' : 'mat');
-
   return {
     name:          p.name,
     description:   p.description ?? '',
     creditsAmount: String(p.creditsAmount),
     category:      (p.category as CreditPackCategory) ?? 'credit',
-    classType:     inferredClassType,
     priceEur:      (p.priceCents / 100).toFixed(2),
     validityWeeks: String(p.validityWeeks ?? Math.ceil((p.validityDays ?? 365) / 7)),
     sortOrder:     String(p.sortOrder),
@@ -89,91 +76,9 @@ function fromPackage(p: CreditPackage): FormState {
   };
 }
 
-// ─── Credit type cards ────────────────────────────────────────────────────────
-
-// Which class types are booked using each credit type, split by package category.
-// Credit packages → group classes only; session packages → private/duo classes only.
-const CREDIT_CLASS_TYPES: Record<ClassType, string[]> = {
-  reformer: ['reformer_group'],
-  mat:      ['mat_group'],
-  group:    ['reformer_group', 'mat_group', 'chair', 'online', 'yoga', 'sound_healing'],
-};
-
-const SESSION_CLASS_TYPES: Record<ClassType, string[]> = {
-  reformer: ['reformer_private', 'reformer_duo'],
-  mat:      ['mat_private', 'mat_duo'],
-  group:    [],
-};
-
-function CreditTypeCards({
-  selected, onSelect, isSession, disabled,
-}: {
-  selected: ClassType;
-  onSelect: (v: ClassType) => void;
-  isSession: boolean;
-  disabled: boolean;
-}) {
-  // Session packages: reformer only (no mat session packages exist).
-  const visibleTypes: ClassType[] = isSession
-    ? ['reformer']
-    : ['reformer', 'mat', 'group'];
-
-  const compatibleTypes = isSession ? SESSION_CLASS_TYPES : CREDIT_CLASS_TYPES;
-
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-[#6b3d32] font-medium">Credit type *</Label>
-      <div className="grid grid-cols-2 gap-2">
-        {visibleTypes.map((type) => {
-          const cfg = CREDIT_TYPES[type as keyof typeof CREDIT_TYPES];
-          if (!cfg) return null;
-          const active = selected === type;
-          const accepts = compatibleTypes[type];
-          return (
-            <button
-              key={type}
-              type="button"
-              disabled={disabled}
-              onClick={() => onSelect(type)}
-              className={`relative flex flex-col gap-1 rounded-xl border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[#4e2b22]/30 ${
-                active
-                  ? 'border-[#4e2b22] bg-[#4e2b22]/5 shadow-sm'
-                  : 'border-[#ede8e5] bg-[#faf9f7] hover:border-[#c4a88a] hover:bg-[#ede8e5]/40'
-              } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-            >
-              {active && (
-                <CheckCircleIcon className="absolute top-2.5 right-2.5 size-4 text-[#4e2b22]" aria-hidden />
-              )}
-              <span className={`text-xs font-semibold ${cfg.badgeStyle} inline-flex items-center rounded-full px-2 py-0.5 w-fit`}>
-                {cfg.label}
-              </span>
-              <span className="text-[11px] leading-snug text-[#6b5047] mt-0.5">
-                {cfg.description}
-              </span>
-              {accepts.length > 0 && (
-                <div className="mt-1.5">
-                  <p className="text-[10px] font-medium text-[#a6856f] uppercase tracking-wide mb-1">Accepted for</p>
-                  <div className="flex flex-wrap gap-1">
-                    {accepts.map((ct) => (
-                      <span key={ct} className="text-[10px] rounded bg-white/70 border border-[#ede8e5] px-1.5 py-0.5 text-[#8b6b5c] font-mono">
-                        {ct}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      {isSession && (
-        <p className="text-[11px] text-[#8b6b5c]">
-          Session packages cover private &amp; duo reformer sessions only.
-        </p>
-      )}
-    </div>
-  );
-}
+// (Removed 2026-05-18) CreditTypeCards — the unified wallet system means a
+// credit pack always grants 'pass' credits and a session pack always grants
+// 'session' credits. The category toggle alone derives the credit type.
 
 // ─── Form dialog ─────────────────────────────────────────────────────────────
 
@@ -223,7 +128,7 @@ function PackageFormDialog({
     if (isNaN(priceCents)    || priceCents < 0)    { setError('Price must be 0 or more.'); return; }
     if (isNaN(validityWeeks) || validityWeeks < 1) { setError('Validity weeks must be positive.'); return; }
 
-    const derivedCreditType = deriveCreditType(form.category, form.classType);
+    const derivedCreditType = deriveCreditType(form.category);
 
     startTransition(async () => {
       const payload = {
@@ -232,7 +137,6 @@ function PackageFormDialog({
         creditsAmount,
         creditType:    derivedCreditType,
         category:      form.category,
-        classType:     form.classType,
         priceCents,
         currency:      'eur',
         validityDays,
@@ -343,13 +247,8 @@ function PackageFormDialog({
             />
           </div>
 
-          {/* Credit type cards */}
-          <CreditTypeCards
-            selected={form.classType}
-            onSelect={(v) => setField('classType', v)}
-            isSession={isSession}
-            disabled={isPending}
-          />
+          {/* Credit type is fully derived from the category toggle now —
+              'credit' → 'pass' credits, 'session' → 'session' credits. */}
 
           {/* Price + validity */}
           <div className="grid grid-cols-2 gap-3">
@@ -498,8 +397,6 @@ export function CreditPackagesManager({ packages }: Props) {
             )}
             {packages.map((pkg) => {
               const cat = (pkg.category ?? 'credit') as CreditPackCategory;
-              const classType = (pkg.classType as ClassType | null) ??
-                (pkg.creditType === 'reformer' || pkg.creditType === 'session' ? 'reformer' : pkg.creditType === 'group' ? 'group' : 'mat');
               const cfg = getCreditPackCategoryConfig(cat);
               return (
                 <tr key={pkg.id} className="hover:bg-slate-50">
@@ -509,7 +406,7 @@ export function CreditPackagesManager({ packages }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg?.badgeStyle ?? 'bg-slate-100 text-slate-700'}`}>
-                      {categoryClassTypeLabel(cat, classType)}
+                      {categoryLabel(cat)}
                     </span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-slate-700">{pkg.creditsAmount}</td>
