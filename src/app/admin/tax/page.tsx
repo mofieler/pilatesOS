@@ -1,3 +1,5 @@
+import { auth } from '@/lib/auth/auth';
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { getTaxSummaryAction } from '@/modules/billing/actions/taxSummary.actions';
 import { TaxSummaryCards } from './components/TaxSummaryCards';
@@ -32,6 +34,8 @@ async function TaxContent({ year }: { year: number }) {
 }
 
 export default async function AdminTaxPage({ searchParams }: Props) {
+  const session = await auth();
+  if (session?.user?.role === 'instructor') redirect('/admin/classes');
   const { year: yearParam } = await searchParams;
   const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
   const safeYear = isNaN(year) ? new Date().getFullYear() : year;

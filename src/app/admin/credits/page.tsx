@@ -1,7 +1,11 @@
+import { auth } from '@/lib/auth/auth';
+import { redirect } from 'next/navigation';
 import { getCreditPackagesAction } from '@/modules/billing/actions/creditPackage.actions';
 import { CreditPackagesManager } from '@/modules/billing/components/CreditPackagesManager';
 
 export default async function CreditsPage() {
+  const session = await auth();
+  if (session?.user?.role === 'instructor') redirect('/admin/classes');
   const packagesResult = await getCreditPackagesAction();
 
   const packages = packagesResult.success ? packagesResult.data : [];

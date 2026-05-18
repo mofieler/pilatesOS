@@ -7,9 +7,9 @@ export async function sendMembershipPurchaseEmail(
 ): Promise<void> {
   const C = COLORS;
   const formatted  = new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency.toUpperCase() }).format(priceCents / 100);
-  const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  const startStr   = startsAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  const endStr     = endsAt.toLocaleDateString('en-GB',   { day: '2-digit', month: 'long', year: 'numeric' });
+  const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
+  const startStr   = startsAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
+  const endStr     = endsAt.toLocaleDateString('en-GB',   { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
 
   await getResend().emails.send({
     from: FROM, to: email,
@@ -43,8 +43,8 @@ export async function sendMembershipCreditGrantEmail(
   creditType: string, newBalance: number, nextGrantDate: Date, endsAt: Date,
 ): Promise<void> {
   const C = COLORS;
-  const nextStr = nextGrantDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-  const endStr  = endsAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const nextStr = nextGrantDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Berlin' });
+  const endStr  = endsAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
 
   await getResend().emails.send({
     from: FROM, to: email,
@@ -71,7 +71,7 @@ export async function sendMembershipCreditGrantEmail(
 export async function sendMembershipExpiryEmail(
   email: string, name: string, planName: string, endsAt: Date,
 ): Promise<void> {
-  const endStr = endsAt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const endStr = endsAt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
 
   await getResend().emails.send({
     from: FROM, to: email,

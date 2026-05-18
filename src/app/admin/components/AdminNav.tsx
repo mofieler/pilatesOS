@@ -70,7 +70,7 @@ const StatsIcon = () => (
 
 // ── Nav structure ──────────────────────────────────────────────────────────────
 
-const NAV_GROUPS = [
+const ADMIN_NAV_GROUPS = [
   {
     id: 'scheduling',
     label: 'Scheduling',
@@ -102,6 +102,25 @@ const NAV_GROUPS = [
   },
 ];
 
+const INSTRUCTOR_NAV_GROUPS = [
+  {
+    id: 'scheduling',
+    label: 'Scheduling',
+    icon: CalendarIcon,
+    items: [
+      { href: '/admin/classes', label: 'Classes', icon: CalendarIcon, desc: 'Manage your classes' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: SyncIcon,
+    items: [
+      { href: '/admin/calendar-sync', label: 'Google Calendar', icon: SyncIcon, desc: 'Calendar synchronisation' },
+    ],
+  },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isActive(pathname: string, href: string): boolean {
@@ -110,7 +129,7 @@ function isActive(pathname: string, href: string): boolean {
 
 // ── Desktop hover dropdown ────────────────────────────────────────────────────
 
-function NavDropdown({ group }: { group: (typeof NAV_GROUPS)[number] }) {
+function NavDropdown({ group }: { group: (typeof ADMIN_NAV_GROUPS)[number] }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
@@ -196,9 +215,13 @@ const NAV_HEADER_HEIGHT = 57; // px — matches the sticky nav height
 function MobileDrawer({
   onClose,
   visible,
+  navGroups,
+  role,
 }: {
   onClose: () => void;
   visible: boolean;
+  navGroups: typeof ADMIN_NAV_GROUPS;
+  role: 'admin' | 'instructor';
 }) {
   const pathname = usePathname();
   const isDashboard = pathname === '/admin';
@@ -259,7 +282,7 @@ function MobileDrawer({
           </Link>
 
           {/* Nav groups */}
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.id} className="mt-4">
               <p className="mb-1 px-4 text-[10px] font-bold uppercase tracking-widest text-[#c4a88a]">
                 {group.label}
@@ -296,40 +319,42 @@ function MobileDrawer({
             </div>
           ))}
 
-          {/* Analytics */}
-          <div className="mt-4">
-            <p className="mb-1 px-4 text-[10px] font-bold uppercase tracking-widest text-[#c4a88a]">
-              Analytics
-            </p>
-            {(() => {
-              const active = isActive(pathname, '/admin/statistics');
-              return (
-                <Link
-                  href="/admin/statistics"
-                  onClick={onClose}
-                  aria-current={active ? 'page' : undefined}
-                  className={[
-                    'flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-medium transition-all active:scale-[.98]',
-                    active
-                      ? 'bg-[#4e2b22]/10 text-[#4e2b22] font-semibold'
-                      : 'text-[#6b3d32] hover:bg-[#ede8e5]/60 hover:text-[#4e2b22]',
-                  ].join(' ')}
-                >
-                  <span className={[
-                    'flex size-9 shrink-0 items-center justify-center rounded-xl',
-                    active ? 'bg-[#4e2b22]/15 text-[#4e2b22]' : 'bg-[#ede8e5]/50 text-[#8b6b5c]',
-                  ].join(' ')}>
-                    <StatsIcon />
-                  </span>
-                  <div className="flex-1">
-                    <p className="leading-tight">Statistics</p>
-                    <p className="text-[11px] text-[#8b6b5c] mt-0.5">Activity & student insights</p>
-                  </div>
-                  {active && <span aria-hidden className="size-1.5 rounded-full bg-[#4e2b22]" />}
-                </Link>
-              );
-            })()}
-          </div>
+          {/* Analytics — admin only */}
+          {role === 'admin' && (
+            <div className="mt-4">
+              <p className="mb-1 px-4 text-[10px] font-bold uppercase tracking-widest text-[#c4a88a]">
+                Analytics
+              </p>
+              {(() => {
+                const active = isActive(pathname, '/admin/statistics');
+                return (
+                  <Link
+                    href="/admin/statistics"
+                    onClick={onClose}
+                    aria-current={active ? 'page' : undefined}
+                    className={[
+                      'flex items-center gap-3.5 rounded-2xl px-4 py-3 text-sm font-medium transition-all active:scale-[.98]',
+                      active
+                        ? 'bg-[#4e2b22]/10 text-[#4e2b22] font-semibold'
+                        : 'text-[#6b3d32] hover:bg-[#ede8e5]/60 hover:text-[#4e2b22]',
+                    ].join(' ')}
+                  >
+                    <span className={[
+                      'flex size-9 shrink-0 items-center justify-center rounded-xl',
+                      active ? 'bg-[#4e2b22]/15 text-[#4e2b22]' : 'bg-[#ede8e5]/50 text-[#8b6b5c]',
+                    ].join(' ')}>
+                      <StatsIcon />
+                    </span>
+                    <div className="flex-1">
+                      <p className="leading-tight">Statistics</p>
+                      <p className="text-[11px] text-[#8b6b5c] mt-0.5">Activity & student insights</p>
+                    </div>
+                    {active && <span aria-hidden className="size-1.5 rounded-full bg-[#4e2b22]" />}
+                  </Link>
+                );
+              })()}
+            </div>
+          )}
         </nav>
 
         <div className="mx-4 border-t border-[#ede8e5]/80" />
@@ -341,12 +366,13 @@ function MobileDrawer({
 
 // ── Main AdminNav ──────────────────────────────────────────────────────────────
 
-export function AdminNav() {
+export function AdminNav({ role }: { role: 'admin' | 'instructor' }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const pathname = usePathname();
   const isDashboard = pathname === '/admin';
+  const navGroups = role === 'instructor' ? INSTRUCTOR_NAV_GROUPS : ADMIN_NAV_GROUPS;
 
   useEffect(() => setMounted(true), []);
 
@@ -384,12 +410,12 @@ export function AdminNav() {
           Dashboard
         </Link>
 
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <NavDropdown key={group.id} group={group} />
         ))}
 
-        {/* Statistics — standalone */}
-        {(() => {
+        {/* Statistics — admin only */}
+        {role === 'admin' && (() => {
           const active = isActive(pathname, '/admin/statistics');
           return (
             <Link
@@ -431,7 +457,7 @@ export function AdminNav() {
 
       {/* ── Mobile drawer portal ── */}
       {mounted && createPortal(
-        <MobileDrawer onClose={closeMenu} visible={visible} />,
+        <MobileDrawer onClose={closeMenu} visible={visible} navGroups={navGroups} role={role} />,
         document.body,
       )}
     </>

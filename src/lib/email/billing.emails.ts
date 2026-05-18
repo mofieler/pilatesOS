@@ -6,9 +6,9 @@ export async function sendPurchaseConfirmationWithInvoice(
   invoiceNumber: string, dueDate: Date, pdfBuffer: Buffer | null,
 ): Promise<void> {
   const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency.toUpperCase() }).format(priceCents / 100);
-  const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dueDateStr = dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
   const expiryDate = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000);
-  const expiryStr  = expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const expiryStr  = expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
 
   await getResend().emails.send({
     from: FROM, to: email,
@@ -38,7 +38,7 @@ export async function sendPaymentReminderEmail(
   pdfBuffer: Buffer, customMessage?: string,
 ): Promise<{ messageId: string | undefined }> {
   const formatted  = new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency.toUpperCase() }).format(priceCents / 100);
-  const dueDateStr = originalDueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dueDateStr = originalDueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
   const overdueNote = daysPastDue > 0
     ? `<span style="color:#c45c4a;font-weight:600;">This invoice is ${daysPastDue} day${daysPastDue !== 1 ? 's' : ''} past due.</span><br><br>`
     : '';

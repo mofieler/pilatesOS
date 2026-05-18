@@ -245,10 +245,10 @@ export async function createBookingAction(
         ]);
         if (userRow?.email && sessionRow) {
           const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Berlin',
           });
           const classTime = sessionRow.startsAt.toLocaleTimeString('en-GB', {
-            hour: '2-digit', minute: '2-digit',
+            hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin',
           });
           await sendBookingConfirmationEmail(
             userRow.email,

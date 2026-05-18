@@ -28,7 +28,13 @@ export type TemplateOption = {
 
 export type AdminTemplateRow = TemplateOption & { isActive: boolean; description: string | null };
 
-// ─── Auth Guard ───────────────────────────────────────────────────────────────
+// ─── Auth Guards ─────────────────────────────────────────────────────────────
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'admin') return null;
+  return session;
+}
 
 async function requireAdminOrInstructor() {
   const session = await auth();
@@ -72,7 +78,7 @@ const updateClassTemplateSchema = z.object({
 export async function createClassTemplateAction(
   input: z.infer<typeof createClassTemplateSchema>,
 ): Promise<ServiceResult<ClassTemplate>> {
-  const authSession = await requireAdminOrInstructor();
+  const authSession = await requireAdmin();
   if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = createClassTemplateSchema.safeParse(input);
@@ -159,7 +165,7 @@ export async function getClassTemplatesAdminAction(): Promise<ServiceResult<Admi
 export async function updateClassTemplateAction(
   input: z.infer<typeof updateClassTemplateSchema>,
 ): Promise<ServiceResult<ClassTemplate>> {
-  const authSession = await requireAdminOrInstructor();
+  const authSession = await requireAdmin();
   if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = updateClassTemplateSchema.safeParse(input);
@@ -183,7 +189,7 @@ export async function updateClassTemplateAction(
 }
 
 export async function deleteClassTemplateAction(input: { id: string }): Promise<ServiceResult<null>> {
-  const authSession = await requireAdminOrInstructor();
+  const authSession = await requireAdmin();
   if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);

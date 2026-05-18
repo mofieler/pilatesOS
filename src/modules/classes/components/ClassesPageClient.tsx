@@ -16,6 +16,8 @@ type Props = {
   templates: TemplateOption[];
   instructors: InstructorOption[];
   hasTemplates: boolean;
+  isAdmin: boolean;
+  myInstructorId: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,6 +43,8 @@ export function ClassesPageClient({
   templates,
   instructors,
   hasTemplates,
+  isAdmin,
+  myInstructorId,
 }: Props) {
   const [view, setView] = useState<'week' | 'list'>('week');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,6 +115,7 @@ export function ClassesPageClient({
               onOpenChange={setDialogOpen}
               initialDate={dialogDate}
               initialTime={dialogTime}
+              lockedInstructorId={isAdmin ? null : myInstructorId}
             />
           )}
           {hasTemplates && (
@@ -157,6 +162,7 @@ export function ClassesPageClient({
           onOpenChange={(open) => {
             if (!open) setDetailSessionId(null);
           }}
+          canEdit={isAdmin || detailSession.instructorId === myInstructorId}
         />
       )}
     </>

@@ -48,6 +48,7 @@ type Props = {
   status: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  canEdit?: boolean;
 };
 
 type DialogMode = 'remove' | null;
@@ -63,6 +64,7 @@ export function SessionDetailModal({
   status,
   open,
   onOpenChange,
+  canEdit = true,
 }: Props) {
   const [students, setStudents] = useState<SessionStudent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -189,7 +191,7 @@ export function SessionDetailModal({
             </div>
 
             {/* Reschedule section */}
-            {status !== 'cancelled' && (
+            {canEdit && status !== 'cancelled' && (
               <div className="rounded-lg border border-[#ede8e5]">
                 <button
                   type="button"
@@ -286,15 +288,17 @@ export function SessionDetailModal({
                           {student.creditsSpent} {student.creditType} credits · Booked {format(student.bookedAt, 'dd MMM')}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openRemoveDialog(student)}
-                        disabled={isPending}
-                        className="ml-3 p-2 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                        title="Remove from class"
-                      >
-                        <Trash2Icon className="size-4 text-red-600" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => openRemoveDialog(student)}
+                          disabled={isPending}
+                          className="ml-3 p-2 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                          title="Remove from class"
+                        >
+                          <Trash2Icon className="size-4 text-red-600" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

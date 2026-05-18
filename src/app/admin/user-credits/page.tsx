@@ -1,7 +1,11 @@
+import { auth } from '@/lib/auth/auth';
+import { redirect } from 'next/navigation';
 import { getAdminUserCreditOverviewAction } from '@/modules/billing/actions/adminCredits.actions';
 import { UserCreditsClient } from '@/modules/billing/components/UserCreditsClient';
 
 export default async function AdminUserCreditsPage() {
+  const session = await auth();
+  if (session?.user?.role === 'instructor') redirect('/admin/classes');
   const result = await getAdminUserCreditOverviewAction();
   const users  = result.success ? result.data : [];
 

@@ -41,6 +41,8 @@ type Props = {
   initialTime?: string;
   // Whether to render the built-in trigger button
   showTrigger?: boolean;
+  // When set, locks the instructor to this ID (instructor role)
+  lockedInstructorId?: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,6 +72,7 @@ export function CreateSessionDialog({
   initialDate,
   initialTime,
   showTrigger = true,
+  lockedInstructorId,
 }: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -79,7 +82,7 @@ export function CreateSessionDialog({
   const [templateId, setTemplateId] = useState('');
   const [date, setDate] = useState(initialDate ?? todayString());
   const [time, setTime] = useState(initialTime ?? '09:00');
-  const [instructorId, setInstructorId] = useState('');
+  const [instructorId, setInstructorId] = useState(lockedInstructorId ?? '');
 
   // Conflict check state
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
@@ -97,7 +100,7 @@ export function CreateSessionDialog({
     setTemplateId('');
     setDate(initialDate ?? todayString());
     setTime(initialTime ?? '09:00');
-    setInstructorId('');
+    setInstructorId(lockedInstructorId ?? '');
     setError(null);
     setConflicts([]);
     setSuggestions([]);
@@ -346,7 +349,14 @@ export function CreateSessionDialog({
             )}
 
             {/* Instructor (required) */}
-            {instructors.length > 0 && (
+            {lockedInstructorId ? (
+              <div className="space-y-1.5">
+                <Label className="text-[#6b3d32] font-medium">Instructor</Label>
+                <div className="flex h-9 items-center rounded-md border border-input bg-[#faf9f7]/60 px-3 py-1 text-sm text-[#4e2b22]">
+                  {instructors.find((i) => i.id === lockedInstructorId)?.name ?? 'You'}
+                </div>
+              </div>
+            ) : instructors.length > 0 && (
               <div className="space-y-1.5">
                 <Label htmlFor="instructor" className="text-[#6b3d32] font-medium">
                   Instructor *

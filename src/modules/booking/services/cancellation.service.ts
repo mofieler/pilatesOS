@@ -220,10 +220,10 @@ export const cancellationService = {
             .where(eq(classTemplates.id, session.templateId!))
             .limit(1);
           const classDate = session.startsAt.toLocaleDateString('en-GB', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Berlin',
           });
           const classTime = session.startsAt.toLocaleTimeString('en-GB', {
-            hour: '2-digit', minute: '2-digit',
+            hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin',
           });
 
           // Student cancellation confirmation
@@ -417,10 +417,10 @@ export const cancellationService = {
           ]);
           if (!sessionRow) return;
           const classDate = sessionRow.startsAt.toLocaleDateString('en-GB', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Berlin',
           });
           const classTime = sessionRow.startsAt.toLocaleTimeString('en-GB', {
-            hour: '2-digit', minute: '2-digit',
+            hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin',
           });
           await Promise.allSettled(
             affectedUsers

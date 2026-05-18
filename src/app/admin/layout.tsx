@@ -29,10 +29,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <img src="/logo.png" alt="Pilateq" className="h-8 w-auto shrink-0" />
             <h1 className="hidden xs:block text-xl font-bold text-[#4e2b22] whitespace-nowrap">Pilateq</h1>
             <span className="rounded-full bg-[#4e2b22] px-2.5 py-1 text-xs font-semibold text-[#faf9f7] whitespace-nowrap shrink-0">
-              Admin
+              {session.user.role === 'instructor' ? 'Instructor' : 'Admin'}
             </span>
 
-            <AdminNav />
+            <AdminNav role={session.user.role as 'admin' | 'instructor'} />
           </div>
 
           {/* Right: email + sign out */}

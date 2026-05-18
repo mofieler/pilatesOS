@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth/auth';
 import {
   getClassTemplatesAdminAction,
   getInstructorsAction,
@@ -5,6 +7,8 @@ import {
 import { ClassTemplatesManager } from '@/modules/classes/components/ClassTemplatesManager';
 
 export default async function ClassTemplatesPage() {
+  const session = await auth();
+  if (session?.user?.role === 'instructor') redirect('/admin/classes');
   const [templatesResult, instructorsResult] = await Promise.all([
     getClassTemplatesAdminAction(),
     getInstructorsAction(),

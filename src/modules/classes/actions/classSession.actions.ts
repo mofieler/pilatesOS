@@ -58,11 +58,30 @@ export type AvailabilityResult = {
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
 
-async function requireAdminOrInstructor() {
+type AuthCtx = {
+  userId: string;
+  role: 'admin' | 'instructor';
+  instructorId: string | null; // instructors.id for instructor role, null for admin
+};
+
+async function requireAdminOrInstructor(): Promise<AuthCtx | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
-  if (session.user.role !== 'admin' && session.user.role !== 'instructor') return null;
-  return session;
+  const role = session.user.role as string;
+  if (role !== 'admin' && role !== 'instructor') return null;
+
+  let instructorId: string | null = null;
+  if (role === 'instructor') {
+    const [row] = await db
+      .select({ id: instructors.id })
+      .from(instructors)
+      .where(eq(instructors.userId, session.user.id))
+      .limit(1);
+    instructorId = row?.id ?? null;
+    if (!instructorId) return null; // user has instructor role but no instructor record
+  }
+
+  return { userId: session.user.id, role: role as 'admin' | 'instructor', instructorId };
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -108,8 +127,8 @@ const checkSlotSchema = z.object({
 export async function getAdminSessionsAction(
   input: z.infer<typeof getAdminSessionsSchema> = {},
 ): Promise<ServiceResult<PaginatedSessions>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = getAdminSessionsSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
@@ -143,25 +162,35 @@ export async function getAdminSessionsAction(
 export async function cancelClassSessionAction(
   input: z.infer<typeof cancelClassSessionSchema>,
 ): Promise<ServiceResult<InstructorCancellationResult>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = cancelClassSessionSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
 
-  return cancellationService.cancelSessionByInstructor(parsed.data.sessionId, authSession.user.id, parsed.data.reason);
+  if (ctx.role === 'instructor') {
+    const [session] = await db.select({ instructorId: classSessions.instructorId }).from(classSessions).where(eq(classSessions.id, parsed.data.sessionId)).limit(1);
+    if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
+    if (session.instructorId !== ctx.instructorId) {
+      return { success: false, error: 'You can only cancel your own sessions.', code: 'UNAUTHORIZED' };
+    }
+  }
+
+  return cancellationService.cancelSessionByInstructor(parsed.data.sessionId, ctx.userId, parsed.data.reason);
 }
 
 export async function createClassSessionAction(
   input: z.infer<typeof createClassSessionSchema>,
 ): Promise<ServiceResult<ClassSession>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = createClassSessionSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
 
-  const { templateId, startsAtISO, instructorId } = parsed.data;
+  const { templateId, startsAtISO } = parsed.data;
+  // Instructors can only create sessions for themselves — ignore any passed instructorId
+  const instructorId = ctx.role === 'instructor' ? ctx.instructorId : parsed.data.instructorId;
 
   const [template] = await db.select().from(classTemplates).where(eq(classTemplates.id, templateId)).limit(1);
   if (!template) return { success: false, error: 'Class template not found.', code: 'NOT_FOUND' };
@@ -196,8 +225,10 @@ export async function createClassSessionAction(
 }
 
 export async function deleteClassSessionAction(input: { id: string }): Promise<ServiceResult<null>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  // Instructors cannot delete sessions — cancellation is the correct flow for them
+  if (ctx.role === 'instructor') return { success: false, error: 'Only admins can delete sessions.', code: 'UNAUTHORIZED' };
 
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid ID.', code: 'INVALID_STATE' };
@@ -206,7 +237,7 @@ export async function deleteClassSessionAction(input: { id: string }): Promise<S
   if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
 
   if (session.status !== 'cancelled' && session.bookedCount > 0) {
-    const cancelResult = await cancellationService.cancelSessionByInstructor(session.id, authSession.user.id, 'Session deleted by administrator');
+    const cancelResult = await cancellationService.cancelSessionByInstructor(session.id, ctx.userId, 'Session deleted by administrator');
     if (!cancelResult.success) return { success: false, error: cancelResult.error ?? 'Failed to cancel session before deleting.', code: 'DB_ERROR' };
   }
 
@@ -240,17 +271,23 @@ export async function deleteClassSessionAction(input: { id: string }): Promise<S
 export async function updateClassSessionAction(
   input: z.infer<typeof updateClassSessionSchema>,
 ): Promise<ServiceResult<ClassSession>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = updateClassSessionSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
 
-  const { id, instructorId, maxCapacity } = parsed.data;
+  const { id, maxCapacity } = parsed.data;
+  // Instructors cannot reassign sessions to another instructor
+  const instructorId = ctx.role === 'instructor' ? undefined : parsed.data.instructorId;
 
   try {
     const [session] = await db.select().from(classSessions).where(eq(classSessions.id, id)).limit(1);
     if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
+
+    if (ctx.role === 'instructor' && session.instructorId !== ctx.instructorId) {
+      return { success: false, error: 'You can only edit your own sessions.', code: 'UNAUTHORIZED' };
+    }
 
     if (session.bookedCount > 0 && maxCapacity !== undefined && maxCapacity < session.bookedCount) {
       return { success: false, error: `Cannot reduce capacity below ${session.bookedCount} booked students.`, code: 'INVALID_STATE' };
@@ -286,8 +323,8 @@ export async function updateClassSessionAction(
 export async function rescheduleClassSessionAction(
   input: z.infer<typeof rescheduleClassSessionSchema>,
 ): Promise<ServiceResult<ClassSession>> {
-  const authSession = await requireAdminOrInstructor();
-  if (!authSession) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
+  const ctx = await requireAdminOrInstructor();
+  if (!ctx) return { success: false, error: 'Unauthorized.', code: 'UNAUTHORIZED' };
 
   const parsed = rescheduleClassSessionSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.', code: 'INVALID_STATE' };
@@ -302,6 +339,10 @@ export async function rescheduleClassSessionAction(
       .limit(1);
 
     if (!session) return { success: false, error: 'Session not found.', code: 'NOT_FOUND' };
+
+    if (ctx.role === 'instructor' && session.instructorId !== ctx.instructorId) {
+      return { success: false, error: 'You can only reschedule your own sessions.', code: 'UNAUTHORIZED' };
+    }
     if (session.status === 'cancelled') {
       return { success: false, error: 'Cannot reschedule a cancelled class.', code: 'INVALID_STATE' };
     }
@@ -366,8 +407,8 @@ export async function rescheduleClassSessionAction(
           .where(and(inArray(users.id, studentIds), isNull(users.deletedAt)));
 
         const fmt = (d: Date) => ({
-          date: d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-          time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          date: d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Berlin' }),
+          time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }),
         });
         const oldFmt = fmt(oldStartsAt);
         const newFmt = fmt(newStartsAt);
