@@ -130,11 +130,14 @@ export const cancellationService = {
 
     // Grace window: if the class was rescheduled AFTER this student booked,
     // they get CANCELLATION_WINDOW_HOURS from the reschedule announcement to cancel
-    // for free — even if the class is less than 24 hours away.
+    // for free — even if the class is less than 24 hours away. The grace is
+    // ALWAYS bounded by class start: once the class begins, no cancellation is
+    // possible (also enforced by the early return above on session.startsAt).
     const rescheduledGraceFree =
       session.rescheduledAt !== null &&
       session.rescheduledAt > booking.bookedAt &&
-      now < addHours(session.rescheduledAt, CANCELLATION_WINDOW_HOURS);
+      now < addHours(session.rescheduledAt, CANCELLATION_WINDOW_HOURS) &&
+      now < session.startsAt;
 
     let refundIssued = false;
     let mercyApplied = false;

@@ -21,13 +21,17 @@ export function resolveCancellationPolicy(
 ): CancellationPolicy {
   const hoursUntilStart = differenceInHours(startsAt, now);
   const isWithinWindow = hoursUntilStart < CANCELLATION_WINDOW_HOURS;
+  const classHasStarted = now >= startsAt;
 
-  // Mirrors server-side grace logic in cancellationService.cancel()
+  // Mirrors server-side grace logic in cancellationService.cancel().
+  // The grace is bounded by class start — once the class begins, no
+  // cancellation is possible regardless of how the booking got here.
   const rescheduledGrace =
     !!rescheduledAt &&
     !!bookedAt &&
     rescheduledAt > bookedAt &&
-    now < addHours(rescheduledAt, CANCELLATION_WINDOW_HOURS);
+    now < addHours(rescheduledAt, CANCELLATION_WINDOW_HOURS) &&
+    !classHasStarted;
 
   if (rescheduledGrace) {
     return { state: 'rescheduled', hoursUntilStart, willReceiveRefund: true };

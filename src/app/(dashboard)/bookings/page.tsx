@@ -1,6 +1,8 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { format, isPast, isToday, isTomorrow, addDays } from 'date-fns';
+import { isPast, isToday, isTomorrow, addDays, format } from 'date-fns';
+import { TZDate } from 'date-fns/tz';
+import { formatStudioTime } from '@/lib/utils/date.utils';
 import { auth } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/db';
@@ -95,11 +97,12 @@ function BookingCard({
   mercyAvailable: boolean;
   isPast: boolean;
 }) {
-  const dateLabel = isToday(booking.startsAt)
+  const berlinDate = new TZDate(booking.startsAt, 'Europe/Berlin');
+  const dateLabel = isToday(berlinDate)
     ? 'Today'
-    : isTomorrow(booking.startsAt)
+    : isTomorrow(berlinDate)
     ? 'Tomorrow'
-    : format(booking.startsAt, 'EEEE, MMMM d');
+    : format(berlinDate, 'EEEE, MMMM d');
 
   const canCancel =
     !isPast &&
@@ -189,7 +192,7 @@ function BookingCard({
           <CalendarCheck className="size-4 text-muted" />
           <span className="font-medium">{dateLabel}</span>
           <span className="text-muted">
-            at {format(booking.startsAt, 'HH:mm')} ({booking.durationMinutes} min)
+            at {formatStudioTime(booking.startsAt)} ({booking.durationMinutes} min)
           </span>
         </div>
 

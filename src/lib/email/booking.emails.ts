@@ -101,7 +101,7 @@ export async function sendClassRescheduledEmail(
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:12px 0 0;border-radius:12px;overflow:hidden;border:1px solid #b8d4f0;">
       <tr><td style="background-color:#f0f7ff;padding:14px 20px;">
         <p style="margin:0;font-size:13px;font-weight:700;color:#1a4a7a;"><font color="#1a4a7a">Free cancellation available</font></p>
-        <p style="margin:3px 0 0;font-size:12px;line-height:1.5;color:#2a5a8a;"><font color="#2a5a8a">Because the schedule changed, you have 24 hours from this notice to cancel for a full credit refund — even if the class is less than 24 hours away.</font></p>
+        <p style="margin:3px 0 0;font-size:12px;line-height:1.5;color:#2a5a8a;"><font color="#2a5a8a">Because the schedule changed, you have 24 hours from this notice to cancel for a full credit refund — even if the class is less than 24 hours away. This grace period ends when the class begins; cancellations after the class has started are no longer possible.</font></p>
       </td></tr>
     </table>`;
 
@@ -113,7 +113,7 @@ export async function sendClassRescheduledEmail(
       greeting: `Hi ${name},`,
       body: `The studio has updated the time for your upcoming class. Your booking remains confirmed — please note the new time below.<br><br>${oldBlock}`,
       actionUrl: APP_URL, actionText: 'View my bookings',
-      expiryText: 'If the new time does not work for you, you can cancel for free within 24 hours of receiving this email.',
+      expiryText: 'If the new time does not work for you, you can cancel for free within 24 hours of receiving this email — but only up until the class starts. Once the class has begun, cancellation is no longer possible.',
     }),
   });
 }
