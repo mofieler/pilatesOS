@@ -58,9 +58,11 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Ensure public directory has correct permissions for standalone mode
-RUN chmod -R 755 /app/public 2>/dev/null || true
+RUN chmod -R 755 /app/public 2>/dev/null || true && \
+    chmod +x /app/scripts/*.sh 2>/dev/null || true
 
 # Switch to non-root user
 USER nextjs
