@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '@/db';
-import { userMemberships, creditBalances, users } from '@/db/schema';
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { userMemberships, users } from '@/db/schema';
+import { and, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { addDays } from 'date-fns';
 import {
   sendMembershipCreditGrantEmail,
@@ -20,6 +20,9 @@ import { creditService } from '@/modules/billing/services/credit.service';
 //  2. Advance next_credit_grant_at by 7 days.
 //  3. If ends_at has passed: mark membership expired + send expiry email.
 //  4. Otherwise: send weekly grant notification email.
+//
+// [PERF] Batch-fetches user rows up-front to avoid N+1 queries.
+// Uses newBalance from addCreditsInternal instead of a separate balance SELECT.
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -53,12 +56,26 @@ export async function POST(req: NextRequest) {
       ),
     );
 
+  if (due.length === 0) {
+    console.info('[CRON] membership-credit-grant: nothing due');
+    return NextResponse.json({ ok: true, report: { processed: 0, granted: 0, expired: 0, errors: 0, ms: 0 } });
+  }
+
+  // Batch-fetch users so we don't N+1 during email sending.
+  const userIds = [...new Set(due.map((m) => m.userId))];
+  const userRows = await db
+    .select({ id: users.id, email: users.email, name: users.name })
+    .from(users)
+    .where(and(inArray(users.id, userIds), isNull(users.deletedAt)));
+  const userMap = new Map(userRows.map((u) => [u.id, u]));
+
   let granted = 0;
   let expired = 0;
   let errors = 0;
 
   for (const membership of due) {
     let isExpired = false;
+    let newBalance: number | undefined;
     try {
       // Atomic: grant credits (creates a lot via addCreditsInternal) + advance schedule.
       // Re-read the membership under FOR UPDATE so overlapping cron runs don't
@@ -78,12 +95,13 @@ export async function POST(req: NextRequest) {
 
         isExpired = locked.endsAt <= now;
 
-        await creditService.addCreditsInternal(tx, {
+        const result = await creditService.addCreditsInternal(tx, {
           userId: locked.userId,
           creditType: locked.creditType as CreditType,
           amount: locked.weeklyCredits,
           description: `Membership weekly grant (membership ${locked.id})`,
         });
+        newBalance = result.newBalance;
 
         // Advance grant date by 7 days; expire if membership has ended
         await tx
@@ -98,24 +116,8 @@ export async function POST(req: NextRequest) {
       });
 
       // Fire-and-forget email — never block the sweep on email failures
-      const [userRow] = await db
-        .select({ email: users.email, name: users.name })
-        .from(users)
-        .where(and(eq(users.id, membership.userId), isNull(users.deletedAt)))
-        .limit(1);
-
+      const userRow = userMap.get(membership.userId);
       if (userRow?.email) {
-        const [balanceRow] = await db
-          .select({ balance: creditBalances.balance })
-          .from(creditBalances)
-          .where(
-            and(
-              eq(creditBalances.userId, membership.userId),
-              eq(creditBalances.creditType, membership.creditType as CreditType),
-            ),
-          )
-          .limit(1);
-
         if (isExpired) {
           sendMembershipExpiryEmail(
             userRow.email,
@@ -131,7 +133,7 @@ export async function POST(req: NextRequest) {
             `Membership Plan`,
             membership.weeklyCredits,
             membership.creditType,
-            balanceRow?.balance ?? membership.weeklyCredits,
+            newBalance ?? membership.weeklyCredits,
             addDays(membership.nextCreditGrantAt, 7),
             membership.endsAt,
           ).catch((err) => console.warn('[membership-cron] grant email failed:', err));

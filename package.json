@@ -24,10 +24,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
-    "queue:ui": "tsx scripts/queue-ui.ts",
-    "pm2:start": "pm2 start ecosystem/ecosystem.config.js --env production",
-    "pm2:stop": "pm2 stop ecosystem/ecosystem.config.js",
-    "pm2:reload": "pm2 reload ecosystem/ecosystem.config.js"
+    "queue:ui": "tsx scripts/queue-ui.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
