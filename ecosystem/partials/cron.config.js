@@ -44,7 +44,7 @@ module.exports = {
     // Mondays at 06:00 — grant weekly membership credits
     cronApp('membership', 'membership-credit-grant', '0 6 * * 1'),
 
-    // Every 15 minutes — sync external instructor calendars
-    cronApp('calendar', 'calendar-sync', '*/15 * * * *'),
+    // Every 5 minutes — sync external instructor calendars
+    cronApp('calendar', 'calendar-sync', '*/5 * * * *'),
   ],
 };

@@ -12,13 +12,14 @@ module.exports = {
   apps: [
     {
       name: 'pilatesos-seed',
-      script: 'npm',
-      args: 'run db:seed',
+      script: 'npx',
+      args: 'tsx scripts/seed.ts',
       cwd: path.join(__dirname, '../..'),
       instances: 1,
       exec_mode: 'fork',
       autorestart: false,
       max_restarts: 1,
+      kill_timeout: 30000,
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       out_file: path.join(__dirname, '../../logs/pm2/seed-out.log'),
       error_file: path.join(__dirname, '../../logs/pm2/seed-error.log'),
