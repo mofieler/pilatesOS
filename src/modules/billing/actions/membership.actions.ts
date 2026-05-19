@@ -16,6 +16,7 @@ import { auth } from '@/lib/auth/auth';
 import { addDays } from 'date-fns';
 import { revalidatePath } from 'next/cache';
 import { getCreditTypeValues } from '@/lib/config/class-types';
+import { FINANCIAL_CONFIG } from '@/lib/config/financial-config';
 import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendMembershipPurchaseEmail } from '@/lib/email/membership.emails';
 import { creditService } from '@/modules/billing/services/credit.service';
@@ -240,7 +241,7 @@ export async function assignMembershipAction(input: z.infer<typeof assignSchema>
     if (!userRow) return { success: false as const, error: 'User not found' };
 
     const endsAt  = addDays(startedAt, plan.durationWeeks * 7);
-    const dueDate = addDays(startedAt, 14);
+    const dueDate = addDays(startedAt, FINANCIAL_CONFIG.membershipDueDateDays);
     const now     = startedAt;
 
     const { membership, invoiceNumber } = await db.transaction(async (tx) => {
@@ -255,7 +256,7 @@ export async function assignMembershipAction(input: z.infer<typeof assignSchema>
         endsAt,
         status:            'active',
         lastCreditGrantAt: now,
-        nextCreditGrantAt: addDays(now, 7),
+        nextCreditGrantAt: addDays(now, FINANCIAL_CONFIG.membershipGrantIntervalDays),
       }).returning();
 
       // Create bill record for the dashboard / admin payments view
@@ -409,7 +410,7 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
     if (existing) return { success: false as const, error: 'You already have an active membership' };
 
     const endsAt  = addDays(now, plan.durationWeeks * 7);
-    const dueDate = addDays(now, 14);
+    const dueDate = addDays(now, FINANCIAL_CONFIG.membershipDueDateDays);
 
     const { membership, invoiceNumber } = await db.transaction(async (tx) => {
       const invNumber = await nextInvoiceNumber(tx);
@@ -423,7 +424,7 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
         endsAt,
         status:                     'active',
         lastCreditGrantAt:          now,
-        nextCreditGrantAt:          addDays(now, 7),
+        nextCreditGrantAt:          addDays(now, FINANCIAL_CONFIG.membershipGrantIntervalDays),
         selfPurchased:              true,
         acceptedTermsAt:            acceptedTerms ? now : undefined,
         acceptedWithdrawalWaiverAt: acceptedWithdrawalWaiver ? now : undefined,

@@ -27,11 +27,14 @@ function cronApp(name, endpoint, schedule) {
     out_file: path.join(LOG_DIR, `cron-${name}-out.log`),
     error_file: path.join(LOG_DIR, `cron-${name}-error.log`),
     merge_logs: false,
+    kill_timeout: 30000,
     env: {
       NODE_ENV: 'development',
+      TZ: 'UTC',
     },
     env_production: {
       NODE_ENV: 'production',
+      TZ: 'UTC',
     },
   };
 }

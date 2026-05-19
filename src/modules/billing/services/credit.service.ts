@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { creditBalances, creditTransactions, creditPurchases, creditLots } from '@/db/schema';
 import type { CreditTransaction, CreditLot, CreditType } from '@/db/schema';
 import { eq, and, lt, desc, asc, gt, sql } from 'drizzle-orm';
+import { CREDIT_PACK_CATEGORIES } from '@/lib/config/financial-config';
 
 // ─── Shared Result Types ──────────────────────────────────────────────────────
 
@@ -69,9 +70,9 @@ export type AddCreditsResult = {
 };
 
 // Default validity if neither expiresAt nor validityWeeks is provided.
-// Mirrors creditPackages.validity_weeks default (52). Keeps the lot from
+// Mirrors creditPackages.validity_weeks default. Keeps the lot from
 // living forever if a caller forgets to specify an expiry.
-const DEFAULT_VALIDITY_WEEKS = 52;
+const DEFAULT_VALIDITY_WEEKS = Math.round(CREDIT_PACK_CATEGORIES.credit.defaultValidityDays / 7);
 
 // [FIX-4] Cursor-based pagination result type.
 export type PaginatedTransactionHistory = {

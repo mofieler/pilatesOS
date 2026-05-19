@@ -11,6 +11,7 @@ import { checkRateLimit, registerRateLimitConfig } from '@/lib/security/server-a
 import { resolveClientIP } from '@/lib/security/client-ip';
 import { verifyTurnstileToken } from '@/lib/security/turnstile';
 import { sendVerificationEmail } from '@/lib/email/resend';
+import { APP_CONFIG } from '@/constants/APP_CONFIG';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -63,8 +64,9 @@ export async function registerAction(input: unknown) {
       .then((rows) => rows[0]);
 
     if (existingUser) {
-      // Don't reveal whether the account exists — same message either way
-      return { success: false, error: 'Email already registered' };
+      // Don't reveal whether the account exists — same response either way.
+      // Optionally send a "you already have an account" email.
+      return { success: true };
     }
 
     const passwordHash = await bcrypt.hash(validated.password, 12);
@@ -78,9 +80,9 @@ export async function registerAction(input: unknown) {
       emailVerified: null,
     });
 
-    // Generate secure verification token (valid 24 h)
+    // Generate secure verification token
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expires = new Date(Date.now() + APP_CONFIG.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
     await db.insert(verificationTokens).values({
       identifier: validated.email,

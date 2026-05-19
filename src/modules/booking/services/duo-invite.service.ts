@@ -3,6 +3,10 @@ import { db } from '@/db';
 import { duoInvites, bookings, classSessions, classTemplates, users } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { lotService } from '@/modules/billing/services/lot.service';
+import {
+  DUO_INVITE_CUTOFF_HOURS_BEFORE_CLASS,
+  DUO_INVITE_MAX_LIFETIME_HOURS,
+} from '@/lib/config/duo-invite';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,9 +35,11 @@ export interface EligibilityResult {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function computeExpiry(sessionStartsAt: Date): Date {
-  const twoHoursBeforeClass = new Date(sessionStartsAt.getTime() - 2 * 60 * 60 * 1000);
-  const fortyEightHoursFromNow = new Date(Date.now() + 48 * 60 * 60 * 1000);
-  return new Date(Math.min(twoHoursBeforeClass.getTime(), fortyEightHoursFromNow.getTime()));
+  const cutoffMs = DUO_INVITE_CUTOFF_HOURS_BEFORE_CLASS * 60 * 60 * 1000;
+  const maxLifetimeMs = DUO_INVITE_MAX_LIFETIME_HOURS * 60 * 60 * 1000;
+  const cutoffBeforeClass = new Date(sessionStartsAt.getTime() - cutoffMs);
+  const maxLifetimeFromNow = new Date(Date.now() + maxLifetimeMs);
+  return new Date(Math.min(cutoffBeforeClass.getTime(), maxLifetimeFromNow.getTime()));
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────

@@ -208,6 +208,16 @@ export function isCreditType(value: unknown): value is CreditType {
   return typeof value === 'string' && isValidCreditType(value);
 }
 
+/** Returns true for duo class types (reformer_duo, mat_duo). */
+export function isDuoClassType(classType: string): boolean {
+  return classType === 'reformer_duo' || classType === 'mat_duo';
+}
+
+/** Returns true for private/duo session class types (all that use session credits). */
+export function isSessionClassType(classType: string): boolean {
+  return getCreditTypeForClassType(classType as ClassType) === 'session';
+}
+
 // ─── LEGACY COMPATIBILITY (used in booking pages / credit package cards) ────────
 
 export const LEGACY_CREDIT_TYPE_LABELS: Record<string, string> = {

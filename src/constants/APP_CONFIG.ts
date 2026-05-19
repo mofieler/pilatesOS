@@ -28,7 +28,11 @@ export const APP_CONFIG = {
   
   // Cache settings
   CACHE_TTL_SECONDS: 3600, // 1 hour
-  
+
+  // Token expiry
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: 24,
+  PASSWORD_RESET_TOKEN_EXPIRY_MINUTES: 60,
+
   // Features
   FEATURES: {
     STRIPE_ENABLED: process.env.STRIPE_SECRET_KEY ? true : false,

@@ -12,6 +12,7 @@ import { sendPurchaseConfirmationWithInvoice } from '@/lib/email/resend';
 import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 import { creditService } from '@/modules/billing/services/credit.service';
 import { hasCompletedWelcome } from '@/lib/welcome';
+import { FINANCIAL_CONFIG } from '@/lib/config/financial-config';
 
 export async function POST(request: Request) {
   const rateLimitResult = await purchaseRateLimiter(request as any);
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const dueDate = addDays(new Date(), 14);
+    const dueDate = addDays(new Date(), FINANCIAL_CONFIG.refundPolicyDays);
 
     // Atomic: generate invoice number + create purchase + grant credits
     const { purchase, newBalance, invoiceNumber } = await db.transaction(async (tx) => {

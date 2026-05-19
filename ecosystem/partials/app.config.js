@@ -12,7 +12,7 @@ module.exports = {
       script: path.join(__dirname, '../../.next/standalone/server.js'),
       instances: process.env.WEB_INSTANCES || 'max',
       exec_mode: 'cluster',
-      max_memory_restart: '512M',
+      max_memory_restart: '1024M',
       restart_delay: 3000,
       max_restarts: 5,
       min_uptime: '10s',
@@ -34,7 +34,13 @@ module.exports = {
       // PM2 itself does not use this, but container orchestrators do.
       // Keep the process alive unless it crashes repeatedly.
       kill_timeout: 5000,
-      listen_timeout: 10000,
+      listen_timeout: 30000,
+      wait_ready: false,
+      exp_backoff_restart_delay: 3000,
+      // IMPORTANT: Next.js standalone does NOT copy .next/static automatically.
+      // You must copy it after build:
+      //   cp -r .next/static .next/standalone/.next/static
+      // The Dockerfile already handles this in the builder stage.
     },
   ],
 };

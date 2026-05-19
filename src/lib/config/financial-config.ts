@@ -40,6 +40,8 @@ export interface FinancialConfig {
   refundPolicyDays: number;
   autoRefundEnabled: boolean;
   partialPaymentEnabled: boolean;
+  membershipGrantIntervalDays: number;
+  membershipDueDateDays: number;
 }
 
 // ─── PAYMENT METHODS CONFIGURATION ─────────────────────────────────────────────
@@ -123,6 +125,8 @@ export const FINANCIAL_CONFIG: FinancialConfig = {
   refundPolicyDays: 14,
   autoRefundEnabled: true,
   partialPaymentEnabled: true,
+  membershipGrantIntervalDays: 7,
+  membershipDueDateDays: 14,
 };
 
 // ─── UTILITY FUNCTIONS ──────────────────────────────────────────────────────────

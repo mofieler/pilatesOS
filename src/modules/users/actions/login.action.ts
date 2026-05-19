@@ -3,7 +3,9 @@
 import { z } from 'zod';
 import { signIn } from '@/lib/auth/auth';
 import { AuthError } from 'next-auth';
+import { headers } from 'next/headers';
 import { checkRateLimit, authRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
+import { resolveClientIP } from '@/lib/security/client-ip';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -14,8 +16,10 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export async function loginAction(input: unknown) {
   try {
-    // Check rate limit before processing
-    const rateLimitResult = await checkRateLimit(authRateLimitConfig, 'login');
+    // Check rate limit before processing (per-IP, not global)
+    const headersList = await headers();
+    const ip = resolveClientIP(headersList);
+    const rateLimitResult = await checkRateLimit(authRateLimitConfig, `login:${ip}`);
     if (!rateLimitResult.success) {
       return {
         success: false,

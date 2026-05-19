@@ -30,10 +30,11 @@ export async function verifyTurnstileToken(
 ): Promise<TurnstileResult> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    // Dev / un-provisioned: skip verification. Logged once to make the
-    // gap obvious in any audit of server logs.
+    // Dev / un-provisioned: skip verification so local development works
+    // without keys. Production MUST fail closed.
     if (process.env.NODE_ENV === 'production') {
-      console.warn('[turnstile] TURNSTILE_SECRET_KEY not set — verification skipped');
+      console.error('[turnstile] TURNSTILE_SECRET_KEY not set — rejecting request');
+      return { success: false, error: 'Captcha verification is not configured.' };
     }
     return { success: true };
   }

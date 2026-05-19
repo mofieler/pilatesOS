@@ -6,13 +6,14 @@ import { bookings, classSessions, classTemplates, duoInvites } from '@/db/schema
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { duoInviteService } from '@/modules/booking/services/duo-invite.service';
+import { isDuoClassType } from '@/lib/config/class-types';
 import { checkRateLimit, duoInviteRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 const schema = z.object({
   bookingId: z.string().uuid(),
 });
 
-const DUO_CLASS_TYPES = new Set(['reformer_duo', 'mat_duo']);
+
 
 export async function createDuoInviteAction(
   input: z.infer<typeof schema>,
@@ -54,7 +55,7 @@ export async function createDuoInviteAction(
     .where(eq(classTemplates.id, session2.templateId))
     .limit(1);
 
-  if (!template || !DUO_CLASS_TYPES.has(template.classType)) {
+  if (!template || !isDuoClassType(template.classType)) {
     return { success: false, error: 'This class does not support duo invites' };
   }
 

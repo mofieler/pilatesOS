@@ -26,15 +26,14 @@ import {
   getClassTypeLabel,
   getCreditTypeLabel,
   getCreditTypeForClassType,
+  isDuoClassType,
+  isSessionClassType,
   type ClassType,
 } from '@/lib/config/class-types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DUO_CLASS_TYPES = new Set<ClassType>(['reformer_duo', 'mat_duo']);
-const PRIVATE_CLASS_TYPES = new Set<ClassType>([
-  'reformer_private', 'reformer_duo', 'mat_private', 'mat_duo',
-]);
+
 
 // ─── Form types ───────────────────────────────────────────────────────────────
 
@@ -186,8 +185,8 @@ function TemplateFormDialog({
                     ...f,
                     classType,
                     creditType: newCreditType,
-                    maxCapacity: DUO_CLASS_TYPES.has(classType) ? '2'
-                      : PRIVATE_CLASS_TYPES.has(classType) ? '1'
+                    maxCapacity: isDuoClassType(classType) ? '2'
+                      : isSessionClassType(classType) ? '1'
                       : f.maxCapacity,
                   }));
                 }}
@@ -367,7 +366,7 @@ export function ClassTemplatesManager({
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.durationMinutes}m</td>
                 <td className="px-4 py-3 tabular-nums text-slate-600">{t.maxCapacity}</td>
                 <td className="px-4 py-3">
-                  {PRIVATE_CLASS_TYPES.has(t.classType) ? (
+                  {isSessionClassType(t.classType) ? (
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
                       Session pkg
                     </span>
