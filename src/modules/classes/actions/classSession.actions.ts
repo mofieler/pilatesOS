@@ -2,6 +2,8 @@
 
 import { z } from 'zod';
 import { addMinutes } from 'date-fns';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { studioYmd } from '@/lib/utils/date.utils';
 import { db } from '@/db';
 import { classTemplates, classSessions, instructors, users, bookings } from '@/db/schema';
 import type { ClassSession, ClassTemplate, Instructor, User } from '@/db/schema';
@@ -542,9 +544,10 @@ export async function checkSlotAvailabilityAction(
 
     const suggestions: string[] = [];
     if (instructorId && conflicts.length > 0) {
-      const utcDateStr  = startsAt.toISOString().split('T')[0];
-      const dayStartUTC = new Date(`${utcDateStr}T00:00:00.000Z`);
-      const dayEndUTC   = new Date(`${utcDateStr}T23:59:59.999Z`);
+      const STUDIO_TZ = 'Europe/Berlin';
+      const studioDateStr = studioYmd(startsAt);
+      const dayStart = fromZonedTime(`${studioDateStr}T00:00:00`, STUDIO_TZ);
+      const dayEnd   = fromZonedTime(`${studioDateStr}T23:59:59.999`, STUDIO_TZ);
 
       const daySessions = await db
         .select({ startsAt: classSessions.startsAt, endsAt: classSessions.endsAt })
@@ -552,41 +555,37 @@ export async function checkSlotAvailabilityAction(
         .where(and(
           eq(classSessions.instructorId, instructorId),
           ne(classSessions.status, 'cancelled'),
-          gte(classSessions.startsAt, dayStartUTC),
-          lte(classSessions.startsAt, dayEndUTC),
+          gte(classSessions.startsAt, dayStart),
+          lte(classSessions.startsAt, dayEnd),
         ));
 
-      const dayBlocks = await getBlocksInRange(dayStartUTC, dayEndUTC);
+      const dayBlocks = await getBlocksInRange(dayStart, dayEnd);
       const busyIntervals = [
         ...daySessions,
         ...dayBlocks.filter((b) => b.instructorId === instructorId || b.instructorId === null),
       ];
 
-      const localOffsetH = -(tzOffsetMinutes / 60);
-      const studioOpenUTC  = 7  - localOffsetH;
-      const studioCloseUTC = 22 - localOffsetH;
-      const requestedUTCMinutes = startsAt.getUTCHours() * 60 + startsAt.getUTCMinutes();
+      const requestedH = parseInt(formatInTimeZone(startsAt, STUDIO_TZ, 'H'), 10);
+      const requestedM = parseInt(formatInTimeZone(startsAt, STUDIO_TZ, 'm'), 10);
+      const requestedStudioMinutes = requestedH * 60 + requestedM;
 
       const freeBefore: string[] = [];
       const freeAfter:  string[] = [];
       const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
 
-      for (let h = studioOpenUTC; h < studioCloseUTC; h++) {
+      for (let localH = 7; localH < 22; localH++) {
         for (const m of [0, 30]) {
-          const slotUTCMin = h * 60 + m;
-          if (slotUTCMin === requestedUTCMinutes) continue;
+          const slotStudioMin = localH * 60 + m;
+          if (slotStudioMin === requestedStudioMinutes) continue;
 
-          const candidateStart = new Date(`${utcDateStr}T${pad(h)}:${m === 0 ? '00' : '30'}:00.000Z`);
+          const candidateStart = fromZonedTime(`${studioDateStr}T${pad(localH)}:${m === 0 ? '00' : '30'}:00`, STUDIO_TZ);
           const candidateEnd   = addMinutes(candidateStart, durationMinutes);
           const busy = busyIntervals.some((b) => b.startsAt < candidateEnd && b.endsAt > candidateStart);
           if (busy) continue;
 
-          let localH = h + localOffsetH;
-          if (localH < 0) localH += 24;
-          if (localH >= 24) localH -= 24;
           const localTimeStr = `${pad(localH)}:${m === 0 ? '00' : '30'}`;
 
-          if (slotUTCMin < requestedUTCMinutes) freeBefore.push(localTimeStr);
+          if (slotStudioMin < requestedStudioMinutes) freeBefore.push(localTimeStr);
           else freeAfter.push(localTimeStr);
         }
       }

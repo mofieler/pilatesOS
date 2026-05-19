@@ -1,4 +1,5 @@
-import { addDays, startOfToday } from 'date-fns';
+import { addDays } from 'date-fns';
+import { startOfStudioDay } from '@/lib/utils/date.utils';
 import { auth } from '@/lib/auth/auth';
 import { db } from '@/db';
 import { instructors as instructorsTable } from '@/db/schema';
@@ -34,8 +35,8 @@ export default async function ClassesPage() {
     myInstructorId = row?.id ?? null;
   }
 
-  const from = addDays(startOfToday(), -14);
-  const to = addDays(startOfToday(), 84); // 12 weeks forward
+  const from = addDays(startOfStudioDay(), -14);
+  const to = addDays(startOfStudioDay(), 84); // 12 weeks forward
 
   const [sessionsResult, templatesResult, instructorsResult, gcalBlocks] = await Promise.all([
     getSessionsForRangeAction(from, to),
