@@ -140,7 +140,7 @@ export function buildBaseTemplate(props: EmailTemplateProps): string {
           <p style="margin:0;font-size:12px;color:${C.textLighter};">
             <a href="${APP_URL}" style="color:${C.primaryLight};text-decoration:none;">Visit website</a>
             <span style="margin:0 8px;color:${C.border};">|</span>
-            <a href="${APP_URL}/privacy" style="color:${C.primaryLight};text-decoration:none;">Privacy</a>
+            <a href="${APP_URL}/datenschutz" style="color:${C.primaryLight};text-decoration:none;">Datenschutz</a>
           </p>
         </td></tr>
       </table>
