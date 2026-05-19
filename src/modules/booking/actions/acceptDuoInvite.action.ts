@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth/auth';
 import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
 import { revalidatePath } from 'next/cache';
 import { hasCompletedWelcome } from '@/lib/welcome';
+import { checkRateLimit, duoInviteRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 const schema = z.object({
   token: z.string().min(1).max(64),
@@ -19,6 +20,11 @@ export async function acceptDuoInviteAction(
   const authSession = await auth();
   if (!authSession?.user?.id) return { success: false, error: 'Please sign in to accept this invite', code: 'UNAUTHORIZED' };
   const userId = authSession.user.id;
+
+  const rateLimit = await checkRateLimit(duoInviteRateLimitConfig, userId);
+  if (!rateLimit.success) {
+    return { success: false, error: 'Rate limit exceeded. Please try again later.', code: 'RATE_LIMITED' };
+  }
 
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid token', code: 'INVALID_INPUT' };

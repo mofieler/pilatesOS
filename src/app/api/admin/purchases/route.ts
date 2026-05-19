@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminRole } from '@/lib/auth/api-auth';
 import { getAllCreditPurchasesAction, updateCreditPurchaseAction, getPurchaseStatsAction } from '@/modules/billing/actions/creditPurchase.actions';
 
 // GET all credit purchases (admin only)
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await requireAdminRole(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const result = await getAllCreditPurchasesAction();
     
@@ -24,7 +28,10 @@ export async function GET() {
 }
 
 // POST - Update credit purchase status (mark as paid, etc.)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAdminRole(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const result = await updateCreditPurchaseAction(body);

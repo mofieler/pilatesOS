@@ -19,6 +19,7 @@ import { getCreditTypeValues } from '@/lib/config/class-types';
 import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendMembershipPurchaseEmail } from '@/lib/email/membership.emails';
 import { creditService } from '@/modules/billing/services/credit.service';
+import { checkRateLimit, membershipSubscribeRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -381,11 +382,17 @@ export async function subscribeMembershipAction(input: z.infer<typeof selfSubscr
   const session = await auth();
   if (!session?.user?.id) return { success: false as const, error: 'Unauthorized' };
 
+  const userId = session.user.id;
+
+  const rateLimit = await checkRateLimit(membershipSubscribeRateLimitConfig, userId);
+  if (!rateLimit.success) {
+    return { success: false as const, error: 'Rate limit exceeded. Please try again later.', code: 'RATE_LIMITED' };
+  }
+
   const parsed = selfSubscribeSchema.safeParse(input);
   if (!parsed.success) return { success: false as const, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
 
   const { planId, acceptedTerms, acceptedWithdrawalWaiver, purchaseIpAddress } = parsed.data;
-  const userId = session.user.id;
   const now    = new Date();
 
   try {

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminRole } from '@/lib/auth/api-auth';
 import { sendInvoiceToEmailAction } from '@/modules/billing/actions/invoiceReminder.actions';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireAdminRole(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const { id: purchaseId } = await params;
 
   let body: { recipientEmail?: string; customMessage?: string } = {};

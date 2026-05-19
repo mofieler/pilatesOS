@@ -63,3 +63,15 @@ export const cancellationRateLimitConfig: RateLimitConfig = {
   maxRequests: 5, // 5 cancellations per minute per user
   keyPrefix: 'cancellation',
 };
+
+export const duoInviteRateLimitConfig: RateLimitConfig = {
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 10, // 10 duo invite ops per minute per user
+  keyPrefix: 'duo_invite',
+};
+
+export const membershipSubscribeRateLimitConfig: RateLimitConfig = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 3, // 3 subscription attempts per 15 minutes per user
+  keyPrefix: 'membership_subscribe',
+};

@@ -6,6 +6,7 @@ import { bookings, classSessions, classTemplates, duoInvites } from '@/db/schema
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { duoInviteService } from '@/modules/booking/services/duo-invite.service';
+import { checkRateLimit, duoInviteRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 
 const schema = z.object({
   bookingId: z.string().uuid(),
@@ -15,10 +16,15 @@ const DUO_CLASS_TYPES = new Set(['reformer_duo', 'mat_duo']);
 
 export async function createDuoInviteAction(
   input: z.infer<typeof schema>,
-): Promise<{ success: boolean; error?: string; data?: { token: string; expiresAt: Date } }> {
+): Promise<{ success: boolean; error?: string; code?: string; data?: { token: string; expiresAt: Date } }> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
   const userId = session.user.id;
+
+  const rateLimit = await checkRateLimit(duoInviteRateLimitConfig, userId);
+  if (!rateLimit.success) {
+    return { success: false, error: 'Rate limit exceeded. Please try again later.', code: 'RATE_LIMITED' };
+  }
 
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid input' };
