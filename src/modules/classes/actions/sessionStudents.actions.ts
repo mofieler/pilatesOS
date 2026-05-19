@@ -70,20 +70,26 @@ export async function removeStudentFromSessionAction(
 
   const { bookingId, reason } = parsed.data;
 
-  const [bookingData] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
-
-  if (!bookingData) return { success: false, error: 'Booking not found', code: 'NOT_FOUND' };
-  if (bookingData.status !== 'confirmed') return { success: false, error: 'Can only remove confirmed bookings', code: 'INVALID_STATE' };
-  if (!bookingData.sessionId) return { success: false, error: 'Booking has no associated session', code: 'NOT_FOUND' };
-
-  const [userData] = await db
-    .select({ email: users.email, name: users.name })
-    .from(users)
-    .where(eq(users.id, bookingData.userId))
-    .limit(1);
-
   try {
-    await db.transaction(async (tx) => {
+    const { bookingData, userData } = await db.transaction(async (tx) => {
+      // Re-read booking under lock to prevent race conditions
+      const [bookingRow] = await tx
+        .select()
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .for('update')
+        .limit(1);
+
+      if (!bookingRow) throw new Error('BOOKING_NOT_FOUND');
+      if (bookingRow.status !== 'confirmed') throw new Error('NOT_CONFIRMED');
+      if (!bookingRow.sessionId) throw new Error('NO_SESSION');
+
+      const [userRow] = await tx
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, bookingRow.userId))
+        .limit(1);
+
       await tx.update(bookings).set({
         status: 'cancelled',
         cancelledAt: new Date(),
@@ -93,10 +99,10 @@ export async function removeStudentFromSessionAction(
 
       // Refund via canonical path — creates a fresh credit_lots row.
       await creditService.refundInternal(tx, {
-        userId: bookingData.userId,
-        creditType: bookingData.creditType,
-        amount: bookingData.creditsSpent,
-        bookingId: bookingData.id,
+        userId: bookingRow.userId,
+        creditType: bookingRow.creditType,
+        amount: bookingRow.creditsSpent,
+        bookingId: bookingRow.id,
         description: 'Refund: removed from class by admin',
       });
 
@@ -104,7 +110,9 @@ export async function removeStudentFromSessionAction(
       await tx.update(classSessions).set({
         bookedCount: sql`GREATEST(0, ${classSessions.bookedCount} - 1)`,
         updatedAt: new Date(),
-      }).where(eq(classSessions.id, bookingData.sessionId!));
+      }).where(eq(classSessions.id, bookingRow.sessionId));
+
+      return { bookingData: bookingRow, userData: userRow };
     });
 
     revalidatePath('/admin/classes');
@@ -127,6 +135,11 @@ export async function removeStudentFromSessionAction(
 
     return { success: true, data: { success: true } };
   } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'BOOKING_NOT_FOUND') return { success: false, error: 'Booking not found', code: 'NOT_FOUND' };
+      if (err.message === 'NOT_CONFIRMED') return { success: false, error: 'Can only remove confirmed bookings', code: 'INVALID_STATE' };
+      if (err.message === 'NO_SESSION') return { success: false, error: 'Booking has no associated session', code: 'NOT_FOUND' };
+    }
     console.error(JSON.stringify({ level: 'error', msg: 'removeStudentFromSessionAction failed', err }));
     return { success: false, error: 'Failed to remove student.', code: 'DB_ERROR' };
   }

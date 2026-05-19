@@ -172,6 +172,9 @@ export const creditPurchases = pgTable(
     stripeSessionIdx: index('credit_purchases_stripe_session_idx').on(table.stripeSessionId),
     stripeSessionUniqueIdx: uniqueIndex('credit_purchases_stripe_session_unique_idx').on(table.stripeSessionId),
     invoiceNumberIdx: index('credit_purchases_invoice_number_idx').on(table.invoiceNumber),
+    // Composite for billing status query: user + method + status
+    userMethodStatusIdx: index('credit_purchases_user_method_status_idx').on(table.userId, table.paymentMethod, table.paymentStatus),
+    createdAtIdx: index('credit_purchases_created_at_idx').on(table.createdAt),
   }),
 );
 

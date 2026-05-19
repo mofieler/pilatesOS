@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { bookings, users, classSessions, classTemplates, waitlistEntries, instructors, cancellationMercyUses, duoInvites } from '@/db/schema';
 import type { Booking } from '@/db/schema';
-import { eq, and, inArray, isNull, or, sql } from 'drizzle-orm';
+import { eq, and, inArray, isNull, or, sql, gte, lt } from 'drizzle-orm';
 import { sendBookingCancellationEmail, sendClassCancelledByAdminEmail, sendInstructorCancellationNotificationEmail } from '@/lib/email/resend';
 import { differenceInHours, addHours } from 'date-fns';
 import { revalidatePath } from 'next/cache';
@@ -12,19 +12,24 @@ import { CANCELLATION_WINDOW_HOURS, MERCY_USES_PER_MONTH } from '@/constants/BOO
 // Transaction client type for composing mercy checks inside other transactions
 type TxClient = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-// Per-calendar-month mercy-use count. Resets on the 1st of each month (server tz).
-// The query is small and uses (user_id, used_at) index for sub-ms execution.
+// Per-calendar-month mercy-use count. Resets on the 1st of each month (Berlin).
+// Uses a sargable range query on the (user_id, used_at) index.
 async function countMercyUsesThisMonth(
   client: TxClient | typeof db,
   userId: string,
 ): Promise<number> {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd   = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+
   const [row] = await client
     .select({ count: sql<number>`COUNT(*)::int` })
     .from(cancellationMercyUses)
     .where(
       and(
         eq(cancellationMercyUses.userId, userId),
-        sql`date_trunc('month', ${cancellationMercyUses.usedAt} AT TIME ZONE 'Europe/Berlin') = date_trunc('month', NOW() AT TIME ZONE 'Europe/Berlin')`,
+        gte(cancellationMercyUses.usedAt, monthStart),
+        lt(cancellationMercyUses.usedAt, monthEnd),
       ),
     );
   return row?.count ?? 0;

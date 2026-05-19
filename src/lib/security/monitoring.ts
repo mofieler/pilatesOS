@@ -73,7 +73,15 @@ class SecurityMonitor {
   constructor() {
     this.config = this.loadConfig();
     if (this.config.monitoringEnabled) {
+      // Guard against HMR creating duplicate intervals in dev
+      const globalKey = '__pilatesos_monitor_interval';
+      if (typeof globalThis !== 'undefined' && (globalThis as any)[globalKey]) {
+        clearInterval((globalThis as any)[globalKey]);
+      }
       this.startMonitoring();
+      if (typeof globalThis !== 'undefined') {
+        (globalThis as any)[globalKey] = this.monitoringInterval;
+      }
     }
   }
 
@@ -202,6 +210,10 @@ class SecurityMonitor {
     try {
       // Store alert
       this.alerts.push(alert);
+      // Prune old alerts to prevent unbounded memory growth
+      if (this.alerts.length > 1000) {
+        this.alerts = this.alerts.slice(-500);
+      }
       
       // Log alert
       console.warn('SECURITY_ALERT:', JSON.stringify(alert));

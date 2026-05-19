@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { creditBalances, creditTransactions, creditAdjustments, users } from '@/db/schema';
 import type { CreditType } from '@/db/schema';
-import { eq, and, isNull, desc, lt } from 'drizzle-orm';
+import { eq, and, isNull, desc, lt, inArray } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { handleApiError } from '@/lib/security/error-sanitizer';
 import { auditHelpers } from '@/lib/security/audit-system';
@@ -37,7 +37,17 @@ export async function getAdminUserCreditOverviewAction() {
       .where(and(isNull(users.deletedAt), eq(users.role, 'student')))
       .orderBy(users.name);
 
-    const balances = await db.select().from(creditBalances);
+    const balances = await db
+      .select({
+        id: creditBalances.id,
+        userId: creditBalances.userId,
+        creditType: creditBalances.creditType,
+        balance: creditBalances.balance,
+        expiresAt: creditBalances.expiresAt,
+        updatedAt: creditBalances.updatedAt,
+      })
+      .from(creditBalances)
+      .where(inArray(creditBalances.userId, activeUsers.map((u) => u.id)));
 
     const balancesByUser: Record<string, typeof balances> = {};
     for (const b of balances) {

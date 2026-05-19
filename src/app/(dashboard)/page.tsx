@@ -29,51 +29,61 @@ import { cancellationService } from '@/modules/booking/services/cancellation.ser
 import { lotService } from '@/modules/billing/services/lot.service';
 import { LotBreakdown } from '@/modules/billing/components/LotBreakdown';
 import { ExpiryWarningBanner } from '@/modules/billing/components/ExpiryWarningBanner';
+import { unstable_cache } from 'next/cache';
 
 // ─── Data fetchers ────────────────────────────────────────────────────────────
 
 // Mercy quota state is fetched via cancellationService.getMercyContext(userId).
 // Replaces the legacy lifetime first_mercy_used flag.
 
-async function getSessionPackages(userId: string): Promise<SessionPackage[]> {
-  const rows = await db
-    .select({
-      purchaseId:    creditPurchases.id,
-      packageName:   creditPackages.name,
-      creditsAmount: creditPurchases.creditsAmount,
-      purchasedAt:   creditPurchases.createdAt,
-    })
-    .from(creditPurchases)
-    .innerJoin(creditPackages, eq(creditPurchases.packageId, creditPackages.id))
-    .where(
-      and(
-        eq(creditPurchases.userId, userId),
-        eq(creditPurchases.paymentStatus, 'paid'),
-        eq(creditPackages.category, 'session'),
-      ),
-    )
-    .orderBy(asc(creditPurchases.createdAt));
+const getSessionPackages = unstable_cache(
+  async (userId: string): Promise<SessionPackage[]> => {
+    const rows = await db
+      .select({
+        purchaseId:    creditPurchases.id,
+        packageName:   creditPackages.name,
+        creditsAmount: creditPurchases.creditsAmount,
+        purchasedAt:   creditPurchases.createdAt,
+      })
+      .from(creditPurchases)
+      .innerJoin(creditPackages, eq(creditPurchases.packageId, creditPackages.id))
+      .where(
+        and(
+          eq(creditPurchases.userId, userId),
+          eq(creditPurchases.paymentStatus, 'paid'),
+          eq(creditPackages.category, 'session'),
+        ),
+      )
+      .orderBy(asc(creditPurchases.createdAt));
 
-  return rows;
-}
+    return rows;
+  },
+  ['session-packages'],
+  { revalidate: 60, tags: ['session-packages'] },
+);
 
-async function getCreditBalances(userId: string): Promise<CreditBalance[]> {
-  const rows = await db
-    .select({
-      creditType: creditBalances.creditType,
-      balance: creditBalances.balance,
-      expiresAt: creditBalances.expiresAt,
-    })
-    .from(creditBalances)
-    .where(eq(creditBalances.userId, userId));
+const getCreditBalances = unstable_cache(
+  async (userId: string): Promise<CreditBalance[]> => {
+    const rows = await db
+      .select({
+        creditType: creditBalances.creditType,
+        balance: creditBalances.balance,
+        expiresAt: creditBalances.expiresAt,
+      })
+      .from(creditBalances)
+      .where(eq(creditBalances.userId, userId));
 
-  const DISPLAY_TYPES: CreditBalance['creditType'][] = ['pass', 'session'];
-  return rows.filter((r): r is CreditBalance =>
-    (DISPLAY_TYPES as readonly string[]).includes(r.creditType),
-  );
-}
+    const DISPLAY_TYPES: CreditBalance['creditType'][] = ['pass', 'session'];
+    return rows.filter((r): r is CreditBalance =>
+      (DISPLAY_TYPES as readonly string[]).includes(r.creditType),
+    );
+  },
+  ['credit-balances'],
+  { revalidate: 60, tags: ['credit-balances'] },
+);
 
-async function getUpcomingBookings(userId: string): Promise<UpcomingBooking[]> {
+const getUpcomingBookings = unstable_cache(
+  async (userId: string): Promise<UpcomingBooking[]> => {
   // Alias the users table so we can join it twice-free
   // (once for the booking owner check — already filtered by userId —
   //  and once for the instructor's display name)
@@ -122,7 +132,7 @@ async function getUpcomingBookings(userId: string): Promise<UpcomingBooking[]> {
     instructorName:     r.instructorName ?? null,
     instructorAvatarUrl: r.instructorAvatarUrl ?? null,
   }));
-}
+}, ['upcoming-bookings'], { revalidate: 60, tags: ['upcoming-bookings'] });
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 

@@ -201,7 +201,12 @@ export const creditService = {
 
     // 1. Lock and read active, unexpired lots FIFO by expires_at.
     const activeLots = await tx
-      .select()
+      .select({
+        id: creditLots.id,
+        remainingAmount: creditLots.remainingAmount,
+        expiresAt: creditLots.expiresAt,
+        acquiredAt: creditLots.acquiredAt,
+      })
       .from(creditLots)
       .where(
         and(
@@ -242,7 +247,11 @@ export const creditService = {
 
       // Decrement aggregate balance cache.
       const [balanceRow] = await tx
-        .select()
+        .select({
+          id: creditBalances.id,
+          balance: creditBalances.balance,
+          expiresAt: creditBalances.expiresAt,
+        })
         .from(creditBalances)
         .where(
           and(

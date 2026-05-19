@@ -101,5 +101,9 @@ export const classSessions = pgTable(
     scheduleIdx: index('class_sessions_schedule_idx').on(table.startsAt, table.status),
     // Retry-sweep worker queries sessions with non-null sync errors
     syncErrorIdx: index('class_sessions_sync_error_idx').on(table.googleCalendarSyncError),
+    // For instructor overlap queries: instructor + status + time range
+    instructorTimeIdx: index('class_sessions_instructor_time_idx').on(table.instructorId, table.status, table.startsAt, table.endsAt),
+    // For template joins
+    templateIdIdx: index('class_sessions_template_id_idx').on(table.templateId),
   }),
 );

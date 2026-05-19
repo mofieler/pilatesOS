@@ -113,9 +113,10 @@ export async function getSummaryStatsAction(): Promise<SummaryStats> {
       .then(r => Number(r[0]?.total ?? 0)),
 
     // Active students (at least 1 confirmed booking in last 30 days)
-    db.selectDistinct({ userId: bookings.userId }).from(bookings)
+    db.select({ n: sql<number>`COUNT(DISTINCT ${bookings.userId})::int` })
+      .from(bookings)
       .where(and(eq(bookings.status, 'confirmed'), gte(bookings.createdAt, thirtyDaysAgo)))
-      .then(r => r.length),
+      .then(r => r[0]?.n ?? 0),
 
     // Cancelled bookings this month
     db.select({ n: count() }).from(bookings)

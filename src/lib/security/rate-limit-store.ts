@@ -48,12 +48,20 @@ function memHit(key: string, windowMs: number, maxRequests: number): HitResult {
 // Periodic cleanup for the mem store. No-op when Redis is in use.
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 if (typeof setInterval === 'function') {
-  setInterval(() => {
+  const globalKey = '__pilatesos_rate_limit_cleanup';
+  if (typeof globalThis !== 'undefined' && (globalThis as any)[globalKey]) {
+    clearInterval((globalThis as any)[globalKey]);
+  }
+  const interval = setInterval(() => {
     const now = Date.now();
     for (const [k, e] of memStore.entries()) {
       if (now > e.resetTime) memStore.delete(k);
     }
-  }, CLEANUP_INTERVAL).unref?.();
+  }, CLEANUP_INTERVAL);
+  interval.unref?.();
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any)[globalKey] = interval;
+  }
 }
 
 // ─── Redis connection (lazy, cached) ─────────────────────────────────────────
@@ -75,6 +83,9 @@ async function getRedis(): Promise<RedisClient | null> {
       }) as RedisClient;
       client.on('error', (err) => {
         console.warn('[rate-limit] Redis error, fall-through to mem store:', err?.message ?? err);
+        // Reset cached promise so next request creates a fresh connection
+        redisPromise = null;
+        client.disconnect().catch(() => {});
       });
       await client.connect();
       console.info('[rate-limit] Redis connected');

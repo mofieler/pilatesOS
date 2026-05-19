@@ -49,5 +49,11 @@ export const bookings = pgTable(
     statusIdx: index('bookings_status_idx').on(table.status),
     // For dashboard queries: "my upcoming confirmed bookings"
     userStatusIdx: index('bookings_user_status_idx').on(table.userId, table.status),
+    // Composite for session student lookups
+    sessionStatusIdx: index('bookings_session_status_idx').on(table.sessionId, table.status),
+    // For statistics aggregation by status + time range
+    statusCreatedAtIdx: index('bookings_status_created_at_idx').on(table.status, table.createdAt),
+    // For ordering students by booking time
+    bookedAtIdx: index('bookings_booked_at_idx').on(table.bookedAt),
   }),
 );

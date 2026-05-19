@@ -7,8 +7,10 @@ import { auth } from '@/lib/auth/auth';
 import { BookingCalendar } from '@/modules/booking/components/BookingCalendar';
 import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSessionCard';
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
+import { unstable_cache } from 'next/cache';
 
-async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProps[]> {
+const getUpcomingSessions = unstable_cache(
+  async (userId: string): Promise<ClassSessionCardProps[]> => {
   const today = startOfStudioDay();
   const cutoff = addDays(today, 14);
 
@@ -63,7 +65,7 @@ async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProp
       location:            s.template?.location ?? null,
     };
   });
-}
+}, ['upcoming-sessions'], { revalidate: 60, tags: ['upcoming-sessions'] });
 
 // ─────────────────────────────────────────────────────────────────────────────
 
