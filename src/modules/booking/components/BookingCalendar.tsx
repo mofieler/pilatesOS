@@ -2,7 +2,12 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { format, isSameDay, isToday, parseISO, startOfToday } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import {
+  isStudioSameDay,
+  isStudioToday,
+  startOfStudioDay,
+} from '@/lib/utils/date.utils';
 import { CalendarDaysIcon, CalendarX2Icon, LayoutListIcon } from 'lucide-react';
 import { DateScroller, DATE_PARAM } from './DateScroller';
 import { ClassSessionCard, type ClassSessionCardProps } from './ClassSessionCard';
@@ -21,11 +26,11 @@ type ViewMode = 'list' | 'week';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseDateParam(raw: string | null): Date {
-  if (!raw) return startOfToday();
+  if (!raw) return startOfStudioDay();
   try {
     return parseISO(raw);
   } catch {
-    return startOfToday();
+    return startOfStudioDay();
   }
 }
 
@@ -85,10 +90,10 @@ function SessionList({
   const selectedDate = parseDateParam(searchParams.get(DATE_PARAM));
 
   const filtered = sessions
-    .filter((s) => isSameDay(s.startsAt, selectedDate))
+    .filter((s) => isStudioSameDay(s.startsAt, selectedDate))
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
-  const dateHeading = isToday(selectedDate)
+  const dateHeading = isStudioToday(selectedDate)
     ? `Today · ${format(selectedDate, 'd MMMM')}`
     : format(selectedDate, 'EEEE · d MMMM');
 

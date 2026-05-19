@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { formatStudioTime } from '@/lib/utils/date.utils';
+import type { ClassType } from '@/lib/config/class-types';
 import { CheckCircleIcon, ClockIcon, MapPinIcon, UsersIcon, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils';
 export type ClassSessionCardProps = {
   id: string;
   name: string;
-  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing' | 'yoga';
+  classType: ClassType;
   startsAt: Date;
   durationMinutes: number;
   instructorName: string;
@@ -67,7 +68,6 @@ const CLASS_TYPE_LABEL: Record<ClassSessionCardProps['classType'], string> = {
   chair:            'Chair Pilates',
   online:           'Online Class',
   sound_healing:    'Sound Healing',
-  yoga:             'Yoga',
 };
 
 const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
@@ -80,7 +80,6 @@ const CLASS_TYPE_ICON: Record<ClassSessionCardProps['classType'], string> = {
   chair:            'Chr',
   online:           'Web',
   sound_healing:    'Snd',
-  yoga:             'Yog',
 };
 
 const CREDIT_DOT: Record<ClassSessionCardProps['creditType'], string> = {

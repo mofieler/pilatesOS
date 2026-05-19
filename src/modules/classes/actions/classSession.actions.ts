@@ -465,7 +465,7 @@ export async function getSessionsForRangeAction(from: Date, to: Date): Promise<S
         id: r.id,
         templateName: r.template?.name ?? '—',
         classType: (r.template?.classType ?? 'mat_group') as ClassType,
-        creditType: (r.template?.creditType ?? 'mat') as CreditType,
+        creditType: (r.template?.creditType ?? 'pass') as CreditType,
         creditCost: r.template?.creditCost ?? 0,
         durationMinutes: r.template?.durationMinutes ?? 60,
         instructorId: r.instructorId,

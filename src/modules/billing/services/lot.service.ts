@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { creditLots, bookings, classTemplates, classSessions } from '@/db/schema';
 import type { CreditLot, CreditType } from '@/db/schema';
-import { and, eq, gt, sql, gte, isNotNull } from 'drizzle-orm';
+import { and, eq, gt, sql, gte, isNotNull, or } from 'drizzle-orm';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export const lotService = {
       .where(
         and(
           eq(bookings.userId, userId),
-          eq(bookings.status, 'confirmed'),
+          or(eq(bookings.status, 'confirmed'), eq(bookings.status, 'attended')),
           gte(bookings.bookedAt, since),
         ),
       );
@@ -145,7 +145,7 @@ export const lotService = {
       if (projectedWaste > 0) {
         const entry = mapLotToEntry(lot, now, /*atRisk*/ true);
         atRiskLots.push(entry);
-        totalAtRiskAmount += Math.round(projectedWaste);
+        totalAtRiskAmount += Math.ceil(projectedWaste);
       }
     }
 

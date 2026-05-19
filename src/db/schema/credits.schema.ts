@@ -9,7 +9,9 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { 
   creditTypeEnum, 
   creditTransactionTypeEnum, 
@@ -29,7 +31,6 @@ export const creditPackages = pgTable(
     creditsAmount: integer('credits_amount').notNull(),
     creditType: creditTypeEnum('credit_type').notNull(),
     category: creditPackCategoryEnum('category').notNull().default('credit'),
-    classType: varchar('class_type', { length: 50 }), // 'mat' or 'reformer' for session packages
     priceCents: integer('price_cents').notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('eur'),
     validityDays: integer('validity_days').notNull().default(365),
@@ -169,6 +170,7 @@ export const creditPurchases = pgTable(
     methodIdx: index('credit_purchases_method_idx').on(table.paymentMethod),
     dueDateIdx: index('credit_purchases_due_date_idx').on(table.paymentDueDate),
     stripeSessionIdx: index('credit_purchases_stripe_session_idx').on(table.stripeSessionId),
+    stripeSessionUniqueIdx: uniqueIndex('credit_purchases_stripe_session_unique_idx').on(table.stripeSessionId),
     invoiceNumberIdx: index('credit_purchases_invoice_number_idx').on(table.invoiceNumber),
   }),
 );
@@ -294,6 +296,9 @@ export const creditLots = pgTable(
     // Cron sweep: WHERE status='active' AND expires_at <= NOW()
     expirySweepIdx: index('credit_lots_expiry_sweep_idx').on(t.status, t.expiresAt),
     userIdx: index('credit_lots_user_idx').on(t.userId),
+    remainingNonNeg: check('credit_lots_remaining_nonneg', sql`${t.remainingAmount} >= 0`),
+    remainingLteOriginal: check('credit_lots_remaining_lte_original', sql`${t.remainingAmount} <= ${t.originalAmount}`),
+    statusValid: check('credit_lots_status_valid', sql`${t.status} IN ('active','exhausted','expired')`),
   }),
 );
 

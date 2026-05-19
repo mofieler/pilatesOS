@@ -12,7 +12,7 @@ import { creditService } from '@/modules/billing/services/credit.service';
 
 const adjustSchema = z.object({
   userId:     z.string().uuid(),
-  creditType: z.enum(['mat', 'reformer', 'group']),
+  creditType: z.enum(['pass', 'session']),
   amountDelta: z.number().int().refine((n) => n !== 0, 'Amount must not be zero'),
   reason:      z.string().min(3).max(500),
   notes:       z.string().max(1000).optional(),
@@ -58,10 +58,17 @@ export async function getAdminUserCreditOverviewAction() {
 }
 
 // Adjustment history for a specific user (cursor-based)
+const userIdSchema = z.string().uuid();
+
 export async function getUserCreditAdjustmentsAction(userId: string, cursor?: Date) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== 'admin') {
     return { success: false as const, error: 'Unauthorized' };
+  }
+
+  const userIdParsed = userIdSchema.safeParse(userId);
+  if (!userIdParsed.success) {
+    return { success: false as const, error: 'Invalid user ID', code: 'VALIDATION_ERROR' };
   }
 
   try {
@@ -133,56 +140,25 @@ export async function adjustUserCreditsAction(input: z.infer<typeof adjustSchema
         newBalance = added.newBalance;
         txRowId = added.transaction.id;
       } else {
-        // Negative adjustment (deduction): balance-only update for now.
-        // Sprint 4 will replace this with FIFO lot reduction so the lot
-        // ledger stays consistent with the aggregate balance.
-        const [existing] = await tx
-          .select()
-          .from(creditBalances)
-          .where(
-            and(
-              eq(creditBalances.userId, userId),
-              eq(creditBalances.creditType, creditType as CreditType),
-            ),
-          )
-          .for('update')
-          .limit(1);
+        // Negative adjustment (deduction): use FIFO debit so lots stay consistent.
+        const debitResult = await creditService.debitInternal(tx, {
+          userId,
+          creditType: creditType as CreditType,
+          amount: -amountDelta,
+          description: `Admin adjustment: ${reason}`,
+        });
+        newBalance = debitResult.balanceAfter;
 
-        const currentBalance = existing?.balance ?? 0;
-        newBalance = currentBalance + amountDelta;
-
-        if (newBalance < 0) {
-          throw new Error(
-            `Cannot reduce balance below zero. Current: ${currentBalance}, delta: ${amountDelta}`,
-          );
-        }
-
-        if (existing) {
-          await tx
-            .update(creditBalances)
-            .set({ balance: newBalance, updatedAt: new Date() })
-            .where(eq(creditBalances.id, existing.id));
-        } else {
-          await tx.insert(creditBalances).values({
-            userId,
-            creditType: creditType as CreditType,
-            balance: newBalance,
-          });
-        }
-
-        const [txRow] = await tx
-          .insert(creditTransactions)
-          .values({
-            userId,
-            type:         'manual_adjustment',
-            creditType:   creditType as CreditType,
-            amount:       amountDelta,
-            balanceAfter: newBalance,
-            description:  `Admin adjustment: ${reason}`,
-            processedBy:  session.user.id,
+        // Overwrite the ledger type from 'debit' to 'manual_adjustment'.
+        await tx
+          .update(creditTransactions)
+          .set({
+            type: 'manual_adjustment',
+            processedBy: session.user.id,
           })
-          .returning();
-        txRowId = txRow.id;
+          .where(eq(creditTransactions.id, debitResult.id));
+
+        txRowId = debitResult.id;
       }
 
       // §147 AO audit record — never modify after insertion

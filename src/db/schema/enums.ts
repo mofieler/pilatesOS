@@ -12,7 +12,6 @@ export const classTypeEnum = pgEnum('class_type', [
   'chair',            // Chair Pilates — uses group credits
   'online',           // Virtual / online class — uses group credits
   'sound_healing',    // Sound healing session — uses group credits (no dedicated package)
-  'yoga',             // Yoga class — uses group credits
 ]);
 
 export const sessionTypeEnum = pgEnum('session_type', ['group', 'private']);
@@ -87,6 +86,7 @@ export const paymentMethodEnum = pgEnum('payment_method', [
   'pay_at_studio',
   'bank_transfer',
   'cash',
+  'sound_healing_credits',
 ]);
 
 export const paymentStatusEnum = pgEnum('payment_status', [

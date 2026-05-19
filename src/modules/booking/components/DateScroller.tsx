@@ -2,7 +2,12 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { addDays, format, isSameDay, isToday, parseISO, startOfToday } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
+import {
+  isStudioSameDay,
+  isStudioToday,
+  startOfStudioDay,
+} from '@/lib/utils/date.utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -12,16 +17,16 @@ export const DATE_PARAM = 'date';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildDays(): Date[] {
-  const today = startOfToday();
+  const today = startOfStudioDay();
   return Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
 }
 
 function parseDateParam(raw: string | null): Date {
-  if (!raw) return startOfToday();
+  if (!raw) return startOfStudioDay();
   try {
     return parseISO(raw);
   } catch {
-    return startOfToday();
+    return startOfStudioDay();
   }
 }
 
@@ -62,8 +67,8 @@ function DateScrollerInner({ onChange }: { onChange?: (date: Date) => void }) {
     >
       {days.map((day) => {
         const key = format(day, 'yyyy-MM-dd');
-        const isSelected = isSameDay(day, selectedDate);
-        const isCurrentDay = isToday(day);
+        const isSelected = isStudioSameDay(day, selectedDate);
+        const isCurrentDay = isStudioToday(day);
 
         return (
           <button

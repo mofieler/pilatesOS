@@ -24,7 +24,7 @@ async function countMercyUsesThisMonth(
     .where(
       and(
         eq(cancellationMercyUses.userId, userId),
-        sql`date_trunc('month', ${cancellationMercyUses.usedAt}) = date_trunc('month', NOW())`,
+        sql`date_trunc('month', ${cancellationMercyUses.usedAt} AT TIME ZONE 'Europe/Berlin') = date_trunc('month', NOW() AT TIME ZONE 'Europe/Berlin')`,
       ),
     );
   return row?.count ?? 0;
@@ -287,11 +287,14 @@ export const cancellationService = {
               : duo.organizerBookingId;
 
           if (partnerBookingId) {
+            // We deliberately do NOT take FOR UPDATE on the partner booking.
+            // The duoInvites row is already locked, which serializes all duo
+            // cancellation paths. Taking a second booking lock here creates a
+            // deadlock risk when both partners cancel simultaneously.
             const [partnerBooking] = await tx
               .select()
               .from(bookings)
               .where(eq(bookings.id, partnerBookingId))
-              .for('update')
               .limit(1);
 
             // Skip if partner booking was already cancelled (idempotent)
@@ -492,6 +495,7 @@ export const cancellationService = {
 
         const affectedUserIds: string[] = [];
         let totalCreditsRefunded = 0;
+        const cancelledBookingIds: string[] = [];
 
         for (const booking of confirmedBookings) {
           await tx
@@ -515,6 +519,23 @@ export const cancellationService = {
 
           affectedUserIds.push(booking.userId);
           totalCreditsRefunded += booking.creditsSpent;
+          cancelledBookingIds.push(booking.id);
+        }
+
+        // Cancel any duo invites tied to bookings in this session
+        if (cancelledBookingIds.length > 0) {
+          await tx
+            .update(duoInvites)
+            .set({ status: 'cancelled', updatedAt: new Date() })
+            .where(
+              and(
+                eq(duoInvites.status, 'accepted'),
+                or(
+                  inArray(duoInvites.organizerBookingId, cancelledBookingIds),
+                  inArray(duoInvites.partnerBookingId, cancelledBookingIds),
+                ),
+              ),
+            );
         }
 
         // Always cancel all waitlist entries for the session

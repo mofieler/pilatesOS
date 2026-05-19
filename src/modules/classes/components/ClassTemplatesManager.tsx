@@ -53,7 +53,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   name: '', description: '', classType: 'reformer_group', durationMinutes: '60',
-  maxCapacity: '8', creditCost: '3', creditType: 'reformer',
+  maxCapacity: '8', creditCost: '3', creditType: 'pass',
   instructorId: '', location: '', isActive: true,
 };
 

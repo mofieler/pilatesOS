@@ -11,6 +11,7 @@ import { generateInvoicePDF } from '@/lib/invoice/invoice.generator';
 import { sendPurchaseConfirmationWithInvoice } from '@/lib/email/resend';
 import { getUserBillingStatus } from '@/modules/billing/services/billingStatus.service';
 import { creditService } from '@/modules/billing/services/credit.service';
+import { hasCompletedWelcome } from '@/lib/welcome';
 
 export async function POST(request: Request) {
   const rateLimitResult = await purchaseRateLimiter(request as any);
@@ -87,6 +88,21 @@ export async function POST(request: Request) {
 
     if (!package_) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+    }
+
+    // Welcome Journey gate: new clients must complete the Welcome Journey
+    // before purchasing any other package.
+    const welcomed = await hasCompletedWelcome(userId);
+    const isWelcomePackage = package_.name === 'Welcome Journey';
+    if (!welcomed && !isWelcomePackage) {
+      return NextResponse.json(
+        {
+          error:
+            'Please complete your Welcome Journey first. Buy the Welcome Journey package, attend your intro session, then unlock all other packages.',
+          code: 'WELCOME_REQUIRED',
+        },
+        { status: 403 },
+      );
     }
 
     const dueDate = addDays(new Date(), 14);

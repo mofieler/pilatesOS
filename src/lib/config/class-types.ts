@@ -1,14 +1,12 @@
 /**
  * CENTRALIZED CLASS & CREDIT TYPES CONFIGURATION
  *
- * Credit model — THREE credit currencies:
- *   'reformer' Bloom / Return to Life packages + reformer membership.
- *              Accepted for: reformer_group only.
- *   'mat'      Mat membership.
- *              Accepted for: mat_group only.
- *   'group'    Essence / Empower packages (flexible).
+ * Credit model — TWO credit currencies (post-Sprint-6 consolidation):
+ *   'pass'     Universal group-class credit.
  *              Accepted for: reformer_group, mat_group, chair, online, yoga, sound_healing.
- *              Booking service tries primary type first; falls back to 'group'.
+ *   'session'  Private / duo session credit.
+ *              Accepted for: mat_private, mat_duo, reformer_private, reformer_duo.
+ *              Also used for the Welcome Journey intro session.
  */
 
 // ─── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
@@ -22,8 +20,7 @@ export type ClassType =
   | 'mat_duo'
   | 'chair'
   | 'online'
-  | 'sound_healing'
-  | 'yoga';
+  | 'sound_healing';
 
 export type CreditType = 'pass' | 'session';
 
@@ -116,14 +113,6 @@ export const CLASS_TYPES: Record<ClassType, ClassTypeConfig> = {
     label: 'Sound Healing',
     description: 'Therapeutic sound healing session — uses group credits',
     badgeStyle: 'bg-purple-100 text-purple-800',
-    defaultDuration: 60,
-    defaultCapacity: 12,
-  },
-  yoga: {
-    value: 'yoga',
-    label: 'Yoga',
-    description: 'Yoga class — uses group credits',
-    badgeStyle: 'bg-indigo-100 text-indigo-800',
     defaultDuration: 60,
     defaultCapacity: 12,
   },

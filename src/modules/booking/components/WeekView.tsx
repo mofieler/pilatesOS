@@ -6,13 +6,15 @@ import {
   addDays,
   format,
   startOfWeek,
-  isSameDay,
-  isToday,
-  isThisWeek,
   parseISO,
-  startOfToday,
 } from 'date-fns';
-import { formatStudioTime } from '@/lib/utils/date.utils';
+import {
+  formatStudioTime,
+  isStudioSameDay,
+  isStudioToday,
+  isStudioThisWeek,
+  startOfStudioDay,
+} from '@/lib/utils/date.utils';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { ClassSessionCardProps } from './ClassSessionCard';
 import { DATE_PARAM } from './DateScroller';
@@ -24,7 +26,7 @@ function WeekNavInner() {
   const searchParams = useSearchParams();
   const selectedDate = parseDateParam(searchParams.get(DATE_PARAM));
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const isCurrentWeek = isThisWeek(weekStart, { weekStartsOn: 1 });
+  const isCurrentWeek = isStudioThisWeek(weekStart);
 
   function navigate(weeks: -1 | 1) {
     const newDate = addDays(weekStart, weeks * 7);
@@ -35,7 +37,7 @@ function WeekNavInner() {
 
   function jumpToToday() {
     const params = new URLSearchParams(searchParams.toString());
-    params.set(DATE_PARAM, format(startOfToday(), 'yyyy-MM-dd'));
+    params.set(DATE_PARAM, format(startOfStudioDay(), 'yyyy-MM-dd'));
     router.push(`?${params.toString()}`, { scroll: false });
   }
 
@@ -110,7 +112,6 @@ const BLOCK_BG: Record<ClassType, string> = {
   chair:            'bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200',
   online:           'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200',
   sound_healing:    'bg-[#9333ea]/10 border-[#9333ea]/30 text-[#9333ea] hover:bg-[#9333ea]/20',
-  yoga:             'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100',
 };
 
 const BLOCK_DOT: Record<ClassType, string> = {
@@ -123,7 +124,6 @@ const BLOCK_DOT: Record<ClassType, string> = {
   chair:            'bg-amber-500',
   online:           'bg-slate-400',
   sound_healing:    'bg-[#9333ea]',
-  yoga:             'bg-indigo-500',
 };
 
 const CLASS_TYPE_LABEL: Record<ClassType, string> = {
@@ -136,14 +136,13 @@ const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   chair:            'Chair Pilates',
   online:           'Online',
   sound_healing:    'Sound Healing',
-  yoga:             'Yoga',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseDateParam(raw: string | null): Date {
-  if (!raw) return startOfToday();
-  try { return parseISO(raw); } catch { return startOfToday(); }
+  if (!raw) return startOfStudioDay();
+  try { return parseISO(raw); } catch { return startOfStudioDay(); }
 }
 
 // ─── Session block ────────────────────────────────────────────────────────────
@@ -277,10 +276,10 @@ function WeekViewInner({
         >
           <div className="flex min-w-[700px] divide-x divide-[#ede8e5]/60">
             {weekDays.map((day) => {
-              const current = isToday(day);
-              const selected = isSameDay(day, selectedDate);
+              const current = isStudioToday(day);
+              const selected = isStudioSameDay(day, selectedDate);
               const daySessions = sessions
-                .filter((s) => isSameDay(s.startsAt, day))
+                .filter((s) => isStudioSameDay(s.startsAt, day))
                 .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
               return (

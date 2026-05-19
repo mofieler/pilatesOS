@@ -2,12 +2,14 @@
 
 import { z } from 'zod';
 import { db } from '@/db';
-import { bookings, users, classSessions, creditBalances, creditTransactions } from '@/db/schema';
+import { bookings, users, classSessions } from '@/db/schema';
 import { eq, and, isNull, asc, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth/auth';
 import type { ServiceResult } from '@/modules/billing/services/credit.service';
+import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
 import type { CreditType } from '@/lib/config/class-types';
+import { isWelcomeJourneyBooking } from '@/lib/welcome';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,28 +91,13 @@ export async function removeStudentFromSessionAction(
         updatedAt: new Date(),
       }).where(eq(bookings.id, bookingId));
 
-      const [balance] = await tx
-        .select()
-        .from(creditBalances)
-        .where(and(eq(creditBalances.userId, bookingData.userId), eq(creditBalances.creditType, bookingData.creditType)))
-        .for('update')
-        .limit(1);
-
-      const newBalance = (balance?.balance ?? 0) + bookingData.creditsSpent;
-      if (balance) {
-        await tx.update(creditBalances).set({ balance: newBalance, updatedAt: new Date() }).where(eq(creditBalances.id, balance.id));
-      } else {
-        await tx.insert(creditBalances).values({ userId: bookingData.userId, creditType: bookingData.creditType, balance: newBalance });
-      }
-
-      await tx.insert(creditTransactions).values({
+      // Refund via canonical path — creates a fresh credit_lots row.
+      await creditService.refundInternal(tx, {
         userId: bookingData.userId,
-        type: 'refund',
         creditType: bookingData.creditType,
         amount: bookingData.creditsSpent,
-        balanceAfter: newBalance,
+        bookingId: bookingData.id,
         description: 'Refund: removed from class by admin',
-        processedBy: session.user.id,
       });
 
       // Atomic decrement — avoids stale-read race condition
@@ -142,5 +129,59 @@ export async function removeStudentFromSessionAction(
   } catch (err) {
     console.error(JSON.stringify({ level: 'error', msg: 'removeStudentFromSessionAction failed', err }));
     return { success: false, error: 'Failed to remove student.', code: 'DB_ERROR' };
+  }
+}
+
+// ─── Mark booking as attended ─────────────────────────────────────────────────
+
+const markAttendedSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
+export async function markBookingAttendedAction(
+  input: z.infer<typeof markAttendedSchema>,
+): Promise<ServiceResult<{ success: boolean }>> {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== 'admin') {
+    return { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' };
+  }
+
+  const parsed = markAttendedSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: 'Invalid input', code: 'INVALID_STATE' };
+
+  const { bookingId } = parsed.data;
+
+  const [bookingData] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+  if (!bookingData) return { success: false, error: 'Booking not found', code: 'NOT_FOUND' };
+  if (bookingData.status !== 'confirmed') {
+    return { success: false, error: 'Can only mark confirmed bookings as attended', code: 'INVALID_STATE' };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      // Update booking status
+      await tx
+        .update(bookings)
+        .set({ status: 'attended', updatedAt: new Date() })
+        .where(eq(bookings.id, bookingId));
+
+      // If this was the Welcome Journey, mark the user as welcomed
+      const isWelcome = await isWelcomeJourneyBooking(bookingId, tx);
+      if (isWelcome) {
+        await tx
+          .update(users)
+          .set({ welcomeCompletedAt: new Date(), updatedAt: new Date() })
+          .where(eq(users.id, bookingData.userId));
+      }
+    });
+
+    revalidatePath('/admin/classes');
+    revalidatePath('/bookings');
+    revalidatePath('/');
+
+    return { success: true, data: { success: true } };
+  } catch (err) {
+    console.error(JSON.stringify({ level: 'error', msg: 'markBookingAttendedAction failed', err }));
+    return { success: false, error: 'Failed to mark as attended.', code: 'DB_ERROR' };
   }
 }

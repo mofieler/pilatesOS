@@ -1,4 +1,5 @@
-import { addDays, startOfToday } from 'date-fns';
+import { addDays } from 'date-fns';
+import { startOfStudioDay } from '@/lib/utils/date.utils';
 import { and, eq, gte, lt } from 'drizzle-orm';
 import { db } from '@/db';
 import { classSessions } from '@/db/schema';
@@ -8,7 +9,7 @@ import type { ClassSessionCardProps } from '@/modules/booking/components/ClassSe
 import { cancellationService } from '@/modules/booking/services/cancellation.service';
 
 async function getUpcomingSessions(userId: string): Promise<ClassSessionCardProps[]> {
-  const today = startOfToday();
+  const today = startOfStudioDay();
   const cutoff = addDays(today, 14);
 
   const [rows, mercyContext] = await Promise.all([

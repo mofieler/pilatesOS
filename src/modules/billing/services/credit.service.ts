@@ -24,7 +24,8 @@ export type ServiceErrorCode =
   | 'DUPLICATE_PAYMENT'
   | 'DB_ERROR'
   | 'RATE_LIMITED'
-  | 'OVERDUE_BILLS';
+  | 'OVERDUE_BILLS'
+  | 'WELCOME_REQUIRED';
 
 // ─── Param Types ──────────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ export type CreditDebitParams = {
   userId: string;
   creditType: CreditType;
   amount: number;
-  bookingId: string;
+  bookingId?: string;
   description?: string;
 };
 
@@ -251,12 +252,51 @@ export const creditService = {
         .for('update')
         .limit(1);
 
-      const newBalance = (balanceRow?.balance ?? totalAvailableInLots) - amount;
+      // Defensive: if the aggregate cache has drifted below the lot sum,
+      // log a warning and clamp to zero rather than writing a negative balance.
+      const rawBalance = balanceRow?.balance ?? totalAvailableInLots;
+      if (balanceRow && balanceRow.balance < amount) {
+        logger.error('Credit balance cache drift detected', {
+          userId,
+          creditType,
+          cacheBalance: balanceRow.balance,
+          lotSum: totalAvailableInLots,
+          debitAmount: amount,
+        });
+      }
+      const newBalance = Math.max(0, rawBalance - amount);
+
+      // Find the earliest-expiring lot that still has credits after this debit.
+      let debitRemaining = amount;
+      const nextExpiry = activeLots.find((lot) => {
+        const take = Math.min(lot.remainingAmount, debitRemaining);
+        debitRemaining -= take;
+        return lot.remainingAmount - take > 0;
+      })?.expiresAt ?? null;
+
+      const balanceUpdate: { balance: number; expiresAt?: Date | null; updatedAt: Date } = {
+        balance: newBalance,
+        updatedAt: now,
+      };
+      if (nextExpiry) {
+        balanceUpdate.expiresAt = nextExpiry;
+      } else if (newBalance === 0) {
+        balanceUpdate.expiresAt = null;
+      }
+
       if (balanceRow) {
         await tx
           .update(creditBalances)
-          .set({ balance: newBalance, updatedAt: now })
+          .set(balanceUpdate)
           .where(eq(creditBalances.id, balanceRow.id));
+      } else {
+        // Defensive: lots exist but aggregate cache is missing. Re-create it.
+        await tx.insert(creditBalances).values({
+          userId,
+          creditType,
+          balance: newBalance,
+          expiresAt: balanceUpdate.expiresAt ?? nextExpiry ?? activeLots[activeLots.length - 1]?.expiresAt ?? now,
+        });
       }
 
       const [transaction] = await tx
@@ -311,7 +351,11 @@ export const creditService = {
 
     await tx
       .update(creditBalances)
-      .set({ balance: newBalance, updatedAt: now })
+      .set({
+        balance: newBalance,
+        expiresAt: newBalance === 0 ? null : current.expiresAt,
+        updatedAt: now,
+      })
       .where(eq(creditBalances.id, current.id));
 
     const [transaction] = await tx
@@ -590,14 +634,15 @@ export const creditService = {
 
   /**
    * Read-only balance check for UI (disable booking button if insufficient).
+   * Uses the lot ledger (ground truth) rather than the aggregate cache.
    */
   async hasSufficientCredits(
     userId: string,
     creditType: CreditType,
     requiredAmount: number,
   ): Promise<boolean> {
-    const balance = await creditService.getBalance(userId, creditType);
-    return balance >= requiredAmount;
+    const { lotService } = await import('@/modules/billing/services/lot.service');
+    return lotService.hasSufficientCredits(userId, creditType, requiredAmount);
   },
 
   /**

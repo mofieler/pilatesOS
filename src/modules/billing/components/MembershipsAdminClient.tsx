@@ -66,7 +66,7 @@ interface PlanFormState {
 }
 
 const EMPTY_PLAN: PlanFormState = {
-  name: '', description: '', creditType: 'reformer',
+  name: '', description: '', creditType: 'pass',
   weeklyCredits: '1', durationWeeks: '4', priceCents: '',
   currency: 'eur', isActive: true, sortOrder: '0',
 };

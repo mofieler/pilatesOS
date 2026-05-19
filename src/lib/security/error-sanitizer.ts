@@ -17,6 +17,7 @@ const PUBLIC_ERROR_MESSAGES: Record<ServiceErrorCode, string> = {
   'DB_ERROR': 'An unexpected error occurred. Please try again.',
   'RATE_LIMITED': 'Too many requests. Please try again later.',
   'OVERDUE_BILLS': 'You have overdue invoices. Please settle them at the studio first.',
+  'WELCOME_REQUIRED': 'Please complete your Welcome Journey first. Buy the Welcome Journey package, attend your intro session, then unlock all other packages.',
 };
 
 // Internal error codes that should never be exposed to users
@@ -148,6 +149,7 @@ export function handleApiError(error: unknown, context: string) {
       case 'INVALID_STATE': status = 400; break;
       case 'INSUFFICIENT_CREDITS': status = 402; break;
       case 'RATE_LIMITED': status = 429; break;
+      case 'WELCOME_REQUIRED': status = 403; break;
       default: status = 500;
     }
   }

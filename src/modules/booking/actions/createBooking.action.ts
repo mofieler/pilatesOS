@@ -11,6 +11,7 @@ import { creditService, InsufficientCreditsError } from '@/modules/billing/servi
 import type { ServiceResult, ServiceErrorCode } from '@/modules/billing/services/credit.service';
 import { checkRateLimit, bookingRateLimitConfig } from '@/lib/security/server-action-rate-limiter';
 import { sendBookingConfirmationEmail } from '@/lib/email/resend';
+import { hasCompletedWelcome } from '@/lib/welcome';
 
 // ─── Input Validation ─────────────────────────────────────────────────────────
 
@@ -144,12 +145,22 @@ export async function createBookingAction(
           creditCost: classTemplates.creditCost,
           creditType: classTemplates.creditType,
           classType: classTemplates.classType,
+          isWelcomeJourney: classTemplates.isWelcomeJourney,
         })
         .from(classTemplates)
         .where(eq(classTemplates.id, classSession.templateId))
         .limit(1);
 
       if (!template) throw new BookingError('Class template not found.', 'NOT_FOUND');
+
+      // Welcome Journey gate: new clients can only book the Welcome Journey class
+      const welcomed = await hasCompletedWelcome(userId);
+      if (!welcomed && !template.isWelcomeJourney) {
+        throw new BookingError(
+          'Please complete your Welcome Journey first. Buy the Welcome Journey package, book your intro session, and attend it before booking other classes.',
+          'WELCOME_REQUIRED',
+        );
+      }
 
       // Unified wallet system: classTemplates.creditType is either 'pass' or
       // 'session'. Cost is driven by classTemplates.creditCost. No fallback

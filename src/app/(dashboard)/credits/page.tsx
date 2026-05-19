@@ -73,7 +73,9 @@ const PACKAGE_SECTIONS: PackageSectionConfig[] = [
     description: '1-on-1 sessions with your instructor — tailored to your individual needs using reformer, mat, and all other apparatus',
     accentClass: 'bg-[#4e2b22]/10 text-[#4e2b22]',
     cardStyle: 'tier',
-    filter: (p) => p.category === 'session' && p.name.toLowerCase().includes('private'),
+    filter: (p) =>
+      p.category === 'session' &&
+      (p.name.toLowerCase().includes('private') || p.name === 'Welcome Journey'),
   },
   {
     key: 'duo-sessions',
@@ -413,6 +415,12 @@ export default function CreditsPage() {
   const [acceptedTerms,    setAcceptedTerms]     = useState(false);
   const [acceptedWithdrawal, setAcceptedWithdrawal] = useState(false);
 
+  // Welcome Journey state
+  const [welcomeStatus, setWelcomeStatus] = useState<{ welcomed: boolean; loading: boolean }>({
+    welcomed: true,
+    loading: true,
+  });
+
   const currentTab      = searchParams.get('tab') || 'purchase';
   const isBillsTab      = currentTab === 'bills';
   const isPurchaseTab   = currentTab === 'purchase';
@@ -423,13 +431,36 @@ export default function CreditsPage() {
       setPackages(data);
       setLoading(false);
     });
+
+    // Fetch welcome status
+    fetch('/api/user/welcome-status', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        setWelcomeStatus({ welcomed: !!data.welcomed, loading: false });
+      })
+      .catch(() => {
+        setWelcomeStatus({ welcomed: true, loading: false });
+      });
   }, []);
 
   const selectedPkg = packages.find((p) => p.id === selectedPackage);
 
+  // Filter packages based on welcome status
+  // Unwelcomed users see ONLY the Welcome Journey package.
+  // Welcomed users see everything EXCEPT the Welcome Journey package.
+  const visiblePackages = welcomeStatus.loading
+    ? []
+    : welcomeStatus.welcomed
+    ? packages.filter((p) => p.name !== 'Welcome Journey')
+    : packages.filter((p) => p.name === 'Welcome Journey');
+
   async function handlePurchase() {
     if (!selectedPkg || !session?.user?.id) {
       setPurchaseError('Authentication required. Please sign in.');
+      return;
+    }
+    if (!welcomeStatus.welcomed && selectedPkg.name !== 'Welcome Journey') {
+      setPurchaseError('Please complete your Welcome Journey first.');
       return;
     }
     if (!acceptedTerms) {
@@ -470,6 +501,12 @@ export default function CreditsPage() {
         dueDate: data.dueDate ? format(new Date(data.dueDate), 'MMMM d, yyyy') : 'Paid',
       });
       setPurchaseComplete(true);
+
+      // If they just bought the Welcome Journey, update local status so the
+      // package list refreshes on next visit (they still need to attend).
+      if (selectedPkg.name === 'Welcome Journey') {
+        setWelcomeStatus((s) => ({ ...s, welcomed: false }));
+      }
     } catch (error) {
       setPurchaseError(error instanceof Error ? error.message : 'Purchase failed. Please try again.');
     } finally {
@@ -507,9 +544,15 @@ export default function CreditsPage() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1 border-[#ede8e5] text-[#8b6b5c]" onClick={() => router.push('/')}>
-            Go to Dashboard
-          </Button>
+          {purchaseDetails?.packageName === 'Welcome Journey' ? (
+            <Button variant="boutique" className="flex-1" onClick={() => router.push('/book')}>
+              Book your Welcome Session now
+            </Button>
+          ) : (
+            <Button variant="outline" className="flex-1 border-[#ede8e5] text-[#8b6b5c]" onClick={() => router.push('/')}>
+              Go to Dashboard
+            </Button>
+          )}
           <Button variant="boutique" className="flex-1" onClick={() => { setPurchaseComplete(false); setSelectedPackage(null); }}>
             Buy More Credits
           </Button>
@@ -564,10 +607,28 @@ export default function CreditsPage() {
       {/* Membership tab */}
       {isMembershipTab && <MembershipShopSection />}
 
+      {/* Welcome Journey banner for new clients */}
+      {isPurchaseTab && !welcomeStatus.loading && !welcomeStatus.welcomed && (
+        <div className="rounded-2xl border border-[#d4a574]/30 bg-[#d4a574]/10 p-5">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#d4a574]/20 text-[#6b3d32]">
+              <Star className="size-4" aria-hidden />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#4e2b22]">Welcome to Paquita Pilates</h3>
+              <p className="mt-1 text-xs leading-relaxed text-[#6b3d32]">
+                New clients start with a <strong>Welcome Journey</strong> — a 2-hour private introduction session.
+                Purchase this package first, book your session, and once you attend it all other packages will unlock.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Package sections */}
       {isPurchaseTab && !loading && (
         <div className="space-y-4">
-          {packages.length === 0 ? (
+          {visiblePackages.length === 0 ? (
             <div className="rounded-xl border border-[#ede8e5]/50 bg-[#faf9f7] p-8 text-center">
               <WalletCardsIcon className="mx-auto mb-3 size-8 text-[#c4a88a]" />
               <p className="font-semibold text-[#4e2b22]">No packages available</p>
@@ -578,7 +639,7 @@ export default function CreditsPage() {
               <PackageSection
                 key={section.key}
                 config={section}
-                packages={packages}
+                packages={visiblePackages}
                 selected={selectedPackage}
                 onSelect={setSelectedPackage}
               />

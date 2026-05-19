@@ -32,6 +32,7 @@ export const classTemplates = pgTable(
     instructorId: uuid('instructor_id').references(() => instructors.id, { onDelete: 'set null' }),
     vibeTags: jsonb('vibe_tags').$type<string[]>().default([]),
     location: varchar('location', { length: 255 }),
+    isWelcomeJourney: boolean('is_welcome_journey').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
     // [FIX-2] withTimezone: true
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

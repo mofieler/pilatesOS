@@ -1,5 +1,6 @@
 import { differenceInHours } from 'date-fns';
 import { CalendarCheckIcon, ClockIcon, MapPinIcon, ShieldCheckIcon } from 'lucide-react';
+import type { ClassType } from '@/lib/config/class-types';
 import { formatStudio, formatStudioRelativeDay, formatStudioTime } from '@/lib/utils/date.utils';
 import { CancelBookingButton } from './CancelBookingButton';
 
@@ -19,7 +20,7 @@ export type UpcomingBooking = {
   creditsSpent: number;
   creditType: 'pass' | 'session';
   name: string;
-  classType: 'reformer_group' | 'reformer_private' | 'reformer_duo' | 'mat_group' | 'mat_private' | 'mat_duo' | 'chair' | 'online' | 'sound_healing' | 'yoga';
+  classType: ClassType;
   startsAt: Date;
   durationMinutes: number;
   location: string | null;
@@ -39,7 +40,6 @@ const CLASS_TYPE_LABEL: Record<UpcomingBooking['classType'], string> = {
   chair:            'Chair Pilates',
   online:           'Online Class',
   sound_healing:    'Sound Healing',
-  yoga:             'Yoga',
 };
 
 const CREDIT_DOT: Record<UpcomingBooking['creditType'], string> = {

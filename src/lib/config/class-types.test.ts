@@ -154,7 +154,6 @@ describe('Class Types Configuration', () => {
       expect(getCreditTypeForClassType('mat_group')).toBe('pass');
       expect(getCreditTypeForClassType('chair')).toBe('pass');
       expect(getCreditTypeForClassType('online')).toBe('pass');
-      expect(getCreditTypeForClassType('yoga')).toBe('pass');
       expect(getCreditTypeForClassType('sound_healing')).toBe('pass');
     });
   });

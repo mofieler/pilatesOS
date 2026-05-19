@@ -7,6 +7,7 @@ import {
   Trash2Icon,
   CalendarClockIcon,
   ChevronDownIcon,
+  CheckCircleIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -33,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import {
   getSessionStudentsAction,
   removeStudentFromSessionAction,
+  markBookingAttendedAction,
   type SessionStudent,
 } from '@/modules/classes/actions/class.actions';
 import { rescheduleClassSessionAction } from '@/modules/classes/actions/classSession.actions';
@@ -75,6 +77,7 @@ export function SessionDetailModal({
   const [selectedStudent, setSelectedStudent] = useState<SessionStudent | null>(null);
   const [removeReason, setRemoveReason] = useState('');
   const [removeError, setRemoveError] = useState('');
+  const [attendingId, setAttendingId] = useState<string | null>(null);
 
   // Reschedule form
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -162,6 +165,21 @@ export function SessionDetailModal({
         setRemoveError(result.error ?? 'Failed to remove student');
       }
     });
+  }
+
+  async function handleMarkAttended(student: SessionStudent) {
+    setAttendingId(student.bookingId);
+    const result = await markBookingAttendedAction({ bookingId: student.bookingId });
+    setAttendingId(null);
+
+    if (result.success) {
+      toast.success(`${student.name ?? 'Student'} marked as attended.`);
+      setStudents((prev) =>
+        prev.map((s) => (s.bookingId === student.bookingId ? { ...s, bookingStatus: 'attended' } : s)),
+      );
+    } else {
+      toast.error(result.error ?? 'Failed to mark as attended.');
+    }
   }
 
   return (
@@ -289,15 +307,32 @@ export function SessionDetailModal({
                         </div>
                       </div>
                       {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => openRemoveDialog(student)}
-                          disabled={isPending}
-                          className="ml-3 p-2 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                          title="Remove from class"
-                        >
-                          <Trash2Icon className="size-4 text-red-600" />
-                        </button>
+                        <div className="ml-3 flex items-center gap-1">
+                          {student.bookingStatus !== 'attended' && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkAttended(student)}
+                              disabled={attendingId === student.bookingId}
+                              className="p-2 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                              title="Mark as attended"
+                            >
+                              {attendingId === student.bookingId ? (
+                                <Loader2Icon className="size-4 animate-spin text-green-600" />
+                              ) : (
+                                <CheckCircleIcon className="size-4 text-green-600" />
+                              )}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openRemoveDialog(student)}
+                            disabled={isPending}
+                            className="p-2 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                            title="Remove from class"
+                          >
+                            <Trash2Icon className="size-4 text-red-600" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}

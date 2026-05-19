@@ -7,6 +7,7 @@ import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth/auth';
 import { creditService, InsufficientCreditsError } from '@/modules/billing/services/credit.service';
 import { revalidatePath } from 'next/cache';
+import { hasCompletedWelcome } from '@/lib/welcome';
 
 const schema = z.object({
   token: z.string().min(1).max(64),
@@ -51,6 +52,22 @@ export async function acceptDuoInviteAction(
       if (session.startsAt <= new Date()) throw new DuoError('This class has already started', 'INVALID_STATE');
       if (session.bookedCount >= session.maxCapacity) throw new DuoError('This class is full', 'CLASS_FULL');
 
+      // Get template for credit type/cost
+      if (!session.templateId) throw new DuoError('Class configuration not found', 'NOT_FOUND');
+
+      // Welcome Journey gate
+      const welcomed = await hasCompletedWelcome(userId, tx);
+      if (!welcomed) {
+        const [templateCheck] = await tx
+          .select({ isWelcomeJourney: classTemplates.isWelcomeJourney })
+          .from(classTemplates)
+          .where(eq(classTemplates.id, session.templateId))
+          .limit(1);
+        if (!templateCheck?.isWelcomeJourney) {
+          throw new DuoError('Please complete your Welcome Journey first.', 'WELCOME_REQUIRED');
+        }
+      }
+
       // Check not already booked
       const [existing] = await tx
         .select({ id: bookings.id })
@@ -59,9 +76,6 @@ export async function acceptDuoInviteAction(
         .limit(1);
 
       if (existing) throw new DuoError('You are already booked for this class', 'BOOKING_ALREADY_EXISTS');
-
-      // Get template for credit type/cost
-      if (!session.templateId) throw new DuoError('Class configuration not found', 'NOT_FOUND');
 
       const [template] = await tx
         .select({ creditType: classTemplates.creditType, creditCost: classTemplates.creditCost })

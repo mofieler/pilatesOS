@@ -30,6 +30,10 @@ export const users = pgTable(
     // [FIX-2] withTimezone: true
     streakLastUpdatedAt: timestamp('streak_last_updated_at', { withTimezone: true, mode: 'date' }),
 
+    // Welcome Journey — new clients must complete a 1:1 intro session before
+    // purchasing or booking any other package / class.
+    welcomeCompletedAt: timestamp('welcome_completed_at', { withTimezone: true, mode: 'date' }),
+
     // [FIX-1] Soft-delete — DB-level RESTRICT FKs on financial tables act as the safety net.
     deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
 

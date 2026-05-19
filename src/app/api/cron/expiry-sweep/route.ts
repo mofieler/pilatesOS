@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   // doesn't roll back the entire sweep).
   for (const lot of expiringLots) {
     try {
-      const expiredAmount = lot.remainingAmount;
+      let expiredAmount = 0;
 
       await db.transaction(async (tx) => {
         // Re-read lot under lock — guard against concurrent debits stealing
@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
         }
 
         const amount = locked.remainingAmount;
+        expiredAmount = amount;
 
         // Mark lot as expired
         await tx
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
           .set({ status: 'expired', remainingAmount: 0 })
           .where(eq(creditLots.id, lot.id));
 
-        // Decrement aggregate balance cache
+        // Decrement aggregate balance cache (or create if missing)
         const [balanceRow] = await tx
           .select()
           .from(creditBalances)
@@ -116,11 +117,44 @@ export async function POST(req: NextRequest) {
 
         const newBalance = Math.max(0, (balanceRow?.balance ?? 0) - amount);
 
+        // Find the next active lot's expiry so we shrink expires_at.
+        const [nextLot] = await tx
+          .select({ expiresAt: creditLots.expiresAt })
+          .from(creditLots)
+          .where(
+            and(
+              eq(creditLots.userId, lot.userId),
+              eq(creditLots.creditType, lot.creditType),
+              eq(creditLots.status, 'active'),
+              gt(creditLots.expiresAt, now),
+            ),
+          )
+          .orderBy(creditLots.expiresAt)
+          .limit(1);
+
+        const balanceUpdate: { balance: number; expiresAt?: Date | null; updatedAt: Date } = {
+          balance: newBalance,
+          updatedAt: now,
+        };
+        if (nextLot) {
+          balanceUpdate.expiresAt = nextLot.expiresAt;
+        } else if (newBalance === 0) {
+          balanceUpdate.expiresAt = null;
+        }
+
         if (balanceRow) {
           await tx
             .update(creditBalances)
-            .set({ balance: newBalance, updatedAt: now })
+            .set(balanceUpdate)
             .where(eq(creditBalances.id, balanceRow.id));
+        } else {
+          // Defensive: phantom balance row — recreate it so the cache stays consistent.
+          await tx.insert(creditBalances).values({
+            userId: lot.userId,
+            creditType: lot.creditType,
+            balance: newBalance,
+            expiresAt: balanceUpdate.expiresAt ?? null,
+          });
         }
 
         // Audit ledger entry — explains the missing credits to the user
@@ -134,8 +168,10 @@ export async function POST(req: NextRequest) {
         });
       });
 
-      expiredLotCount += 1;
-      expiredCreditTotal += expiredAmount;
+      if (expiredAmount > 0) {
+        expiredLotCount += 1;
+        expiredCreditTotal += expiredAmount;
+      }
     } catch (err) {
       errors += 1;
       logger.error('Failed to expire lot', { lotId: lot.id, userId: lot.userId, err });

@@ -58,19 +58,31 @@ export async function POST(req: NextRequest) {
   let errors = 0;
 
   for (const membership of due) {
+    let isExpired = false;
     try {
-      const isExpired = membership.endsAt <= now;
-
       // Atomic: grant credits (creates a lot via addCreditsInternal) + advance schedule.
-      // Membership grants get the default 52-week validity; the membership's
-      // ends_at governs when grants stop arriving, but each granted lot lives
-      // a full year so users on travel don't get truncated unexpectedly.
+      // Re-read the membership under FOR UPDATE so overlapping cron runs don't
+      // double-grant the same week's credits.
       await db.transaction(async (tx) => {
+        const [locked] = await tx
+          .select()
+          .from(userMemberships)
+          .where(eq(userMemberships.id, membership.id))
+          .for('update')
+          .limit(1);
+
+        if (!locked || locked.status !== 'active' || locked.nextCreditGrantAt > now) {
+          // Another process already handled this membership — skip.
+          return;
+        }
+
+        isExpired = locked.endsAt <= now;
+
         await creditService.addCreditsInternal(tx, {
-          userId: membership.userId,
-          creditType: membership.creditType as CreditType,
-          amount: membership.weeklyCredits,
-          description: `Membership weekly grant (membership ${membership.id})`,
+          userId: locked.userId,
+          creditType: locked.creditType as CreditType,
+          amount: locked.weeklyCredits,
+          description: `Membership weekly grant (membership ${locked.id})`,
         });
 
         // Advance grant date by 7 days; expire if membership has ended
@@ -78,11 +90,11 @@ export async function POST(req: NextRequest) {
           .update(userMemberships)
           .set({
             lastCreditGrantAt: now,
-            nextCreditGrantAt: addDays(membership.nextCreditGrantAt, 7),
+            nextCreditGrantAt: addDays(locked.nextCreditGrantAt, 7),
             status: isExpired ? 'expired' : 'active',
             updatedAt: now,
           })
-          .where(eq(userMemberships.id, membership.id));
+          .where(eq(userMemberships.id, locked.id));
       });
 
       // Fire-and-forget email — never block the sweep on email failures
