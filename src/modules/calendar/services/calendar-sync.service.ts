@@ -159,17 +159,17 @@ function buildEventSummary(className: string, instructorName: string | null): st
  * so only the first creates the event and the second sees the populated
  * googleCalendarEventId and PATCHes it. No duplicate events.
  */
-export async function pushSession(sessionId: string): Promise<void> {
+export async function pushSession(sessionId: string): Promise<boolean> {
   try {
     const session = await loadSessionForSync(sessionId);
-    if (!session) return;
+    if (!session) return false;
 
     // Prefer the instructor's own calendar; fall back to any admin calendar so
     // sessions are always visible even before an instructor connects theirs.
     const conn = session.instructorUserId
       ? (await loadConnectionForUser(session.instructorUserId)) ?? await loadFallbackAdminConnection()
       : await loadFallbackAdminConnection();
-    if (!conn) return; // No calendar connected anywhere → skip
+    if (!conn) return false; // No calendar connected anywhere → skip
 
     const attendees = await loadAttendees(sessionId);
     const className = session.templateName ?? 'Pilates Klasse';
@@ -245,8 +245,7 @@ export async function pushSession(sessionId: string): Promise<void> {
       return id;
     });
 
-    // Reference eventId to ensure the transaction was committed (TS happy + intent clear).
-    void eventId;
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CALENDAR-SYNC] pushSession(${sessionId}) failed:`, message);
@@ -255,6 +254,7 @@ export async function pushSession(sessionId: string): Promise<void> {
       .set({ googleCalendarSyncError: message.slice(0, 500) })
       .where(eq(classSessions.id, sessionId))
       .catch(() => {});
+    return false;
   }
 }
 
@@ -262,17 +262,17 @@ export async function pushSession(sessionId: string): Promise<void> {
  * Updates only the description (attendee list) of an already-synced event.
  * Cheaper than a full push when only bookings changed.
  */
-export async function updateAttendeesInDescription(sessionId: string): Promise<void> {
+export async function updateAttendeesInDescription(sessionId: string): Promise<boolean> {
   try {
     const session = await loadSessionForSync(sessionId);
     if (!session || !session.googleCalendarEventId || !session.googleCalendarId) {
-      return pushSession(sessionId);
+      return await pushSession(sessionId);
     }
 
     const conn = session.instructorUserId
       ? (await loadConnectionForUser(session.instructorUserId)) ?? await loadFallbackAdminConnection()
       : await loadFallbackAdminConnection();
-    if (!conn) return;
+    if (!conn) return false;
 
     const attendees = await loadAttendees(sessionId);
     const className = session.templateName ?? 'Pilates Klasse';
@@ -297,6 +297,7 @@ export async function updateAttendeesInDescription(sessionId: string): Promise<v
       .update(classSessions)
       .set({ googleCalendarSyncedAt: new Date(), googleCalendarSyncError: null })
       .where(eq(classSessions.id, sessionId));
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CALENDAR-SYNC] updateAttendees(${sessionId}) failed:`, message);
@@ -305,6 +306,7 @@ export async function updateAttendeesInDescription(sessionId: string): Promise<v
       .set({ googleCalendarSyncError: message.slice(0, 500) })
       .where(eq(classSessions.id, sessionId))
       .catch(() => {});
+    return false;
   }
 }
 

@@ -107,16 +107,8 @@ async function runPushRetrySweep() {
 
   let succeeded = 0;
   for (const row of toRetry) {
-    await pushSession(row.id);
-    const [after] = await db
-      .select({
-        eventId: classSessions.googleCalendarEventId,
-        err: classSessions.googleCalendarSyncError,
-      })
-      .from(classSessions)
-      .where(eq(classSessions.id, row.id))
-      .limit(1);
-    if (after?.eventId && !after?.err) succeeded += 1;
+    const ok = await pushSession(row.id);
+    if (ok) succeeded += 1;
   }
   return { retriedPushes: toRetry.length, retriedSuccesses: succeeded };
 }

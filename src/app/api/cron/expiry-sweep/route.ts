@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '@/db';
-import { creditLots, creditBalances, creditTransactions } from '@/db/schema';
-import { and, eq, gt, lte } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 // POST /api/cron/expiry-sweep
 // Runs daily (e.g. every day at 02:00 UTC via Coolify scheduled task).
 // Auth: Authorization: Bearer <CRON_SECRET>
 //
-// For every active credit_lots row whose expires_at <= NOW():
-//   1. Mark the lot as status='expired'
-//   2. Decrement credit_balances by the lot's remaining_amount
-//   3. Append a credit_transactions ledger entry of type 'expiry' for audit
+// Single SQL CTE — the database does all the work:
+//   1. Identifies all active lots whose expires_at <= NOW()
+//   2. Marks them expired (status='expired', remaining_amount=0)
+//   3. Decrements credit_balances by the sum of expired amounts per user
+//   4. Shrinks credit_balances.expires_at to the next active lot's expiry
+//   5. Inserts audit ledger entries (credit_transactions) per lot
 //
-// The sweep is idempotent: re-running it on the same day does nothing,
-// because previously-swept lots are already 'expired' (not 'active').
-//
-// [PERF] Batch-by-user: one transaction per (userId, creditType) group
-// instead of one transaction per lot. A typical user has 1-5 lots, so
-// this cuts transaction count by ~5-10x at scale.
+// Idempotent: re-running does nothing because expired lots are no longer 'active'.
+// One statement = one implicit transaction. No JS loops, no N+1, no per-lot round-trips.
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -46,205 +43,126 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const now = new Date();
   const startedAt = Date.now();
 
-  // Step 1: Find all lots that need to expire (status='active' AND expires_at <= NOW())
-  // We only need the identifying fields; the tx will re-read under lock.
-  const expiringLots = await db
-    .select({
-      id: creditLots.id,
-      userId: creditLots.userId,
-      creditType: creditLots.creditType,
-      remainingAmount: creditLots.remainingAmount,
-      acquiredAt: creditLots.acquiredAt,
-    })
-    .from(creditLots)
-    .where(
-      and(
-        eq(creditLots.status, 'active'),
-        lte(creditLots.expiresAt, now),
-        gt(creditLots.remainingAmount, 0),
+  try {
+    // Single CTE chain: identify → expire → balance update → audit insert → return stats
+    const result = await db.execute(sql`
+      WITH lots_to_expire AS (
+        SELECT id, user_id, credit_type, remaining_amount, acquired_at
+        FROM credit_lots
+        WHERE status = 'active'
+          AND expires_at <= NOW()
+          AND remaining_amount > 0
       ),
-    );
+      -- Mark all identified lots as expired in one UPDATE.
+      expired_lots AS (
+        UPDATE credit_lots
+        SET status = 'expired', remaining_amount = 0
+        WHERE id IN (SELECT id FROM lots_to_expire)
+      ),
+      -- Per-user totals needed for the balance update.
+      expired_totals AS (
+        SELECT user_id, credit_type, SUM(remaining_amount)::int AS total_expired
+        FROM lots_to_expire
+        GROUP BY user_id, credit_type
+      ),
+      -- Capture old balances before we overwrite them.
+      old_balances AS (
+        SELECT user_id, credit_type, balance
+        FROM credit_balances
+        WHERE (user_id, credit_type) IN (
+          SELECT user_id, credit_type FROM expired_totals
+        )
+      ),
+      -- Find the earliest future expiry per user+credit_type (after the UPDATE).
+      next_lots AS (
+        SELECT DISTINCT ON (user_id, credit_type)
+          user_id, credit_type, expires_at AS next_expires_at
+        FROM credit_lots
+        WHERE status = 'active' AND expires_at > NOW()
+        ORDER BY user_id, credit_type, expires_at ASC
+      ),
+      -- Decrement balances in one UPDATE.
+      balance_updated AS (
+        UPDATE credit_balances cb
+        SET
+          balance = GREATEST(0, COALESCE(ob.balance, 0) - et.total_expired),
+          expires_at = CASE
+            WHEN GREATEST(0, COALESCE(ob.balance, 0) - et.total_expired) = 0 THEN NULL
+            ELSE nl.next_expires_at
+          END,
+          updated_at = NOW()
+        FROM expired_totals et
+        LEFT JOIN old_balances ob
+          ON ob.user_id = et.user_id AND ob.credit_type = et.credit_type
+        LEFT JOIN next_lots nl
+          ON nl.user_id = et.user_id AND nl.credit_type = et.credit_type
+        WHERE cb.user_id = et.user_id AND cb.credit_type = et.credit_type
+      ),
+      -- Defensive: create missing balance rows (balance = 0 after expiry).
+      inserted_balances AS (
+        INSERT INTO credit_balances (user_id, credit_type, balance, expires_at)
+        SELECT et.user_id, et.credit_type, 0, NULL
+        FROM expired_totals et
+        LEFT JOIN credit_balances cb
+          ON cb.user_id = et.user_id AND cb.credit_type = et.credit_type
+        WHERE cb.id IS NULL
+        ON CONFLICT (user_id, credit_type) DO NOTHING
+      ),
+      -- Audit ledger entries: one per expired lot with the final balance.
+      audit_inserted AS (
+        INSERT INTO credit_transactions
+          (user_id, type, credit_type, amount, balance_after, description)
+        SELECT
+          lte.user_id,
+          'expiry',
+          lte.credit_type,
+          -lte.remaining_amount,
+          GREATEST(0, COALESCE(ob.balance, 0) - et.total_expired),
+          'Expired ' || lte.remaining_amount || ' ' || lte.credit_type || ' credit'
+            || CASE WHEN lte.remaining_amount = 1 THEN '' ELSE 's' END
+            || ' (lot acquired ' || TO_CHAR(lte.acquired_at, 'YYYY-MM-DD') || ')'
+        FROM lots_to_expire lte
+        JOIN expired_totals et
+          ON et.user_id = lte.user_id AND et.credit_type = lte.credit_type
+        LEFT JOIN old_balances ob
+          ON ob.user_id = lte.user_id AND ob.credit_type = lte.credit_type
+      )
+      SELECT
+        (SELECT COUNT(*)::int FROM lots_to_expire) AS lot_count,
+        (SELECT COALESCE(SUM(remaining_amount), 0)::int FROM lots_to_expire) AS total_expired;
+    `);
 
-  if (expiringLots.length === 0) {
-    logger.info('Expiry sweep: nothing to expire', { durationMs: Date.now() - startedAt });
+    const row = (result[0] ?? {}) as {
+      lot_count: number | string;
+      total_expired: number | string;
+    };
+
+    const expiredLots = Number(row.lot_count ?? 0);
+    const expiredCredits = Number(row.total_expired ?? 0);
+    const durationMs = Date.now() - startedAt;
+
+    logger.info('Expiry sweep complete', {
+      expiredLots,
+      expiredCredits,
+      durationMs,
+    });
+
     return NextResponse.json({
       success: true,
-      expiredLots: 0,
-      expiredCredits: 0,
-      durationMs: Date.now() - startedAt,
+      expiredLots,
+      expiredCredits,
+      durationMs,
     });
+  } catch (err) {
+    logger.error('Expiry sweep failed', { err });
+    return NextResponse.json(
+      {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 },
+    );
   }
-
-  // Group by (userId, creditType) so each group gets one transaction.
-  const groups = new Map<string, typeof expiringLots>();
-  for (const lot of expiringLots) {
-    const key = `${lot.userId}:${lot.creditType}`;
-    const arr = groups.get(key);
-    if (arr) {
-      arr.push(lot);
-    } else {
-      groups.set(key, [lot]);
-    }
-  }
-
-  let expiredLotCount = 0;
-  let expiredCreditTotal = 0;
-  let errors = 0;
-
-  // Step 2: For each (user, creditType) group, atomically expire all lots,
-  // decrement balance once, find next expiry once, and batch-insert audit rows.
-  for (const [key, lots] of groups) {
-    try {
-      let groupExpiredAmount = 0;
-      const userId = lots[0].userId;
-      const creditType = lots[0].creditType;
-
-      await db.transaction(async (tx) => {
-        // Lock ALL lots for this user+creditType (not just the expiring ones)
-        // so concurrent debits can't steal from them mid-sweep.
-        const locked = await tx
-          .select({
-            id: creditLots.id,
-            status: creditLots.status,
-            remainingAmount: creditLots.remainingAmount,
-            acquiredAt: creditLots.acquiredAt,
-          })
-          .from(creditLots)
-          .where(
-            and(
-              eq(creditLots.userId, userId),
-              eq(creditLots.creditType, creditType),
-            ),
-          )
-          .for('update');
-
-        // Filter to the ones we intended to expire that are still valid.
-        const expiredIds = new Set(lots.map((l) => l.id));
-        const toExpire = locked.filter(
-          (l) =>
-            expiredIds.has(l.id) &&
-            l.status === 'active' &&
-            l.remainingAmount > 0,
-        );
-
-        if (toExpire.length === 0) return;
-
-        const totalExpired = toExpire.reduce((s, l) => s + l.remainingAmount, 0);
-        groupExpiredAmount = totalExpired;
-
-        // Batch-update each expired lot.
-        for (const lot of toExpire) {
-          await tx
-            .update(creditLots)
-            .set({ status: 'expired', remainingAmount: 0 })
-            .where(eq(creditLots.id, lot.id));
-        }
-
-        // Decrement aggregate balance cache.
-        const [balanceRow] = await tx
-          .select()
-          .from(creditBalances)
-          .where(
-            and(
-              eq(creditBalances.userId, userId),
-              eq(creditBalances.creditType, creditType),
-            ),
-          )
-          .for('update')
-          .limit(1);
-
-        const oldBalance = balanceRow?.balance ?? totalExpired;
-        const newBalance = Math.max(0, oldBalance - totalExpired);
-
-        // Find the next active lot's expiry so we shrink expires_at.
-        const [nextLot] = await tx
-          .select({ expiresAt: creditLots.expiresAt })
-          .from(creditLots)
-          .where(
-            and(
-              eq(creditLots.userId, userId),
-              eq(creditLots.creditType, creditType),
-              eq(creditLots.status, 'active'),
-              gt(creditLots.expiresAt, now),
-            ),
-          )
-          .orderBy(creditLots.expiresAt)
-          .limit(1);
-
-        const balanceUpdate: { balance: number; expiresAt?: Date | null; updatedAt: Date } = {
-          balance: newBalance,
-          updatedAt: now,
-        };
-        if (nextLot) {
-          balanceUpdate.expiresAt = nextLot.expiresAt;
-        } else if (newBalance === 0) {
-          balanceUpdate.expiresAt = null;
-        }
-
-        if (balanceRow) {
-          await tx
-            .update(creditBalances)
-            .set(balanceUpdate)
-            .where(eq(creditBalances.id, balanceRow.id));
-        } else {
-          // Defensive: phantom balance row — recreate it so the cache stays consistent.
-          await tx.insert(creditBalances).values({
-            userId,
-            creditType,
-            balance: newBalance,
-            expiresAt: balanceUpdate.expiresAt ?? null,
-          });
-        }
-
-        // Batch-insert audit ledger entries — running balance decreases per lot.
-        let runningBalance = oldBalance;
-        const auditRows = toExpire.map((lot) => {
-          runningBalance -= lot.remainingAmount;
-          return {
-            userId,
-            type: 'expiry' as const,
-            creditType,
-            amount: -lot.remainingAmount,
-            balanceAfter: runningBalance,
-            description: `Expired ${lot.remainingAmount} ${creditType} credit${lot.remainingAmount === 1 ? '' : 's'} (lot acquired ${lot.acquiredAt.toISOString().slice(0, 10)})`,
-          };
-        });
-        await tx.insert(creditTransactions).values(auditRows);
-      });
-
-      if (groupExpiredAmount > 0) {
-        expiredLotCount += lots.length;
-        expiredCreditTotal += groupExpiredAmount;
-      }
-    } catch (err) {
-      errors += 1;
-      logger.error('Failed to expire group', {
-        key,
-        userId: lots[0]?.userId,
-        lotCount: lots.length,
-        err,
-      });
-    }
-  }
-
-  const durationMs = Date.now() - startedAt;
-  logger.info('Expiry sweep complete', {
-    expiredLotCount,
-    expiredCreditTotal,
-    errors,
-    groupCount: groups.size,
-    durationMs,
-  });
-
-  return NextResponse.json({
-    success: errors === 0,
-    expiredLots: expiredLotCount,
-    expiredCredits: expiredCreditTotal,
-    errors,
-    groupCount: groups.size,
-    durationMs,
-  });
 }
