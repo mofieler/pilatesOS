@@ -16,15 +16,16 @@ vi.mock('@/db', () => ({
 }));
 
 vi.mock('@/db/schema', () => ({
-  creditBalances: { userId: 'userId', creditType: 'creditType', id: 'id' },
-  creditTransactions: { userId: 'userId', createdAt: 'createdAt' },
+  creditBalances: { userId: 'userId', creditType: 'creditType', id: 'id', balance: 'balance', expiresAt: 'expiresAt' },
+  creditTransactions: { userId: 'userId', createdAt: 'createdAt', type: 'type', creditType: 'creditType', amount: 'amount', balanceAfter: 'balanceAfter' },
+  creditLots: { userId: 'userId', creditType: 'creditType', id: 'id', remainingAmount: 'remainingAmount', expiresAt: 'expiresAt', status: 'status', originalAmount: 'originalAmount' },
 }));
 
 import { creditService } from '../../src/modules/billing/services/credit.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function makeTx(balanceRows: unknown[]) {
+function makeTx(balanceRows: unknown[], lotRows: unknown[] = []) {
   return {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
@@ -32,7 +33,9 @@ function makeTx(balanceRows: unknown[]) {
           for: vi.fn(() => ({
             limit: vi.fn().mockResolvedValue(balanceRows),
           })),
-          orderBy: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })),
+          orderBy: vi.fn(() => ({
+            for: vi.fn().mockResolvedValue(lotRows),
+          })),
           limit: vi.fn().mockResolvedValue(balanceRows),
         })),
       })),
@@ -78,9 +81,10 @@ describe('creditService.debit', () => {
 
   it('debits balance and records a credit transaction', async () => {
     const fakeBalance = { id: 'bal-1', balance: 10 };
+    const fakeLot = { id: 'lot-1', remainingAmount: 10, expiresAt: new Date(Date.now() + 86400000) };
 
     mockTransaction.mockImplementation(
-      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance])),
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance], [fakeLot])),
     );
 
     const result = await creditService.debit({
@@ -99,9 +103,10 @@ describe('creditService.debit', () => {
 
   it('returns INSUFFICIENT_CREDITS when balance is lower than the debit amount', async () => {
     const fakeBalance = { id: 'bal-1', balance: 2 };
+    const fakeLot = { id: 'lot-1', remainingAmount: 2, expiresAt: new Date(Date.now() + 86400000) };
 
     mockTransaction.mockImplementation(
-      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance])),
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([fakeBalance], [fakeLot])),
     );
 
     const result = await creditService.debit({
@@ -121,7 +126,7 @@ describe('creditService.debit', () => {
 
   it('returns INSUFFICIENT_CREDITS when no balance row exists for the user', async () => {
     mockTransaction.mockImplementation(
-      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([])),
+      async (cb: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) => cb(makeTx([], [])),
     );
 
     const result = await creditService.debit({

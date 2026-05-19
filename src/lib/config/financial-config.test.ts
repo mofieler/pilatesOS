@@ -175,6 +175,8 @@ describe('Financial Configuration', () => {
         refundPolicyDays: 14,
         autoRefundEnabled: true,
         partialPaymentEnabled: true,
+        membershipDueDateDays: 14,
+        membershipGrantIntervalDays: 7,
       });
     });
   });
