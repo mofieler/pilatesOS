@@ -59,7 +59,7 @@ FROM (
   VALUES
     ('credit_balances_user_type_unique_idx'),
     ('credit_purchases_stripe_session_unique_idx'),
-    ('users_email_unique_idx'),
+    ('users_email_idx'),
     ('user_memberships_grant_sweep_idx')
 ) AS t(index_name)
 LEFT JOIN pg_indexes i
@@ -240,7 +240,7 @@ LEFT JOIN users u ON u.id = ct.user_id
 WHERE u.id IS NULL;
 
 -- ─── 12. STALE PENDING BOOKINGS (>30 min old, never confirmed) ────────────────
-\echo '\n▶ 12. STALE PENDING BOOKINGS (payment_pending > 30 min)'
+\echo '\n▶ 12. STALE PENDING BOOKINGS (status=pending > 30 min)'
 \echo '────────────────────────────────────────────────────────────────────────────────'
 
 SELECT
@@ -248,8 +248,7 @@ SELECT
   b.user_id,
   b.session_id,
   b.status,
-  b.booked_at,
-  b.payment_status
+  b.booked_at
 FROM bookings b
 WHERE b.status = 'pending'
   AND b.booked_at < NOW() - INTERVAL '30 minutes'
